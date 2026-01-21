@@ -1,5 +1,5 @@
 ---
-name: orange-skill
+name: listenhub
 description: |
   Explain anything — turn ideas into podcasts, explainer videos, or voice narration.
   Use when the user wants to "make a podcast", "create an explainer video",

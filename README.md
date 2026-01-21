@@ -12,17 +12,17 @@ You have ideas worth sharing. ListenHub turns them into content people actually 
 
 **Vercel skills.sh**
 ```bash
-npx skills add marswaveai/orange-skill
+npx skills add marswaveai/skills
 ```
 
 **Open Agent Skills**
 ```bash
-bunx add-skill marswaveai/orange-skill
+bunx add-skill marswaveai/skills
 ```
 
 **Claude Code Plugin**
 ```bash
-claude plugin install marswaveai/orange-skill
+claude plugin install marswaveai/skills
 ```
 
 ## What You Can Create
