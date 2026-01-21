@@ -164,13 +164,10 @@ When user says "done yet?" / "ready?" / "check status":
 
 All scripts located at `./scripts/`, curl-based (no extra dependencies).
 
-**⚠️ Long-running Tasks**: Image generation may take 1-5 minutes. For CLI tools like Claude Code, use background execution to avoid blocking:
+**⚠️ Long-running Tasks**: Image generation may take 1-5 minutes. Use your CLI client's native background execution feature:
 
-```bash
-# Claude Code: use run_in_background parameter
-# Other CLIs: append & or use async execution
-./scripts/generate-image.sh "<prompt>" &
-```
+- **Claude Code**: set `run_in_background: true` in Bash tool
+- **Other CLIs**: use built-in async/background job management if available
 
 ### Podcast
 ```bash
