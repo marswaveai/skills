@@ -7,6 +7,7 @@ description: |
   Supports: topic descriptions, YouTube links, article URLs, plain text, and image prompts.
 version: 1.0.0
 license: MIT
+compatibility: Claude Code, Cursor, Copilot, OpenCode
 ---
 
 <purpose>
@@ -164,40 +165,40 @@ When user says "done yet?" / "ready?" / "check status":
 
 ## Script Reference
 
-All scripts located at `${CLAUDE_PLUGIN_ROOT}/scripts/`, curl-based (no extra dependencies).
+All scripts located at `./scripts/`, curl-based (no extra dependencies).
 
 ### Podcast
 ```bash
-${CLAUDE_PLUGIN_ROOT}/scripts/create-podcast.sh <type> "<content>" [mode]
+./scripts/create-podcast.sh <type> "<content>" [mode]
 # type: query (topic) | url (link)
 # mode: quick (default) | deep | debate
 ```
 
 ### Explain
 ```bash
-${CLAUDE_PLUGIN_ROOT}/scripts/create-explainer.sh "<topic>" [mode]
+./scripts/create-explainer.sh "<topic>" [mode]
 # mode: info (default) | story
 
 # Generate video file (optional)
-${CLAUDE_PLUGIN_ROOT}/scripts/generate-video.sh "<episode-id>"
+./scripts/generate-video.sh "<episode-id>"
 ```
 
 ### TTS
 ```bash
-${CLAUDE_PLUGIN_ROOT}/scripts/create-tts.sh "<text>" [mode]
+./scripts/create-tts.sh "<text>" [mode]
 # mode: smart (default) | direct
 ```
 
 ### Image Generation
 ```bash
-${CLAUDE_PLUGIN_ROOT}/scripts/generate-image.sh "<prompt>" [size] [ratio]
+./scripts/generate-image.sh "<prompt>" [size] [ratio]
 # size: 1K | 2K | 4K (default: 2K)
 # ratio: 16:9 | 1:1 | 9:16 | 2:3 | 3:2 | 3:4 | 4:3 | 21:9 (default: 16:9)
 ```
 
 ### Check Status
 ```bash
-${CLAUDE_PLUGIN_ROOT}/scripts/check-status.sh "<episode-id>" <type>
+./scripts/check-status.sh "<episode-id>" <type>
 # type: podcast | explainer | tts
 ```
 
