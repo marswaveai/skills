@@ -52,9 +52,9 @@ Just describe what you want. ListenHub handles the rest.
 
 Keys auto-configure on first use.
 
-## Platform Support
+## Supported Clients
 
-macOS · Linux · Windows (Git Bash / WSL)
+Claude Code · Cursor · Windsurf · OpenCode · etc.
 
 ---
 

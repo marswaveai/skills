@@ -52,9 +52,9 @@ claude plugin install marswaveai/orange-skill
 
 首次使用时自动配置。
 
-## 平台支持
+## 客户端支持
 
-macOS · Linux · Windows (Git Bash / WSL)
+Claude Code · Cursor · Windsurf · OpenCode 等
 
 ---
 
