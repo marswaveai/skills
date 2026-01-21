@@ -48,7 +48,7 @@ Just describe what you want. ListenHub handles the rest.
 
 **ListenHub API Key** — [Get yours](https://listenhub.ai/zh/settings/api-keys) (Pro plan)
 
-**Labnana API Key** — [Get yours](https://labnana.com/api-keys) (requires 帝王蕉 Pro plan)
+**Labnana API Key** — [Get yours](https://labnana.com/api-keys) (requires Pro plan)
 
 Keys auto-configure on first use.
 
@@ -59,5 +59,7 @@ macOS · Linux · Windows (Git Bash / WSL)
 ---
 
 *Empowering everyone to express naturally, dissolving the barriers to understanding, connecting humanity through stories.*
+
+[中文文档](./README.zh.md)
 
 [listenhub.ai](https://listenhub.ai)
