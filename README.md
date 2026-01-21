@@ -48,7 +48,7 @@ Just describe what you want. ListenHub handles the rest.
 
 **ListenHub API Key** — [Get yours](https://listenhub.ai/zh/settings/api-keys) (Pro plan)
 
-**Labnana API Key** — [Get yours](https://labnana.com/api-keys) (for image generation)
+**Labnana API Key** — [Get yours](https://labnana.com/api-keys) (requires 帝王蕉 Pro plan)
 
 Keys auto-configure on first use.
 
