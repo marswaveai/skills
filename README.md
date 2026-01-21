@@ -1,8 +1,17 @@
-# ListenHub
+<h1 align="center">ListenHub Skills</h1>
 
-**Explain Anything. In Videos, Podcasts, and More.**
+<p align="center">
+<strong>Explain Anything. In Videos, Podcasts, and More.</strong>
+</p>
 
-Make knowledge click. Bring stories to life.
+<p align="center">
+<a href="https://listenhub.ai"><img alt="ListenHub" src="https://img.shields.io/badge/Made%20by%20ListenHub-000?logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IiNmZmYiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj48cGF0aCBkPSJNMTIgMmE1IDUgMCAwIDAgLTUgNXY2YTUgNSAwIDAgMCAxMCAwVjdhNSA1IDAgMCAwIC01IC01eiIvPjxwYXRoIGQ9Ik04IDIxaDgiLz48cGF0aCBkPSJNMTIgMTd2NCIvPjwvc3ZnPg==&logoColor=fff" /></a>
+<a href="https://discord.gg/ZbwA7g2guU"><img alt="Discord" src="https://img.shields.io/discord/1365293903405645886?label=Discord&logo=discord&color=eee&labelColor=5865f2&logoColor=fff" /></a>
+<a href="https://x.com/AiListenhub"><img alt="Twitter" src="https://img.shields.io/twitter/follow/AiListenhub?logo=x" /></a>
+<a href="https://github.com/marswaveai/skills/blob/main/LICENSE"><img alt="License" src="https://img.shields.io/github/license/marswaveai/skills?color=blue" /></a>
+<br />
+English | <a href="./README.zh.md">简体中文</a>
+</p>
 
 ---
 
@@ -35,20 +44,20 @@ Just describe what you want. ListenHub handles the rest.
 
 ## Setup
 
-**ListenHub API Key** — [Get yours](https://listenhub.ai/zh/settings/api-keys) (Pro plan)
+**ListenHub API Key** — [Get yours](https://listenhub.ai/settings/api-keys) (Pro plan required)
 
-**Labnana API Key** — [Get yours](https://labnana.com/api-keys) (requires Pro plan)
+**Labnana API Key** — [Get yours](https://labnana.com/api-keys) (Pro plan required)
 
 Keys auto-configure on first use.
 
 ## Supported Clients
 
-Claude Code · Cursor · Windsurf · OpenCode · etc.
+Claude Code · Cursor · Windsurf · OpenCode · Codex · Trae · and more.
 
 ---
 
-*Empowering everyone to express naturally, dissolving the barriers to understanding, connecting humanity through stories.*
+**Thank you for using ListenHub Skills!**
 
-[中文文档](./README.zh.md)
+If you have any questions, feel free to reach out: support@marswave.ai
 
 [listenhub.ai](https://listenhub.ai)

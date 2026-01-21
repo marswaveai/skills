@@ -1,8 +1,17 @@
-# ListenHub
+<h1 align="center">ListenHub Skills</h1>
 
-**解说万物，一键生成视频、播客、PPT**
+<p align="center">
+<strong>解说万物，一键生成视频、播客、语音</strong>
+</p>
 
-把知识点透，把故事讲活。
+<p align="center">
+<a href="https://listenhub.ai"><img alt="ListenHub" src="https://img.shields.io/badge/Made%20by%20ListenHub-000?logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IiNmZmYiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj48cGF0aCBkPSJNMTIgMmE1IDUgMCAwIDAgLTUgNXY2YTUgNSAwIDAgMCAxMCAwVjdhNSA1IDAgMCAwIC01IC01eiIvPjxwYXRoIGQ9Ik04IDIxaDgiLz48cGF0aCBkPSJNMTIgMTd2NCIvPjwvc3ZnPg==&logoColor=fff" /></a>
+<a href="https://discord.gg/ZbwA7g2guU"><img alt="Discord" src="https://img.shields.io/discord/1365293903405645886?label=Discord&logo=discord&color=eee&labelColor=5865f2&logoColor=fff" /></a>
+<a href="https://x.com/AiListenhub"><img alt="Twitter" src="https://img.shields.io/twitter/follow/AiListenhub?logo=x" /></a>
+<a href="https://github.com/marswaveai/skills/blob/main/LICENSE"><img alt="License" src="https://img.shields.io/github/license/marswaveai/skills?color=blue" /></a>
+<br />
+<a href="./README.md">English</a> | 简体中文
+</p>
 
 ---
 
@@ -35,18 +44,20 @@ npx skills add marswaveai/skills
 
 ## 配置
 
-**ListenHub API Key** — [获取](https://listenhub.ai/zh/settings/api-keys)（需要 Pro 计划）
+**ListenHub API Key** — [获取](https://listenhub.ai/zh/settings/api-keys)（Pro 订阅）
 
-**Labnana API Key** — [获取](https://labnana.com/api-keys)（需要帝王蕉 Pro 计划）
+**Labnana API Key** — [获取](https://labnana.com/api-keys)（帝王蕉订阅）
 
 首次使用时自动配置。
 
-## 客户端支持
+## 支持的客户端
 
-Claude Code · Cursor · Windsurf · OpenCode 等
+Claude Code · Cursor · Windsurf · OpenCode · Codex · Trae 等
 
 ---
 
-*赋予每个人自然表达的力量，消融理解的边界，让人类彼此联结。*
+**感谢使用 ListenHub Skills！**
+
+如有任何问题，欢迎联系我们：support@marswave.ai
 
 [listenhub.ai](https://listenhub.ai)
