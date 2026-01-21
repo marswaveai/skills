@@ -15,7 +15,7 @@ English | <a href="./README.zh.md">简体中文</a>
 
 ---
 
-You have ideas worth sharing. ListenHub turns them into content people actually want to watch and listen to — no editing skills required.
+You have ideas worth sharing. [ListenHub](https://listenhub.ai) turns them into content people actually want to watch and listen to — no editing skills required.
 
 ## Install
 
@@ -59,5 +59,3 @@ Claude Code · Cursor · Windsurf · OpenCode · Codex · Trae · and more.
 **Thank you for using ListenHub Skills!**
 
 If you have any questions, feel free to reach out: support@marswave.ai
-
-[listenhub.ai](https://listenhub.ai)

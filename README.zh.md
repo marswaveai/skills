@@ -15,7 +15,7 @@
 
 ---
 
-你有值得分享的想法。ListenHub 把它们变成人们真正想看、想听的内容——无需剪辑技能。
+你有值得分享的想法。[ListenHub](https://listenhub.ai) 把它们变成人们真正想看、想听的内容——无需剪辑技能。
 
 ## 安装
 
@@ -59,5 +59,3 @@ Claude Code · Cursor · Windsurf · OpenCode · Codex · Trae 等
 **感谢使用 ListenHub Skills！**
 
 如有任何问题，欢迎联系我们：support@marswave.ai
-
-[listenhub.ai](https://listenhub.ai)
