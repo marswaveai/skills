@@ -5,9 +5,6 @@ description: |
   Use when the user wants to "make a podcast", "create an explainer video",
   "read this aloud", "generate an image", or share knowledge in audio/visual form.
   Supports: topic descriptions, YouTube links, article URLs, plain text, and image prompts.
-version: 1.0.0
-license: MIT
-compatibility: Claude Code, Cursor, Windsurf, OpenCode
 ---
 
 <purpose>
