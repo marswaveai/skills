@@ -14,7 +14,7 @@ RATIO="${3:-16:9}"
 # 配置
 API_ENDPOINT="https://api.labnana.com/openapi/v1/images/gemini-3-pro-image-preview"
 MAX_RETRIES=3
-INITIAL_TIMEOUT=90
+INITIAL_TIMEOUT=600
 RETRY_DELAY=5
 
 # 临时文件追踪（用于中断清理）
