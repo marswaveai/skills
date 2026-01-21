@@ -12,7 +12,7 @@ SIZE="${2:-2K}"
 RATIO="${3:-16:9}"
 
 # 配置
-API_ENDPOINT="https://api.labnana.com/openapi/v1/images/gemini-3-pro-image-preview"
+API_ENDPOINT="https://api.labnana.com/openapi/v1/images/generation"
 MAX_RETRIES=3
 INITIAL_TIMEOUT=600
 RETRY_DELAY=5
@@ -201,6 +201,91 @@ load_env_var() {
 [ -z "${LABNANA_OUTPUT_DIR:-}" ] && load_env_var "LABNANA_OUTPUT_DIR" || true
 
 # ============================================
+# 依赖检查与安装引导
+# ============================================
+
+check_dependencies() {
+  local missing_deps=()
+  local install_cmd=""
+
+  # 检查 jq
+  if ! command -v jq &>/dev/null; then
+    missing_deps+=("jq")
+  fi
+
+  # 检查 curl
+  if ! find_curl &>/dev/null; then
+    missing_deps+=("curl")
+  fi
+
+  # 如果有缺失依赖，自动安装
+  if [ ${#missing_deps[@]} -gt 0 ]; then
+    echo "→ 检测到缺失的必备工具: ${missing_deps[*]}" >&2
+    echo "  正在自动安装..." >&2
+    echo "" >&2
+
+    case "$PLATFORM" in
+      macos)
+        install_cmd="brew install ${missing_deps[*]}"
+        if ! command -v brew &>/dev/null; then
+          echo "Error: 未检测到 Homebrew" >&2
+          echo "  请先安装 Homebrew: https://brew.sh" >&2
+          echo "  或手动安装: ${missing_deps[*]}" >&2
+          exit 1
+        fi
+        ;;
+      linux)
+        # 检测 Linux 发行版
+        if command -v apt-get &>/dev/null; then
+          install_cmd="sudo apt-get update && sudo apt-get install -y ${missing_deps[*]}"
+        elif command -v yum &>/dev/null; then
+          install_cmd="sudo yum install -y ${missing_deps[*]}"
+        elif command -v dnf &>/dev/null; then
+          install_cmd="sudo dnf install -y ${missing_deps[*]}"
+        elif command -v pacman &>/dev/null; then
+          install_cmd="sudo pacman -S --noconfirm ${missing_deps[*]}"
+        else
+          echo "Error: 未检测到支持的包管理器" >&2
+          echo "  请手动安装: ${missing_deps[*]}" >&2
+          exit 1
+        fi
+        ;;
+      windows)
+        if command -v choco &>/dev/null; then
+          install_cmd="choco install -y ${missing_deps[*]}"
+        elif command -v scoop &>/dev/null; then
+          install_cmd="scoop install ${missing_deps[*]}"
+        else
+          echo "Error: 未检测到 Chocolatey 或 Scoop" >&2
+          echo "  请先安装包管理器:" >&2
+          echo "  - Chocolatey: https://chocolatey.org/install" >&2
+          echo "  - Scoop: https://scoop.sh" >&2
+          echo "  或手动下载: https://stedolan.github.io/jq/download/" >&2
+          exit 1
+        fi
+        ;;
+      *)
+        echo "Error: 不支持的平台" >&2
+        echo "  请手动安装: ${missing_deps[*]}" >&2
+        exit 1
+        ;;
+    esac
+
+    # 执行安装
+    if eval "$install_cmd"; then
+      echo "" >&2
+      echo "✓ 依赖安装成功" >&2
+      echo "" >&2
+    else
+      echo "" >&2
+      echo "Error: 自动安装失败" >&2
+      echo "  请手动执行: $install_cmd" >&2
+      exit 1
+    fi
+  fi
+}
+
+# ============================================
 # 首次配置检查
 # ============================================
 
@@ -211,6 +296,9 @@ setup_config() {
   echo "→ 欢迎使用 Labnana 图片生成！需要先配置一下。" >&2
   echo "  检测到平台: $PLATFORM" >&2
   echo "" >&2
+
+  # 先检查依赖
+  check_dependencies
 
   # 配置 API Key
   if [ -z "${LABNANA_API_KEY:-}" ]; then
@@ -315,7 +403,7 @@ build_json_payload() {
       --arg prompt "$prompt" \
       --arg size "$size" \
       --arg ratio "$ratio" \
-      '{prompt: $prompt, imageSize: $size, aspectRatio: $ratio}'
+      '{provider: "google", prompt: $prompt, imageConfig: {imageSize: $size, aspectRatio: $ratio}}'
   else
     # 无 jq 时手动转义 JSON 特殊字符
     local escaped_prompt="$prompt"
@@ -327,7 +415,7 @@ build_json_payload() {
     escaped_prompt="${escaped_prompt//$'\t'/\\t}"   # Tab -> \t
     # 控制字符 (0x00-0x1F) 除了已处理的 \n\r\t，其他替换为空格
     escaped_prompt=$(printf '%s' "$escaped_prompt" | tr '\000-\010\013\014\016-\037' ' ')
-    echo "{\"prompt\":\"$escaped_prompt\",\"imageSize\":\"$size\",\"aspectRatio\":\"$ratio\"}"
+    echo "{\"provider\":\"google\",\"prompt\":\"$escaped_prompt\",\"imageConfig\":{\"imageSize\":\"$size\",\"aspectRatio\":\"$ratio\"}}"
   fi
 }
 
