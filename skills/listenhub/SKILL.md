@@ -232,8 +232,8 @@ $SCRIPTS/create-podcast.sh "query" [mode] [source_url]
 # source_url: optional URL for content analysis
 
 # Example:
-$SCRIPTS/create-podcast.sh "AI 的未来发展" deep
-$SCRIPTS/create-podcast.sh "分析这篇文章" deep "https://example.com/article"
+$SCRIPTS/create-podcast.sh "The future of AI development" deep
+$SCRIPTS/create-podcast.sh "Analyze this article" deep "https://example.com/article"
 ```
 
 ### Podcast (Two-Stage: Text → Audio)
@@ -258,7 +258,7 @@ $SCRIPTS/create-speech.sh <scripts_json_file>
 # scripts.json format:
 # {
 #   "scripts": [
-#     {"content": "台词内容", "speakerId": "speaker-id"},
+#     {"content": "Script content here", "speakerId": "speaker-id"},
 #     ...
 #   ]
 # }
@@ -306,9 +306,13 @@ $SCRIPTS/create-tts.sh "<text>" [mode]
 
 ### Image Generation
 ```bash
-$SCRIPTS/generate-image.sh "<prompt>" [size] [ratio]
+$SCRIPTS/generate-image.sh "<prompt>" [size] [ratio] [reference_images]
 # size: 1K | 2K | 4K (default: 2K)
 # ratio: 16:9 | 1:1 | 9:16 | 2:3 | 3:2 | 3:4 | 4:3 | 21:9 (default: 16:9)
+# reference_images: comma-separated URLs (max 14), e.g. "url1,url2"
+#   - Provides visual guidance for style, composition, or content
+#   - Supports jpg, png, gif, webp, bmp formats
+#   - URLs must be publicly accessible
 ```
 
 ### Check Status
@@ -461,6 +465,20 @@ When generating images, optimize user prompts by adding:
 
 ✓ Image generated!
   ~/Downloads/labnana-20260121-143145.jpg
+</response>
+</example>
+
+<example name="image-with-reference">
+<user>Generate an image in this style: https://example.com/style-ref.jpg, prompt: "a futuristic car"</user>
+<response>
+→ Generating image with reference...
+
+  Prompt: a futuristic car
+  Reference images: 1
+  Resolution: 2K (16:9)
+
+✓ Image generated!
+  ~/Downloads/labnana-20260122-154230.jpg
 </response>
 </example>
 
