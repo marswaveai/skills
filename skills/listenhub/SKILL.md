@@ -232,8 +232,8 @@ $SCRIPTS/create-podcast.sh "query" [mode] [source_url]
 # source_url: optional URL for content analysis
 
 # Example:
-$SCRIPTS/create-podcast.sh "AI 的未来发展" deep
-$SCRIPTS/create-podcast.sh "分析这篇文章" deep "https://example.com/article"
+$SCRIPTS/create-podcast.sh "The future of AI development" deep
+$SCRIPTS/create-podcast.sh "Analyze this article" deep "https://example.com/article"
 ```
 
 ### Podcast (Two-Stage: Text → Audio)
@@ -258,7 +258,7 @@ $SCRIPTS/create-speech.sh <scripts_json_file>
 # scripts.json format:
 # {
 #   "scripts": [
-#     {"content": "台词内容", "speakerId": "speaker-id"},
+#     {"content": "Script content here", "speakerId": "speaker-id"},
 #     ...
 #   ]
 # }
