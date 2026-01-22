@@ -425,7 +425,7 @@ build_reference_images_json() {
     # 使用 jq 构建数组
     local count=0
     json_array=$(echo "$urls" | tr ',' '\n' | while IFS= read -r url; do
-      url=$(echo "$url" | xargs)  # 去除首尾空格
+      url=$(echo "$url" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')  # 去除首尾空格（不破坏特殊字符）
       if [ -n "$url" ]; then
         count=$((count + 1))
         if [ $count -gt 14 ]; then
@@ -442,7 +442,7 @@ build_reference_images_json() {
     local items=()
     local count=0
     while IFS= read -r url; do
-      url=$(echo "$url" | xargs)
+      url=$(echo "$url" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')  # 去除首尾空格（不破坏特殊字符）
       if [ -n "$url" ]; then
         count=$((count + 1))
         if [ $count -gt 14 ]; then
