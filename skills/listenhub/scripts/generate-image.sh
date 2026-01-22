@@ -10,6 +10,7 @@ set -euo pipefail
 PROMPT="${1:-}"
 SIZE="${2:-2K}"
 RATIO="${3:-16:9}"
+REFERENCE_IMAGES="${4:-}"
 
 # 配置
 API_ENDPOINT="https://api.labnana.com/openapi/v1/images/generation"
@@ -366,13 +367,15 @@ fi
 # ============================================
 
 if [ -z "$PROMPT" ]; then
-  echo "Usage: $0 \"<prompt>\" [size] [ratio]" >&2
+  echo "Usage: $0 \"<prompt>\" [size] [ratio] [reference_images]" >&2
   echo "  size: 1K | 2K | 4K (default: 2K)" >&2
   echo "  ratio: 16:9 | 1:1 | 9:16 | 2:3 | 3:2 | 3:4 | 4:3 | 21:9 (default: 16:9)" >&2
+  echo "  reference_images: comma-separated URLs (max 14), e.g. \"url1,url2\"" >&2
   echo "" >&2
   echo "Examples:" >&2
   echo "  $0 \"a cute cat\" 2K 1:1" >&2
   echo "  $0 \"cyberpunk city at night\" 4K 16:9" >&2
+  echo "  $0 \"similar style\" 2K 16:9 \"https://example.com/ref1.jpg,https://example.com/ref2.png\"" >&2
   exit 1
 fi
 
@@ -392,18 +395,98 @@ esac
 # JSON 构建（兼容无 jq 环境）
 # ============================================
 
+# 从 URL 推断 MIME 类型
+detect_mime_type() {
+  local url="$1"
+  local ext="${url##*.}"
+  ext="${ext,,}"  # 转小写
+
+  case "$ext" in
+    jpg|jpeg) echo "image/jpeg" ;;
+    png) echo "image/png" ;;
+    gif) echo "image/gif" ;;
+    webp) echo "image/webp" ;;
+    bmp) echo "image/bmp" ;;
+    *) echo "image/jpeg" ;;  # 默认
+  esac
+}
+
+# 构建 referenceImages JSON 数组
+build_reference_images_json() {
+  local urls="$1"
+  local json_array="[]"
+
+  if [ -z "$urls" ]; then
+    echo "$json_array"
+    return
+  fi
+
+  if command -v jq &> /dev/null; then
+    # 使用 jq 构建数组
+    local count=0
+    json_array=$(echo "$urls" | tr ',' '\n' | while IFS= read -r url; do
+      url=$(echo "$url" | xargs)  # 去除首尾空格
+      if [ -n "$url" ]; then
+        count=$((count + 1))
+        if [ $count -gt 14 ]; then
+          echo "Warning: 最多支持 14 张参考图片，已忽略多余的图片" >&2
+          break
+        fi
+        mime_type=$(detect_mime_type "$url")
+        jq -n --arg uri "$url" --arg mime "$mime_type" \
+          '{fileData: {fileUri: $uri, mimeType: $mime}}'
+      fi
+    done | jq -s '.')
+  else
+    # 手动构建 JSON 数组
+    local items=()
+    local count=0
+    while IFS= read -r url; do
+      url=$(echo "$url" | xargs)
+      if [ -n "$url" ]; then
+        count=$((count + 1))
+        if [ $count -gt 14 ]; then
+          echo "Warning: 最多支持 14 张参考图片，已忽略多余的图片" >&2
+          break
+        fi
+        mime_type=$(detect_mime_type "$url")
+        # 转义 URL 中的特殊字符
+        local escaped_url="$url"
+        escaped_url="${escaped_url//\\/\\\\}"
+        escaped_url="${escaped_url//\"/\\\"}"
+        items+=("{\"fileData\":{\"fileUri\":\"$escaped_url\",\"mimeType\":\"$mime_type\"}}")
+      fi
+    done < <(echo "$urls" | tr ',' '\n')
+
+    if [ ${#items[@]} -gt 0 ]; then
+      json_array="[$(IFS=,; echo "${items[*]}")]"
+    fi
+  fi
+
+  echo "$json_array"
+}
+
 build_json_payload() {
   local prompt="$1"
   local size="$2"
   local ratio="$3"
+  local ref_images="$4"
 
   if command -v jq &> /dev/null; then
     # jq 可用时，直接构建完整 JSON 对象（自动处理所有转义）
+    local ref_json
+    ref_json=$(build_reference_images_json "$ref_images")
+
     jq -n \
       --arg prompt "$prompt" \
       --arg size "$size" \
       --arg ratio "$ratio" \
-      '{provider: "google", prompt: $prompt, imageConfig: {imageSize: $size, aspectRatio: $ratio}}'
+      --argjson refs "$ref_json" \
+      'if ($refs | length) > 0 then
+        {provider: "google", prompt: $prompt, imageConfig: {imageSize: $size, aspectRatio: $ratio}, referenceImages: $refs}
+      else
+        {provider: "google", prompt: $prompt, imageConfig: {imageSize: $size, aspectRatio: $ratio}}
+      end'
   else
     # 无 jq 时手动转义 JSON 特殊字符
     local escaped_prompt="$prompt"
@@ -415,7 +498,16 @@ build_json_payload() {
     escaped_prompt="${escaped_prompt//$'\t'/\\t}"   # Tab -> \t
     # 控制字符 (0x00-0x1F) 除了已处理的 \n\r\t，其他替换为空格
     escaped_prompt=$(printf '%s' "$escaped_prompt" | tr '\000-\010\013\014\016-\037' ' ')
-    echo "{\"provider\":\"google\",\"prompt\":\"$escaped_prompt\",\"imageConfig\":{\"imageSize\":\"$size\",\"aspectRatio\":\"$ratio\"}}"
+
+    local base_json="{\"provider\":\"google\",\"prompt\":\"$escaped_prompt\",\"imageConfig\":{\"imageSize\":\"$size\",\"aspectRatio\":\"$ratio\"}"
+
+    if [ -n "$ref_images" ]; then
+      local ref_json
+      ref_json=$(build_reference_images_json "$ref_images")
+      echo "${base_json},\"referenceImages\":${ref_json}}"
+    else
+      echo "${base_json}}"
+    fi
   fi
 }
 
@@ -575,7 +667,7 @@ generate_unique_filename() {
 mkdir -p "$LABNANA_OUTPUT_DIR"
 
 # 构建请求
-PAYLOAD=$(build_json_payload "$PROMPT" "$SIZE" "$RATIO")
+PAYLOAD=$(build_json_payload "$PROMPT" "$SIZE" "$RATIO" "$REFERENCE_IMAGES")
 
 # 调用 API（带重试）
 BODY=$(call_api_with_retry "$PAYLOAD") || exit 1
