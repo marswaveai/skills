@@ -5,9 +5,9 @@
 </p>
 
 <p align="center">
-<a href="https://listenhub.ai"><img alt="ListenHub" src="https://img.shields.io/badge/Made%20by%20ListenHub-000?logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IiNmZmYiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj48cGF0aCBkPSJNMTIgMmE1IDUgMCAwIDAgLTUgNXY2YTUgNSAwIDAgMCAxMCAwVjdhNSA1IDAgMCAwIC01IC01eiIvPjxwYXRoIGQ9Ik04IDIxaDgiLz48cGF0aCBkPSJNMTIgMTd2NCIvPjwvc3ZnPg==&logoColor=fff" /></a>
+<a href="https://listenhub.ai"><img alt="ListenHub" src="https://img.shields.io/badge/Made%20by%20ListenHub-000?logo=listenhub&logoColor=fff" /></a>
 <a href="https://discord.gg/ZbwA7g2guU"><img alt="Discord" src="https://img.shields.io/discord/1365293903405645886?label=Discord&logo=discord&color=eee&labelColor=5865f2&logoColor=fff" /></a>
-<a href="https://x.com/AiListenhub"><img alt="Twitter" src="https://img.shields.io/twitter/follow/AiListenhub?logo=x" /></a>
+<a href="https://x.com/ListenHub"><img alt="Twitter" src="https://img.shields.io/twitter/follow/ListenHub?logo=x" /></a>
 <a href="https://github.com/marswaveai/skills/blob/main/LICENSE"><img alt="License" src="https://img.shields.io/github/license/marswaveai/skills?color=blue" /></a>
 <br />
 English | <a href="./README.zh.md">简体中文</a>
@@ -49,6 +49,8 @@ Just describe what you want. ListenHub handles the rest.
 **Labnana API Key** — [Get yours](https://labnana.com/api-keys) (Pro plan required)
 
 Keys auto-configure on first use.
+
+**CLI Output Language**: The Skills CLI automatically detects your system language and outputs in English or Chinese accordingly.
 
 ## Supported Clients
 
