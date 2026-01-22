@@ -52,7 +52,7 @@ check_version() {
         git stash pop -q 2>/dev/null || true
       ) >/dev/null 2>&1 || {
         echo "│  Auto-update failed. Run manually:                  │" >&2
-        echo "│  cd $(dirname "$SKILL_DIR") && git pull            │" >&2
+        echo "│  npx skills add marswaveai/skills                   │" >&2
       }
     else
       # Fallback: notify user to update manually
@@ -62,7 +62,7 @@ check_version() {
   elif [ "$local_patch" != "$remote_patch" ]; then
     echo "┌─────────────────────────────────────────────────────┐" >&2
     echo "│  Patch update available: $local_ver → $remote_ver" >&2
-    echo "│  Run: cd $(dirname "$SKILL_DIR") && git pull      │" >&2
+    echo "│  Run: npx skills add marswaveai/skills             │" >&2
     echo "└─────────────────────────────────────────────────────┘" >&2
   fi
 }
