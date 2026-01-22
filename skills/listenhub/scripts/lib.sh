@@ -36,16 +36,13 @@ check_version() {
   IFS='.' read -r local_major local_minor local_patch <<< "$local_ver"
   IFS='.' read -r remote_major remote_minor remote_patch <<< "$remote_ver"
 
-  # Major or minor mismatch → auto-update
+  # Major or minor mismatch → notify (critical update)
   if [ "$local_major" != "$remote_major" ] || [ "$local_minor" != "$remote_minor" ]; then
     echo "┌─────────────────────────────────────────────────────┐" >&2
-    echo "│  Auto-updating: $local_ver → $remote_ver" >&2
+    echo "│  ⚠ Critical update available: $local_ver → $remote_ver" >&2
+    echo "│  Run: npx skills add marswaveai/skills             │" >&2
     echo "└─────────────────────────────────────────────────────┘" >&2
-    npx skills add marswaveai/skills 2>/dev/null || {
-      echo "│  Auto-update failed. Run manually:                  │" >&2
-      echo "│  npx skills add marswaveai/skills                   │" >&2
-    }
-  # Patch mismatch → notify only
+  # Patch mismatch → notify (optional update)
   elif [ "$local_patch" != "$remote_patch" ]; then
     echo "┌─────────────────────────────────────────────────────┐" >&2
     echo "│  Patch update available: $local_ver → $remote_ver" >&2
@@ -54,7 +51,7 @@ check_version() {
   fi
 }
 
-# Run version check (foreground for auto-update capability, but timeout-protected)
+# Run version check (non-blocking notification only)
 check_version
 
 # Load API key from shell config (try multiple sources)
