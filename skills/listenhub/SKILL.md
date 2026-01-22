@@ -21,6 +21,58 @@ Users don't need to remember APIs, modes, or parameters. Just say what you want.
 
 <instructions>
 
+## ⛔ Hard Constraints (Inviolable)
+
+**The scripts are the ONLY interface. Period.**
+
+```
+┌─────────────────────────────────────────────────────────┐
+│  AI Agent  ──▶  ./scripts/*.sh  ──▶  ListenHub API     │
+│                      ▲                                  │
+│                      │                                  │
+│            This is the ONLY path.                       │
+│            Direct API calls are FORBIDDEN.              │
+└─────────────────────────────────────────────────────────┘
+```
+
+**MUST**:
+- Execute functionality ONLY through provided scripts in `**/skills/listenhub/scripts/`
+- Pass user intent as script arguments exactly as documented
+- Trust script outputs; do not second-guess internal logic
+
+**MUST NOT**:
+- Write curl commands to ListenHub/Marswave API directly
+- Construct JSON bodies for API calls manually
+- Guess or fabricate speakerIds, endpoints, or API parameters
+- Assume API structure based on patterns or web searches
+- Hallucinate features not exposed by existing scripts
+
+**Why**: The API is proprietary. Endpoints, parameters, and speakerIds are NOT publicly documented. Web searches will NOT find this information. Any attempt to bypass scripts will produce incorrect, non-functional code.
+
+## Script Location
+
+Scripts are located at `**/skills/listenhub/scripts/` relative to your working context.
+
+Different AI clients use different dot-directories:
+- Claude Code: `.claude/skills/listenhub/scripts/`
+- Other clients: may vary (`.cursor/`, `.windsurf/`, etc.)
+
+**Resolution**: Use glob pattern `**/skills/listenhub/scripts/*.sh` to locate scripts reliably, or resolve from the SKILL.md file's own path.
+
+## Private Data (Cannot Be Searched)
+
+The following are **internal implementation details** that AI cannot reliably know:
+
+| Category | Examples | How to Obtain |
+|----------|----------|---------------|
+| API Base URL | `api.marswave.ai/...` | ✗ Cannot — internal to scripts |
+| Endpoints | `podcast/episodes`, etc. | ✗ Cannot — internal to scripts |
+| Speaker IDs | `cozy-man-english`, etc. | ✓ Call `get-speakers.sh` |
+| Request schemas | JSON body structure | ✗ Cannot — internal to scripts |
+| Response formats | Episode ID, status codes | ✓ Documented per script |
+
+**Rule**: If information is not in this SKILL.md or retrievable via a script (like `get-speakers.sh`), assume you don't know it.
+
 ## Design Philosophy
 
 **Hide complexity, reveal magic.**
@@ -162,53 +214,133 @@ When user says "done yet?" / "ready?" / "check status":
 
 ## Script Reference
 
-All scripts located at `./scripts/`, curl-based (no extra dependencies).
+All scripts are curl-based (no extra dependencies). Locate via `**/skills/listenhub/scripts/*.sh`.
 
-**⚠️ Long-running Tasks**: Image generation may take 1-5 minutes. Use your CLI client's native background execution feature:
+**⚠️ Long-running Tasks**: Generation may take 1-5 minutes. Use your CLI client's native background execution feature:
 
 - **Claude Code**: set `run_in_background: true` in Bash tool
 - **Other CLIs**: use built-in async/background job management if available
 
-### Podcast
+**Invocation pattern**: `$SCRIPTS/script-name.sh [args]`
+
+Where `$SCRIPTS` = resolved path to `**/skills/listenhub/scripts/`
+
+### Podcast (One-Stage)
 ```bash
-./scripts/create-podcast.sh <type> "<content>" [mode]
-# type: query (topic) | url (link)
+$SCRIPTS/create-podcast.sh "query" [mode] [source_url]
 # mode: quick (default) | deep | debate
+# source_url: optional URL for content analysis
+
+# Example:
+$SCRIPTS/create-podcast.sh "AI 的未来发展" deep
+$SCRIPTS/create-podcast.sh "分析这篇文章" deep "https://example.com/article"
 ```
+
+### Podcast (Two-Stage: Text → Audio)
+For advanced workflows requiring script editing between generation:
+
+```bash
+# Stage 1: Generate text content
+$SCRIPTS/create-podcast-text.sh "query" [mode] [source_url]
+# Returns: episode_id + scripts array
+
+# Stage 2: Generate audio from text
+$SCRIPTS/create-podcast-audio.sh "<episode-id>" [modified_scripts.json]
+# Without scripts file: uses original scripts
+# With scripts file: uses modified scripts
+```
+
+### Speech (Multi-Speaker)
+```bash
+$SCRIPTS/create-speech.sh <scripts_json_file>
+# Or pipe: echo '{"scripts":[...]}' | $SCRIPTS/create-speech.sh -
+
+# scripts.json format:
+# {
+#   "scripts": [
+#     {"content": "台词内容", "speakerId": "speaker-id"},
+#     ...
+#   ]
+# }
+```
+
+### Get Available Speakers
+```bash
+$SCRIPTS/get-speakers.sh [language]
+# language: zh (default) | en
+```
+
+**Response structure** (for AI parsing):
+```json
+{
+  "code": 0,
+  "data": {
+    "items": [
+      {
+        "name": "Yuanye",
+        "speakerId": "cozy-man-english",
+        "gender": "male",
+        "language": "zh"
+      }
+    ]
+  }
+}
+```
+
+**Usage**: When user requests specific voice characteristics (gender, style), call this script first to discover available `speakerId` values. NEVER hardcode or assume speakerIds.
 
 ### Explain
 ```bash
-./scripts/create-explainer.sh "<topic>" [mode]
+$SCRIPTS/create-explainer.sh "<topic>" [mode]
 # mode: info (default) | story
 
 # Generate video file (optional)
-./scripts/generate-video.sh "<episode-id>"
+$SCRIPTS/generate-video.sh "<episode-id>"
 ```
 
 ### TTS
 ```bash
-./scripts/create-tts.sh "<text>" [mode]
+$SCRIPTS/create-tts.sh "<text>" [mode]
 # mode: smart (default) | direct
 ```
 
 ### Image Generation
 ```bash
-./scripts/generate-image.sh "<prompt>" [size] [ratio]
+$SCRIPTS/generate-image.sh "<prompt>" [size] [ratio]
 # size: 1K | 2K | 4K (default: 2K)
 # ratio: 16:9 | 1:1 | 9:16 | 2:3 | 3:2 | 3:4 | 4:3 | 21:9 (default: 16:9)
 ```
 
 ### Check Status
 ```bash
-./scripts/check-status.sh "<episode-id>" <type>
+$SCRIPTS/check-status.sh "<episode-id>" <type>
 # type: podcast | explainer | tts
 ```
 
 ## AI Responsibilities
 
+### Black Box Principle
+
+**You are a dispatcher, not an implementer.**
+
+Your job is to:
+1. Understand user intent (what do they want to create?)
+2. Select the correct script (which tool fits?)
+3. Format arguments correctly (what parameters?)
+4. Execute and relay results (what happened?)
+
+Your job is NOT to:
+- Understand or modify script internals
+- Construct API calls directly
+- Guess parameters not documented here
+- Invent features that scripts don't expose
+
+### Mode-Specific Behavior
+
 **ListenHub modes (passthrough)**:
-- Podcast/Explain/TTS → pass user input directly
+- Podcast/Explain/TTS/Speech → pass user input directly
 - Server has full AI capability to process content
+- If user needs specific speakers → call `get-speakers.sh` first to list options
 
 **Labnana mode (enhance)**:
 - Image Generation → client-side AI optimizes prompt

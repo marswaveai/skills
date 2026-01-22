@@ -1,29 +1,52 @@
 #!/usr/bin/env bash
-# Create TTS audio via ListenHub API
-# Usage: ./create-tts.sh "text content" [mode]
+# Create FlowSpeech audio via ListenHub API
+# Usage: ./create-tts.sh <type> "content" [mode]
+# Types: text | url
 # Modes: smart (default) | direct
+#
+# Examples:
+#   ./create-tts.sh text "欢迎使用 ListenHub 音频生成服务" smart
+#   ./create-tts.sh url "https://example.com/article.html" smart
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${SCRIPT_DIR}/_common.sh"
 
-TEXT="${1:-}"
-MODE="${2:-smart}"
+TYPE="${1:-}"
+CONTENT="${2:-}"
+MODE="${3:-smart}"
 
-if [ -z "$TEXT" ]; then
-  echo "Usage: $0 \"text content\" [mode]" >&2
-  echo "Modes: smart | direct" >&2
+if [ -z "$TYPE" ] || [ -z "$CONTENT" ]; then
+  cat >&2 <<'EOF'
+Usage: ./create-tts.sh <type> "content" [mode]
+
+Types:
+  text  - Direct text content (minimum 10 characters)
+  url   - URL to read from
+
+Modes: smart | direct
+
+Examples:
+  ./create-tts.sh text "欢迎使用 ListenHub 音频生成服务" smart
+  ./create-tts.sh url "https://example.com/article.html" smart
+EOF
+  exit 1
+fi
+
+# Validate type
+if [[ ! "$TYPE" =~ ^(text|url)$ ]]; then
+  echo "Error: Invalid type '$TYPE'. Must be: text | url" >&2
   exit 1
 fi
 
 # Use jq for safe JSON encoding if available
 if command -v jq &>/dev/null; then
-  TEXT_JSON=$(jq -n --arg t "$TEXT" '$t')
+  CONTENT_JSON=$(jq -n --arg c "$CONTENT" '$c')
 else
-  TEXT_JSON="\"${TEXT//\"/\\\"}\""
+  CONTENT_JSON="\"${CONTENT//\"/\\\"}\""
 fi
 
-api_post "flowspeech/episodes" "{
-  \"sources\": [{\"type\": \"text\", \"content\": ${TEXT_JSON}}],
+api_post "flow-speech/episodes" "{
+  \"sources\": [{\"type\": \"${TYPE}\", \"content\": ${CONTENT_JSON}}],
   \"speakers\": [{\"speakerId\": \"CN-Man-Beijing-V2\"}],
   \"language\": \"zh\",
   \"mode\": \"${MODE}\"

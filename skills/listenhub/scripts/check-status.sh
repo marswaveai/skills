@@ -23,7 +23,7 @@ case "$TYPE" in
     ENDPOINT="storybook/episodes/${EPISODE_ID}"
     ;;
   tts)
-    ENDPOINT="flowspeech/episodes/${EPISODE_ID}"
+    ENDPOINT="flow-speech/episodes/${EPISODE_ID}"
     ;;
   *)
     echo "Error: Invalid type '$TYPE'. Must be: podcast | explainer | tts" >&2

@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-# Create podcast episode via ListenHub API
-# Usage: ./create-podcast.sh "query" [mode] [source_url]
+# Create podcast text content (Stage 1 of two-stage generation)
+# Usage: ./create-podcast-text.sh "query" [mode] [source_url]
 # Modes: quick (default) | deep | debate
 #
 # Examples:
-#   ./create-podcast.sh "AI 的未来发展" deep
-#   ./create-podcast.sh "分析这篇文章的核心观点" deep "https://blog.example.com/article"
+#   ./create-podcast-text.sh "AI 的未来发展" deep
+#   ./create-podcast-text.sh "分析这篇文章" deep "https://blog.example.com/article"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${SCRIPT_DIR}/_common.sh"
@@ -16,14 +16,15 @@ SOURCE_URL="${3:-}"
 
 if [ -z "$QUERY" ]; then
   cat >&2 <<'EOF'
-Usage: ./create-podcast.sh "query" [mode] [source_url]
+Usage: ./create-podcast-text.sh "query" [mode] [source_url]
 
 Modes: quick | deep | debate
 
 Examples:
-  ./create-podcast.sh "AI 的未来发展" deep
-  ./create-podcast.sh "讨论远程工作的利弊" debate
-  ./create-podcast.sh "分析这篇文章" deep "https://blog.example.com/article"
+  ./create-podcast-text.sh "AI 的未来发展" deep
+  ./create-podcast-text.sh "分析这篇文章" deep "https://blog.example.com/article"
+
+Note: This only generates text content. Use create-podcast-audio.sh to generate audio.
 EOF
   exit 1
 fi
@@ -65,4 +66,4 @@ else
 }"
 fi
 
-api_post "podcast/episodes" "$BODY"
+api_post "podcast/episodes/text-content" "$BODY"
