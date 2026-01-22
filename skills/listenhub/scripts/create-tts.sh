@@ -9,7 +9,7 @@
 #   ./create-tts.sh url "https://example.com/article.html" smart
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "${SCRIPT_DIR}/_common.sh"
+source "${SCRIPT_DIR}/lib.sh"
 
 TYPE="${1:-}"
 CONTENT="${2:-}"

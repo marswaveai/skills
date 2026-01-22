@@ -8,7 +8,7 @@
 #   ./create-podcast.sh "分析这篇文章的核心观点" deep "https://blog.example.com/article"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "${SCRIPT_DIR}/_common.sh"
+source "${SCRIPT_DIR}/lib.sh"
 
 QUERY="${1:-}"
 MODE="${2:-quick}"

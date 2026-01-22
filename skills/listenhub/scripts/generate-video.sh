@@ -3,7 +3,7 @@
 # Usage: ./generate-video.sh <episode-id>
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "${SCRIPT_DIR}/_common.sh"
+source "${SCRIPT_DIR}/lib.sh"
 
 EPISODE_ID="${1:-}"
 

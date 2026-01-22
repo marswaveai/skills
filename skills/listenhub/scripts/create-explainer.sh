@@ -4,7 +4,7 @@
 # Modes: info (default) | story
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "${SCRIPT_DIR}/_common.sh"
+source "${SCRIPT_DIR}/lib.sh"
 
 CONTENT="${1:-}"
 MODE="${2:-info}"
