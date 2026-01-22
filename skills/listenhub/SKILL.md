@@ -317,6 +317,33 @@ $SCRIPTS/check-status.sh "<episode-id>" <type>
 # type: podcast | explainer | tts
 ```
 
+## Language Adaptation
+
+**Automatic Language Detection**: Adapt output language based on user input and context.
+
+**Detection Rules**:
+1. **User Input Language**: If user writes in Chinese, respond in Chinese. If user writes in English, respond in English.
+2. **Context Consistency**: Maintain the same language throughout the interaction unless user explicitly switches.
+3. **CLAUDE.md Override**: If project-level CLAUDE.md specifies a default language, respect it unless user input indicates otherwise.
+4. **Mixed Input**: If user mixes languages, prioritize the dominant language (>50% of content).
+
+**Application**:
+- Status messages: "→ Got it! Preparing..." (English) vs "→ 收到！准备中..." (Chinese)
+- Error messages: Match user's language
+- Result summaries: Match user's language
+- Script outputs: Pass through as-is (scripts handle their own language)
+
+**Example**:
+```
+User (Chinese): "生成一个关于 AI 的播客"
+AI (Chinese): "→ 收到！准备双人播客..."
+
+User (English): "Make a podcast about AI"
+AI (English): "→ Got it! Preparing two-person podcast..."
+```
+
+**Principle**: Language is interface, not barrier. Adapt seamlessly to user's natural expression.
+
 ## AI Responsibilities
 
 ### Black Box Principle
