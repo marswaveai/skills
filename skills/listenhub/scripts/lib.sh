@@ -36,22 +36,38 @@ check_version() {
   IFS='.' read -r local_major local_minor local_patch <<< "$local_ver"
   IFS='.' read -r remote_major remote_minor remote_patch <<< "$remote_ver"
 
-  # Major or minor mismatch → notify (critical update)
+  # Major or minor mismatch → auto-update via git (non-interactive)
   if [ "$local_major" != "$remote_major" ] || [ "$local_minor" != "$remote_minor" ]; then
     echo "┌─────────────────────────────────────────────────────┐" >&2
-    echo "│  ⚠ Critical update available: $local_ver → $remote_ver" >&2
-    echo "│  Run: npx skills add marswaveai/skills             │" >&2
+    echo "│  Auto-updating: $local_ver → $remote_ver" >&2
     echo "└─────────────────────────────────────────────────────┘" >&2
-  # Patch mismatch → notify (optional update)
+
+    # Check if we're in a git repository
+    if git -C "$SKILL_DIR/../.." rev-parse --git-dir >/dev/null 2>&1; then
+      # Non-interactive git pull (stash local changes if any)
+      (
+        cd "$SKILL_DIR/../.." || exit 0
+        git stash push -q -m "Auto-stash before skill update" 2>/dev/null || true
+        git pull -q origin main 2>/dev/null || git pull -q 2>/dev/null || true
+        git stash pop -q 2>/dev/null || true
+      ) >/dev/null 2>&1 || {
+        echo "│  Auto-update failed. Run manually:                  │" >&2
+        echo "│  cd $(dirname "$SKILL_DIR") && git pull            │" >&2
+      }
+    else
+      # Fallback: notify user to update manually
+      echo "│  Not a git repo. Run: npx skills add marswaveai/skills │" >&2
+    fi
+  # Patch mismatch → notify only (optional update)
   elif [ "$local_patch" != "$remote_patch" ]; then
     echo "┌─────────────────────────────────────────────────────┐" >&2
     echo "│  Patch update available: $local_ver → $remote_ver" >&2
-    echo "│  Run: npx skills add marswaveai/skills             │" >&2
+    echo "│  Run: cd $(dirname "$SKILL_DIR") && git pull      │" >&2
     echo "└─────────────────────────────────────────────────────┘" >&2
   fi
 }
 
-# Run version check (non-blocking notification only)
+# Run version check (auto-update via git if available)
 check_version
 
 # Load API key from shell config (try multiple sources)
