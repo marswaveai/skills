@@ -399,7 +399,7 @@ esac
 detect_mime_type() {
   local url="$1"
   local ext="${url##*.}"
-  ext="${ext,,}"  # 转小写
+  ext=$(echo "$ext" | tr '[:upper:]' '[:lower:]')  # Convert to lowercase (bash 3.2 compatible)
 
   case "$ext" in
     jpg|jpeg) echo "image/jpeg" ;;
@@ -407,7 +407,7 @@ detect_mime_type() {
     gif) echo "image/gif" ;;
     webp) echo "image/webp" ;;
     bmp) echo "image/bmp" ;;
-    *) echo "image/jpeg" ;;  # 默认
+    *) echo "image/jpeg" ;;  # Default
   esac
 }
 
