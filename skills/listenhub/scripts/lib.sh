@@ -36,27 +36,42 @@ check_version() {
   IFS='.' read -r local_major local_minor local_patch <<< "$local_ver"
   IFS='.' read -r remote_major remote_minor remote_patch <<< "$remote_ver"
 
-  # Major or minor mismatch → auto-update via git (non-interactive)
+  # Major or minor mismatch → auto-update via curl (non-interactive)
   if [ "$local_major" != "$remote_major" ] || [ "$local_minor" != "$remote_minor" ]; then
     echo "┌─────────────────────────────────────────────────────┐" >&2
     echo "│  Auto-updating: $local_ver → $remote_ver" >&2
     echo "└─────────────────────────────────────────────────────┘" >&2
 
-    # Check if we're in a git repository
-    if git -C "$SKILL_DIR/../.." rev-parse --git-dir >/dev/null 2>&1; then
-      # Non-interactive git pull (stash local changes if any)
-      (
-        cd "$SKILL_DIR/../.." || exit 0
-        git stash push -q -m "Auto-stash before skill update" 2>/dev/null || true
-        git pull -q origin main 2>/dev/null || git pull -q 2>/dev/null || true
-        git stash pop -q 2>/dev/null || true
-      ) >/dev/null 2>&1 || {
-        echo "│  Auto-update failed. Run manually:                  │" >&2
-        echo "│  npx skills add marswaveai/skills                   │" >&2
-      }
+    # Download and replace scripts using curl (non-interactive, no git required)
+    local base_url="https://raw.githubusercontent.com/marswaveai/skills/main/skills/listenhub"
+    local update_success=true
+
+    # Update VERSION file
+    if ! curl -fsSL --max-time 10 "$base_url/VERSION" -o "$VERSION_FILE.tmp" 2>/dev/null; then
+      update_success=false
+    fi
+
+    # Update all scripts in scripts/ directory
+    for script in "$SCRIPT_DIR"/*.sh; do
+      local script_name=$(basename "$script")
+      if ! curl -fsSL --max-time 10 "$base_url/scripts/$script_name" -o "$script.tmp" 2>/dev/null; then
+        update_success=false
+        break
+      fi
+    done
+
+    # If all downloads succeeded, replace files atomically
+    if [ "$update_success" = true ]; then
+      mv -f "$VERSION_FILE.tmp" "$VERSION_FILE" 2>/dev/null || true
+      for script in "$SCRIPT_DIR"/*.sh; do
+        [ -f "$script.tmp" ] && mv -f "$script.tmp" "$script" && chmod +x "$script"
+      done
+      echo "│  ✓ Updated successfully to $remote_ver                  │" >&2
     else
-      # Fallback: notify user to update manually
-      echo "│  Not a git repo. Run: npx skills add marswaveai/skills │" >&2
+      # Cleanup temp files on failure
+      rm -f "$VERSION_FILE.tmp" "$SCRIPT_DIR"/*.sh.tmp 2>/dev/null || true
+      echo "│  Auto-update failed. Run manually:                  │" >&2
+      echo "│  npx skills add marswaveai/skills                   │" >&2
     fi
   # Patch mismatch → notify only (optional update)
   elif [ "$local_patch" != "$remote_patch" ]; then
@@ -67,7 +82,7 @@ check_version() {
   fi
 }
 
-# Run version check (auto-update via git if available)
+# Run version check (auto-update via curl if available)
 check_version
 
 # Load API key from shell config (try multiple sources)
