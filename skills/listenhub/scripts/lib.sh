@@ -44,6 +44,7 @@ check_version() {
 
     # Download and replace scripts using curl (non-interactive, no git required)
     local base_url="https://raw.githubusercontent.com/marswaveai/skills/main/skills/listenhub"
+    local api_url="https://api.github.com/repos/marswaveai/skills/contents/skills/listenhub/scripts"
     local update_success=true
 
     # Update VERSION file
@@ -51,21 +52,33 @@ check_version() {
       update_success=false
     fi
 
-    # Update all scripts in scripts/ directory
-    for script in "$SCRIPT_DIR"/*.sh; do
-      local script_name=$(basename "$script")
-      if ! curl -fsSL --max-time 10 "$base_url/scripts/$script_name" -o "$script.tmp" 2>/dev/null; then
+    # Fetch remote script list from GitHub API and download all scripts
+    if [ "$update_success" = true ]; then
+      local script_list
+      script_list=$(curl -fsSL --max-time 10 "$api_url" 2>/dev/null | grep -o '"name":"[^"]*\.sh"' | cut -d'"' -f4)
+
+      if [ -z "$script_list" ]; then
         update_success=false
-        break
+      else
+        for script_name in $script_list; do
+          if ! curl -fsSL --max-time 10 "$base_url/scripts/$script_name" -o "$SCRIPT_DIR/$script_name.tmp" 2>/dev/null; then
+            update_success=false
+            break
+          fi
+        done
       fi
-    done
+    fi
 
     # If all downloads succeeded, replace files atomically
     if [ "$update_success" = true ]; then
-      mv -f "$VERSION_FILE.tmp" "$VERSION_FILE" 2>/dev/null || true
-      for script in "$SCRIPT_DIR"/*.sh; do
-        [ -f "$script.tmp" ] && mv -f "$script.tmp" "$script" && chmod +x "$script"
+      # Move all script files first
+      for script_tmp in "$SCRIPT_DIR"/*.sh.tmp; do
+        [ -f "$script_tmp" ] || continue
+        local script="${script_tmp%.tmp}"
+        mv -f "$script_tmp" "$script" && chmod +x "$script"
       done
+      # Only update VERSION after all scripts are successfully moved
+      mv -f "$VERSION_FILE.tmp" "$VERSION_FILE" 2>/dev/null || true
       echo "│  ✓ Updated successfully to $remote_ver                  │" >&2
     else
       # Cleanup temp files on failure
