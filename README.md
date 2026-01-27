@@ -46,8 +46,6 @@ Just describe what you want. ListenHub handles the rest.
 
 **ListenHub API Key** — [Get yours](https://listenhub.ai/settings/api-keys) (Pro plan required)
 
-**Labnana API Key** — [Get yours](https://labnana.com/api-keys) (Pro plan required)
-
 Keys auto-configure on first use.
 
 **CLI Output Language**: The Skills CLI automatically detects your system language and outputs in English or Chinese accordingly.

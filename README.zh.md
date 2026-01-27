@@ -46,8 +46,6 @@ npx skills add marswaveai/skills
 
 **ListenHub API Key** — [获取](https://listenhub.ai/zh/settings/api-keys)（Pro 订阅）
 
-**Labnana API Key** — [获取](https://labnana.com/api-keys)（帝王蕉订阅）
-
 首次使用时自动配置。
 
 **CLI 输出语言**：Skills CLI 会自动检测您的系统语言，并相应地以中文或英文输出。
