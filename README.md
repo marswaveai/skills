@@ -25,12 +25,12 @@ npx skills add marswaveai/skills
 
 ## What You Can Create
 
-| Say this... | Get this |
-|-------------|----------|
-| "Make a podcast about quantum computing" | Two hosts discussing your topic |
-| "Explain this article as a video" | Narrated explainer with AI visuals |
-| "Read this aloud" | Natural voice audio |
-| "Generate an image: sunset over mountains" | AI-generated artwork |
+| Say this...                                | Get this                           |
+| ------------------------------------------ | ---------------------------------- |
+| "Make a podcast about quantum computing"   | Two hosts discussing your topic    |
+| "Explain this article as a video"          | Narrated explainer with AI visuals |
+| "Read this aloud"                          | Natural voice audio                |
+| "Generate an image: sunset over mountains" | AI-generated artwork               |
 
 Just describe what you want. ListenHub handles the rest.
 
@@ -56,8 +56,8 @@ Keys auto-configure on first use.
 
 Claude Code · Cursor · Windsurf · OpenCode · Codex · Trae · and more.
 
----
-
-**Thank you for using ListenHub Skills!**
-
 If you have any questions, feel free to reach out: support@marswave.ai
+
+## License
+
+MIT
