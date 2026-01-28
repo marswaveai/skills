@@ -12,7 +12,7 @@ source "${SCRIPT_DIR}/lib.sh"
 TYPE=""
 CONTENT=""
 LANGUAGE=""
-MODE="smart"
+MODE="direct"
 SPEAKERS=""
 
 usage() {
