@@ -140,7 +140,7 @@ check_api_key() {
 Error: LISTENHUB_API_KEY not set
 
 Setup:
-  1. Get API key from https://listenhub.ai/zh/settings/api-keys
+  1. Get API key from https://listenhub.ai/settings/api-keys
   2. Add to ~/.zshrc or ~/.bashrc:
      export LISTENHUB_API_KEY="lh_sk_..."
   3. Run: source ~/.zshrc

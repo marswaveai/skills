@@ -238,7 +238,7 @@ load_env_var() {
 }
 
 [ -z "${LISTENHUB_API_KEY:-}" ] && load_env_var "LISTENHUB_API_KEY" || true
-[ -z "${LABNANA_OUTPUT_DIR:-}" ] && load_env_var "LABNANA_OUTPUT_DIR" || true
+[ -z "${LISTENHUB_OUTPUT_DIR:-}" ] && load_env_var "LISTENHUB_OUTPUT_DIR" || true
 
 # ============================================
 # Dependency check and installation guide
@@ -343,7 +343,7 @@ setup_config() {
   # Configure API Key
   if [ -z "${LISTENHUB_API_KEY:-}" ]; then
     echo "1. API Key" >&2
-    echo "   Visit https://listenhub.ai/zh/settings/api-keys" >&2
+    echo "   Visit https://listenhub.ai/settings/api-keys" >&2
     echo "   (Requires subscription)" >&2
     echo "" >&2
     echo -n "   Please paste your API key: " >&2
@@ -366,7 +366,7 @@ setup_config() {
   fi
 
   # Configure output path
-  if [ -z "${LABNANA_OUTPUT_DIR:-}" ]; then
+  if [ -z "${LISTENHUB_OUTPUT_DIR:-}" ]; then
     echo "2. Output path" >&2
     echo -n "   Image save location (default: ~/Downloads): " >&2
     read -r output_dir
@@ -383,12 +383,12 @@ setup_config() {
     mkdir -p "$output_dir"
 
     # Check if config already exists (avoid duplicate append)
-    if ! grep -q "^export LABNANA_OUTPUT_DIR=" "$shell_rc" 2>/dev/null; then
-      echo "export LABNANA_OUTPUT_DIR=\"$output_dir\"" >> "$shell_rc"
+    if ! grep -q "^export LISTENHUB_OUTPUT_DIR=" "$shell_rc" 2>/dev/null; then
+      echo "export LISTENHUB_OUTPUT_DIR=\"$output_dir\"" >> "$shell_rc"
     else
-      sed_inplace "$shell_rc" "s|^export LABNANA_OUTPUT_DIR=.*|export LABNANA_OUTPUT_DIR=\"$output_dir\"|"
+      sed_inplace "$shell_rc" "s|^export LISTENHUB_OUTPUT_DIR=.*|export LISTENHUB_OUTPUT_DIR=\"$output_dir\"|"
     fi
-    export LABNANA_OUTPUT_DIR="$output_dir"
+    export LISTENHUB_OUTPUT_DIR="$output_dir"
     echo "" >&2
   fi
 
@@ -397,7 +397,7 @@ setup_config() {
 }
 
 # Check and execute first-time configuration
-  if [ -z "${LISTENHUB_API_KEY:-}" ] || [ -z "${LABNANA_OUTPUT_DIR:-}" ]; then
+  if [ -z "${LISTENHUB_API_KEY:-}" ] || [ -z "${LISTENHUB_OUTPUT_DIR:-}" ]; then
   setup_config
 fi
 
@@ -612,7 +612,7 @@ call_api_with_retry() {
         ;;
       401)
         echo "Error: API Key invalid or expired" >&2
-        echo "  Please check LISTENHUB_API_KEY or get a new one: https://listenhub.ai/zh/settings/api-keys" >&2
+        echo "  Please check LISTENHUB_API_KEY or get a new one: https://listenhub.ai/settings/api-keys" >&2
         return 1
         ;;
       402)
@@ -706,7 +706,7 @@ generate_unique_filename() {
 # ============================================
 
 # Ensure output directory exists
-mkdir -p "$LABNANA_OUTPUT_DIR"
+mkdir -p "$LISTENHUB_OUTPUT_DIR"
 
 # Build request
 PAYLOAD=$(build_json_payload "$PROMPT" "$SIZE" "$RATIO" "$REFERENCE_IMAGES")
@@ -723,7 +723,7 @@ if [ -z "$BASE64_DATA" ]; then
 fi
 
 # Generate unique filename
-OUTPUT_FILE=$(generate_unique_filename "$LABNANA_OUTPUT_DIR" "labnana" "jpg")
+OUTPUT_FILE=$(generate_unique_filename "$LISTENHUB_OUTPUT_DIR" "listenhub" "jpg")
 TEMP_OUTPUT_FILE="$OUTPUT_FILE"  # Mark as temp file for trap cleanup
 
 # Decode and save (cross-platform)

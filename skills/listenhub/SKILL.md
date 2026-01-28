@@ -91,17 +91,17 @@ source ~/.zshrc 2>/dev/null; [ -n "$LISTENHUB_API_KEY" ] && echo "ready" || echo
 ```
 
 If setup needed, guide user:
-1. Visit https://listenhub.ai/zh/settings/api-keys
+1. Visit https://listenhub.ai/settings/api-keys
 2. Paste key (only the `lh_sk_...` part)
 3. Auto-save to ~/.zshrc
 
 ### Image Generation API Key
 
 Image generation uses the same ListenHub API key stored in `$LISTENHUB_API_KEY`.
-Output path is stored in `$LABNANA_OUTPUT_DIR`.
+Image generation output path defaults to the user downloads directory, stored in `$LISTENHUB_OUTPUT_DIR`.
 
 On first image generation, the script auto-guides configuration:
-1. Visit https://listenhub.ai/zh/settings/api-keys (requires subscription)
+1. Visit https://listenhub.ai/settings/api-keys (requires subscription)
 2. Paste API key
 3. Configure output path (default: ~/Downloads)
 4. Auto-save to shell rc file
@@ -133,25 +133,25 @@ When the user only provides a topic (e.g., "I want a podcast about X"), proceed 
 - Feature: Single narrator + AI-generated visuals, can export video
 
 **→ TTS (Text-to-speech)**
-TTS 默认指向 FlowSpeech 的 direct 模式，用于文本或 URL 的单段内容直转语音。
-脚本数组与多角色对话属于 Speech 的进阶能力，不作为默认 TTS 入口。
-文本转语音上限 10000 字，超过需拆分或改用 URL 输入。
+TTS defaults to FlowSpeech `direct` for single-pass text or URL narration.
+Script arrays and multi-speaker dialogue belong to Speech as an advanced path, not the default TTS entry.
+Text-to-speech input is limited to 10,000 characters; split or use a URL when longer.
 1. Keywords: "read aloud", "convert to speech", "tts", "voice"
 2. Use case: Article to audio, note review, document narration
 3. Feature: Fastest (1-2 min), pure audio
 
-### Ambiguous "转语音" Guidance
+### Ambiguous "Convert to speech" Guidance
 
-当出现“转语音”“朗读”等模糊请求时，采用以下引导与默认策略：
+When the request is ambiguous (e.g., "convert to speech", "read aloud"), apply:
 
-1. 默认选择 FlowSpeech，优先使用 `direct` 模式，避免对内容进行改写。
-2. 输入判断：若内容为 URL，使用 `type=url`；若内容为纯文本，使用 `type=text`。
-3. 声音选择：若未指定 speaker，先调用 `get-speakers` 获取列表，再选择与 `language` 匹配的首个 `speakerId`。
-4. 仅在明确要求逐句脚本与多人对话时，切换为 Speech，并要求提供 `scripts` 数组。
+1. Default to FlowSpeech and prioritize `direct` to avoid altering content.
+2. Input type: URL uses `type=url`, plain text uses `type=text`.
+3. Speaker: if not specified, call `get-speakers` and pick the first `speakerId` matching `language`.
+4. Switch to Speech only when multi-line scripts or multi-speaker dialogue is explicitly requested, and require `scripts`.
 
-示例引导文本：
+Example guidance:
 
-“当前请求可用 FlowSpeech 直接朗读，默认 direct 模式；如需自动修正语法与标点可改用 smart。若需要逐句分配说话人，请提供 scripts 并切换至 Speech。”
+“This request can use FlowSpeech with the default direct mode; switch to smart for grammar and punctuation fixes. For per-line speaker assignment, provide scripts and switch to Speech.”
 
 **→ Image Generation**
 - Keywords: "generate image", "draw", "create picture", "visualize"
@@ -190,9 +190,9 @@ For URLs, identify type:
   • Wait and ask "done yet?"
   • Use check-status via scripts
   • View outputs in product pages:
-    - Podcast: https://listenhub.ai/zh/app/podcast
-    - Explain: https://listenhub.ai/zh/app/explainer
-    - Text-to-Speech: https://listenhub.ai/zh/app/text-to-speech
+    - Podcast: https://listenhub.ai/app/podcast
+    - Explain: https://listenhub.ai/app/explainer
+    - Text-to-Speech: https://listenhub.ai/app/text-to-speech
   • Do other things, ask later
 ```
 
@@ -214,7 +214,7 @@ When user says "done yet?" / "ready?" / "check status":
 
   "{title}"
 
-  Episode: https://listenhub.ai/zh/app/episode/{episodeId}
+  Episode: https://listenhub.ai/app/episode/{episodeId}
 
   Duration: ~{duration} minutes
 
@@ -231,7 +231,7 @@ creation is only for script review or manual edits before audio generation.
 
   "{title}"
 
-  Watch: https://listenhub.ai/zh/app/explainer
+  Watch: https://listenhub.ai/app/explainer
 
   Duration: ~{duration} minutes
 
@@ -455,7 +455,7 @@ When generating images, optimize user prompts by adding:
 
   You can:
   • Wait and ask "done yet?"
-  • Check listenhub.ai/zh/app/library
+  • Check listenhub.ai/app/library
 </response>
 </example>
 
@@ -522,7 +522,7 @@ When generating images, optimize user prompts by adding:
 
   "AI Revolution: From GPT to AGI"
 
-  Listen: https://listenhub.ai/zh/app/library
+  Listen: https://listenhub.ai/app/library
 
   Duration: ~8 minutes
 
