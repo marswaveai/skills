@@ -65,6 +65,8 @@ if [[ ! "$MODE" =~ ^(info|story)$ ]]; then
   exit 1
 fi
 
+check_jq
+
 SPEAKER_IDS=()
 IFS=',' read -r -a SPEAKER_ITEMS <<< "$SPEAKERS"
 for speaker_item in "${SPEAKER_ITEMS[@]}"; do
@@ -78,19 +80,13 @@ if [ ${#SPEAKER_IDS[@]} -ne 1 ]; then
   exit 1
 fi
 
-if command -v jq &>/dev/null; then
-  CONTENT_JSON=$(jq -n --arg c "$CONTENT" '$c')
-  SPEAKERS_JSON=$(printf '%s\n' "${SPEAKER_IDS[@]}" | jq -R '{speakerId: .}' | jq -s '.')
-  BODY=$(jq -n \
-    --argjson content "$CONTENT_JSON" \
-    --argjson speakers "$SPEAKERS_JSON" \
-    --arg lang "$LANGUAGE" \
-    --arg mode "$MODE" \
-    '{sources: [{type: "text", content: $content}], speakers: $speakers, language: $lang, mode: $mode}')
-else
-  CONTENT_ESCAPED=$(json_escape "$CONTENT")
-  speaker_escaped=$(json_escape "${SPEAKER_IDS[0]}")
-  BODY="{\"sources\":[{\"type\":\"text\",\"content\":\"${CONTENT_ESCAPED}\"}],\"speakers\":[{\"speakerId\":\"${speaker_escaped}\"}],\"language\":\"${LANGUAGE}\",\"mode\":\"${MODE}\"}"
-fi
+CONTENT_JSON=$(jq -n --arg c "$CONTENT" '$c')
+SPEAKERS_JSON=$(printf '%s\n' "${SPEAKER_IDS[@]}" | jq -R '{speakerId: .}' | jq -s '.')
+BODY=$(jq -n \
+  --argjson content "$CONTENT_JSON" \
+  --argjson speakers "$SPEAKERS_JSON" \
+  --arg lang "$LANGUAGE" \
+  --arg mode "$MODE" \
+  '{sources: [{type: "text", content: $content}], speakers: $speakers, language: $lang, mode: $mode}')
 
 api_post "storybook/episodes" "$BODY"

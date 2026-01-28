@@ -62,6 +62,8 @@ if [ -z "$SCRIPTS_FILE" ]; then
   exit 1
 fi
 
+check_jq
+
 # Read scripts from file or stdin
 if [ "$SCRIPTS_FILE" = "-" ]; then
   BODY=$(cat)
@@ -74,24 +76,17 @@ else
 fi
 
 # Validate JSON format
-if command -v jq &>/dev/null; then
-  if ! echo "$BODY" | jq empty 2>/dev/null; then
-    echo "Error: Invalid JSON format" >&2
-    exit 1
-  fi
-  if ! echo "$BODY" | jq -e '
-    (.scripts | type == "array") and
-    ((.scripts | length) > 0) and
-    (all(.scripts[]; (.content | type == "string" and length > 0) and (.speakerId | type == "string" and length > 0)))
-  ' >/dev/null 2>&1; then
-    echo "Error: Invalid scripts structure (require scripts[].content and scripts[].speakerId)" >&2
-    exit 1
-  fi
-else
-  if ! echo "$BODY" | grep -q '"scripts"' || ! echo "$BODY" | grep -q '"content"' || ! echo "$BODY" | grep -q '"speakerId"'; then
-    echo "Error: scripts JSON must include scripts[].content and scripts[].speakerId" >&2
-    exit 1
-  fi
+if ! echo "$BODY" | jq empty 2>/dev/null; then
+  echo "Error: Invalid JSON format" >&2
+  exit 1
+fi
+if ! echo "$BODY" | jq -e '
+  (.scripts | type == "array") and
+  ((.scripts | length) > 0) and
+  (all(.scripts[]; (.content | type == "string" and length > 0) and (.speakerId | type == "string" and length > 0)))
+' >/dev/null 2>&1; then
+  echo "Error: Invalid scripts structure (require scripts[].content and scripts[].speakerId)" >&2
+  exit 1
 fi
 
 api_post "speech" "$BODY"

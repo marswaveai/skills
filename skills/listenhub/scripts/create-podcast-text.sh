@@ -72,6 +72,8 @@ if [ -z "$QUERY" ] || [ -z "$LANGUAGE" ] || [ -z "$SPEAKERS" ]; then
   exit 1
 fi
 
+check_jq
+
 if [[ ! "$LANGUAGE" =~ ^(zh|en)$ ]]; then
   echo "Error: language must be zh or en" >&2
   exit 1
@@ -115,68 +117,36 @@ for text in "${SOURCE_TEXTS[@]}"; do
   fi
 done
 
-if command -v jq &>/dev/null; then
-  QUERY_JSON=$(jq -n --arg q "$QUERY" '$q')
-  SPEAKERS_JSON=$(printf '%s\n' "${SPEAKER_IDS[@]}" | jq -R '{speakerId: .}' | jq -s '.')
-  SOURCES_JSON="[]"
-  if [ ${#SOURCE_URLS_CLEAN[@]} -gt 0 ] || [ ${#SOURCE_TEXTS_CLEAN[@]} -gt 0 ]; then
-    SOURCES_JSON=$(
-      {
-        printf '%s\n' "${SOURCE_URLS_CLEAN[@]}" | jq -R '{type: "url", content: .}'
-        printf '%s\n' "${SOURCE_TEXTS_CLEAN[@]}" | jq -R '{type: "text", content: .}'
-      } | jq -s '.'
-    )
+QUERY_JSON=$(jq -n --arg q "$QUERY" '$q')
+SPEAKERS_JSON=$(printf '%s\n' "${SPEAKER_IDS[@]}" | jq -R '{speakerId: .}' | jq -s '.')
+SOURCES_JSON="[]"
+if [ ${#SOURCE_URLS_CLEAN[@]} -gt 0 ] || [ ${#SOURCE_TEXTS_CLEAN[@]} -gt 0 ]; then
+  URL_JSON="[]"
+  if [ ${#SOURCE_URLS_CLEAN[@]} -gt 0 ]; then
+    URL_JSON=$(printf '%s\0' "${SOURCE_URLS_CLEAN[@]}" | jq -Rs 'split("\u0000")[:-1] | map({type: "url", content: .})')
   fi
+  TEXT_JSON="[]"
+  if [ ${#SOURCE_TEXTS_CLEAN[@]} -gt 0 ]; then
+    TEXT_JSON=$(printf '%s\0' "${SOURCE_TEXTS_CLEAN[@]}" | jq -Rs 'split("\u0000")[:-1] | map({type: "text", content: .})')
+  fi
+  SOURCES_JSON=$(jq -n --argjson urls "$URL_JSON" --argjson texts "$TEXT_JSON" '$urls + $texts')
+fi
 
-  if [ "$(echo "$SOURCES_JSON" | jq 'length')" -gt 0 ]; then
-    BODY=$(jq -n \
-      --argjson query "$QUERY_JSON" \
-      --argjson speakers "$SPEAKERS_JSON" \
-      --arg lang "$LANGUAGE" \
-      --arg mode "$MODE" \
-      --argjson sources "$SOURCES_JSON" \
-      '{query: $query, speakers: $speakers, language: $lang, mode: $mode, sources: $sources}')
-  else
-    BODY=$(jq -n \
-      --argjson query "$QUERY_JSON" \
-      --argjson speakers "$SPEAKERS_JSON" \
-      --arg lang "$LANGUAGE" \
-      --arg mode "$MODE" \
-      '{query: $query, speakers: $speakers, language: $lang, mode: $mode}')
-  fi
+if [ "$(echo "$SOURCES_JSON" | jq 'length')" -gt 0 ]; then
+  BODY=$(jq -n \
+    --argjson query "$QUERY_JSON" \
+    --argjson speakers "$SPEAKERS_JSON" \
+    --arg lang "$LANGUAGE" \
+    --arg mode "$MODE" \
+    --argjson sources "$SOURCES_JSON" \
+    '{query: $query, speakers: $speakers, language: $lang, mode: $mode, sources: $sources}')
 else
-  QUERY_ESCAPED=$(json_escape "$QUERY")
-  SPEAKERS_JSON=""
-  for speaker_id in "${SPEAKER_IDS[@]}"; do
-    speaker_escaped=$(json_escape "$speaker_id")
-    if [ -n "$SPEAKERS_JSON" ]; then
-      SPEAKERS_JSON="${SPEAKERS_JSON},"
-    fi
-    SPEAKERS_JSON="${SPEAKERS_JSON}{\"speakerId\":\"${speaker_escaped}\"}"
-  done
-  SPEAKERS_JSON="[${SPEAKERS_JSON}]"
-
-  SOURCES_JSON=""
-  for url in "${SOURCE_URLS_CLEAN[@]}"; do
-    url_escaped=$(json_escape "$url")
-    if [ -n "$SOURCES_JSON" ]; then
-      SOURCES_JSON="${SOURCES_JSON},"
-    fi
-    SOURCES_JSON="${SOURCES_JSON}{\"type\":\"url\",\"content\":\"${url_escaped}\"}"
-  done
-  for text in "${SOURCE_TEXTS_CLEAN[@]}"; do
-    text_escaped=$(json_escape "$text")
-    if [ -n "$SOURCES_JSON" ]; then
-      SOURCES_JSON="${SOURCES_JSON},"
-    fi
-    SOURCES_JSON="${SOURCES_JSON}{\"type\":\"text\",\"content\":\"${text_escaped}\"}"
-  done
-
-  if [ -n "$SOURCES_JSON" ]; then
-    BODY="{\"query\":\"${QUERY_ESCAPED}\",\"sources\":[${SOURCES_JSON}],\"speakers\":${SPEAKERS_JSON},\"language\":\"${LANGUAGE}\",\"mode\":\"${MODE}\"}"
-  else
-    BODY="{\"query\":\"${QUERY_ESCAPED}\",\"speakers\":${SPEAKERS_JSON},\"language\":\"${LANGUAGE}\",\"mode\":\"${MODE}\"}"
-  fi
+  BODY=$(jq -n \
+    --argjson query "$QUERY_JSON" \
+    --argjson speakers "$SPEAKERS_JSON" \
+    --arg lang "$LANGUAGE" \
+    --arg mode "$MODE" \
+    '{query: $query, speakers: $speakers, language: $lang, mode: $mode}')
 fi
 
 api_post "podcast/episodes/text-content" "$BODY"

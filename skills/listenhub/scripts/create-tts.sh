@@ -83,6 +83,8 @@ if [[ ! "$MODE" =~ ^(smart|direct)$ ]]; then
   exit 1
 fi
 
+check_jq
+
 if [ "$TYPE" = "text" ]; then
   CONTENT_LEN=$(printf '%s' "$CONTENT" | wc -m | tr -d ' ')
   if [ "$CONTENT_LEN" -gt 10000 ]; then
@@ -104,20 +106,14 @@ if [ ${#SPEAKER_IDS[@]} -ne 1 ]; then
   exit 1
 fi
 
-if command -v jq &>/dev/null; then
-  CONTENT_JSON=$(jq -n --arg c "$CONTENT" '$c')
-  SPEAKERS_JSON=$(printf '%s\n' "${SPEAKER_IDS[@]}" | jq -R '{speakerId: .}' | jq -s '.')
-  BODY=$(jq -n \
-    --argjson content "$CONTENT_JSON" \
-    --arg type "$TYPE" \
-    --argjson speakers "$SPEAKERS_JSON" \
-    --arg lang "$LANGUAGE" \
-    --arg mode "$MODE" \
-    '{sources: [{type: $type, content: $content}], speakers: $speakers, language: $lang, mode: $mode}')
-else
-  CONTENT_ESCAPED=$(json_escape "$CONTENT")
-  speaker_escaped=$(json_escape "${SPEAKER_IDS[0]}")
-  BODY="{\"sources\":[{\"type\":\"${TYPE}\",\"content\":\"${CONTENT_ESCAPED}\"}],\"speakers\":[{\"speakerId\":\"${speaker_escaped}\"}],\"language\":\"${LANGUAGE}\",\"mode\":\"${MODE}\"}"
-fi
+CONTENT_JSON=$(jq -n --arg c "$CONTENT" '$c')
+SPEAKERS_JSON=$(printf '%s\n' "${SPEAKER_IDS[@]}" | jq -R '{speakerId: .}' | jq -s '.')
+BODY=$(jq -n \
+  --argjson content "$CONTENT_JSON" \
+  --arg type "$TYPE" \
+  --argjson speakers "$SPEAKERS_JSON" \
+  --arg lang "$LANGUAGE" \
+  --arg mode "$MODE" \
+  '{sources: [{type: $type, content: $content}], speakers: $speakers, language: $lang, mode: $mode}')
 
 api_post "flow-speech/episodes" "$BODY"

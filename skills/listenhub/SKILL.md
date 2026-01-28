@@ -252,6 +252,8 @@ Image results are file-only and not shown in the web UI.
 ## Script Reference
 
 Scripts are shell-based. Locate via `**/skills/listenhub/scripts/`.
+Dependency: `jq` is required for request construction.
+The AI must ensure `curl` and `jq` are installed before invoking scripts.
 
 **⚠️ Long-running Tasks**: Generation may take 1-5 minutes. Use your CLI client's native background execution feature:
 

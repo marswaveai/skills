@@ -118,6 +118,22 @@ check_curl() {
   fi
 }
 
+check_jq() {
+  if ! command -v jq &>/dev/null; then
+    cat >&2 <<'EOF'
+Error: jq not found
+
+Install:
+  macOS (Homebrew): brew install jq
+  Ubuntu/Debian: apt-get install jq
+  RHEL/CentOS: yum install jq
+  Fedora: dnf install jq
+  Arch: pacman -S jq
+EOF
+    exit 127
+  fi
+}
+
 check_api_key() {
   if [ -z "${LISTENHUB_API_KEY:-}" ]; then
     cat >&2 <<'EOF'
