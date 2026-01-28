@@ -237,7 +237,7 @@ load_env_var() {
   return 1
 }
 
-[ -z "${LABNANA_API_KEY:-}" ] && load_env_var "LABNANA_API_KEY" || true
+[ -z "${LISTENHUB_API_KEY:-}" ] && load_env_var "LISTENHUB_API_KEY" || true
 [ -z "${LABNANA_OUTPUT_DIR:-}" ] && load_env_var "LABNANA_OUTPUT_DIR" || true
 
 # ============================================
@@ -341,9 +341,9 @@ setup_config() {
   check_dependencies
 
   # Configure API Key
-  if [ -z "${LABNANA_API_KEY:-}" ]; then
+  if [ -z "${LISTENHUB_API_KEY:-}" ]; then
     echo "1. API Key" >&2
-    echo "   Visit https://labnana.com/api-keys" >&2
+    echo "   Visit https://listenhub.ai/zh/settings/api-keys" >&2
     echo "   (Requires subscription)" >&2
     echo "" >&2
     echo -n "   Please paste your API key: " >&2
@@ -355,13 +355,13 @@ setup_config() {
     fi
 
     # Check if config already exists (avoid duplicate append)
-    if ! grep -q "^export LABNANA_API_KEY=" "$shell_rc" 2>/dev/null; then
-      echo "export LABNANA_API_KEY=\"$api_key\"" >> "$shell_rc"
+    if ! grep -q "^export LISTENHUB_API_KEY=" "$shell_rc" 2>/dev/null; then
+      echo "export LISTENHUB_API_KEY=\"$api_key\"" >> "$shell_rc"
     else
       # If exists, replace
-      sed_inplace "$shell_rc" "s|^export LABNANA_API_KEY=.*|export LABNANA_API_KEY=\"$api_key\"|"
+      sed_inplace "$shell_rc" "s|^export LISTENHUB_API_KEY=.*|export LISTENHUB_API_KEY=\"$api_key\"|"
     fi
-    export LABNANA_API_KEY="$api_key"
+    export LISTENHUB_API_KEY="$api_key"
     echo "" >&2
   fi
 
@@ -397,7 +397,7 @@ setup_config() {
 }
 
 # Check and execute first-time configuration
-if [ -z "${LABNANA_API_KEY:-}" ] || [ -z "${LABNANA_OUTPUT_DIR:-}" ]; then
+  if [ -z "${LISTENHUB_API_KEY:-}" ] || [ -z "${LABNANA_OUTPUT_DIR:-}" ]; then
   setup_config
 fi
 
@@ -579,7 +579,7 @@ call_api_with_retry() {
 
     response=$("$curl_cmd" -s -w "\n%{http_code}" -X POST \
       "$API_ENDPOINT" \
-      -H "Authorization: Bearer $LABNANA_API_KEY" \
+      -H "Authorization: Bearer $LISTENHUB_API_KEY" \
       -H "Content-Type: application/json" \
       -d "$payload" \
       --max-time "$timeout" 2>&1) || true
@@ -612,7 +612,7 @@ call_api_with_retry() {
         ;;
       401)
         echo "Error: API Key invalid or expired" >&2
-        echo "  Please check LABNANA_API_KEY or get a new one: https://labnana.com/api-keys" >&2
+        echo "  Please check LISTENHUB_API_KEY or get a new one: https://listenhub.ai/zh/settings/api-keys" >&2
         return 1
         ;;
       402)

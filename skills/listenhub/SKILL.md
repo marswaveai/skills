@@ -95,12 +95,13 @@ If setup needed, guide user:
 2. Paste key (only the `lh_sk_...` part)
 3. Auto-save to ~/.zshrc
 
-### Labnana API Key (for Image Generation)
+### Image Generation API Key
 
-API key stored in `$LABNANA_API_KEY`, output path in `$LABNANA_OUTPUT_DIR`.
+Image generation uses the same ListenHub API key stored in `$LISTENHUB_API_KEY`.
+Output path is stored in `$LABNANA_OUTPUT_DIR`.
 
 On first image generation, the script auto-guides configuration:
-1. Visit https://labnana.com/api-keys (requires subscription)
+1. Visit https://listenhub.ai/zh/settings/api-keys (requires subscription)
 2. Paste API key
 3. Configure output path (default: ~/Downloads)
 4. Auto-save to shell rc file
