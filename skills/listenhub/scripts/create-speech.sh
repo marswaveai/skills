@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # Create multi-speaker audio from scripts via ListenHub API
-# Usage: ./create-speech.sh <scripts_json_file>
+# Usage: ./create-speech.sh --scripts <scripts_json_file|->
 #
 # Example:
-#   ./create-speech.sh scripts.json
+#   ./create-speech.sh --scripts scripts.json
 #
 # scripts.json format:
 # {
@@ -16,14 +16,14 @@
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${SCRIPT_DIR}/lib.sh"
 
-SCRIPTS_FILE="${1:-}"
+SCRIPTS_FILE=""
 
-if [ -z "$SCRIPTS_FILE" ]; then
+usage() {
   cat >&2 <<'EOF'
-Usage: ./create-speech.sh <scripts_json_file>
+Usage: ./create-speech.sh --scripts <scripts_json_file|->
 
 Example:
-  ./create-speech.sh scripts.json
+  ./create-speech.sh --scripts scripts.json
 
 scripts.json format:
 {
@@ -34,8 +34,31 @@ scripts.json format:
 }
 
 Or use inline JSON:
-  echo '{"scripts":[{"content":"Hello","speakerId":"cozy-man-english"}]}' | ./create-speech.sh -
+  echo '{"scripts":[{"content":"Hello","speakerId":"cozy-man-english"}]}' | ./create-speech.sh --scripts -
 EOF
+}
+
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --scripts)
+      SCRIPTS_FILE="${2:-}"
+      shift 2
+      ;;
+    --help)
+      usage
+      exit 0
+      ;;
+    *)
+      echo "Error: Unknown argument $1" >&2
+      usage
+      exit 1
+      ;;
+  esac
+done
+
+if [ -z "$SCRIPTS_FILE" ]; then
+  echo "Error: --scripts is required" >&2
+  usage
   exit 1
 fi
 
@@ -54,6 +77,19 @@ fi
 if command -v jq &>/dev/null; then
   if ! echo "$BODY" | jq empty 2>/dev/null; then
     echo "Error: Invalid JSON format" >&2
+    exit 1
+  fi
+  if ! echo "$BODY" | jq -e '
+    (.scripts | type == "array") and
+    ((.scripts | length) > 0) and
+    (all(.scripts[]; (.content | type == "string" and length > 0) and (.speakerId | type == "string" and length > 0)))
+  ' >/dev/null 2>&1; then
+    echo "Error: Invalid scripts structure (require scripts[].content and scripts[].speakerId)" >&2
+    exit 1
+  fi
+else
+  if ! echo "$BODY" | grep -q '"scripts"' || ! echo "$BODY" | grep -q '"content"' || ! echo "$BODY" | grep -q '"speakerId"'; then
+    echo "Error: scripts JSON must include scripts[].content and scripts[].speakerId" >&2
     exit 1
   fi
 fi

@@ -7,10 +7,49 @@ set -euo pipefail
 # Platform: macOS, Linux, Windows (Git Bash/WSL)
 # ============================================
 
-PROMPT="${1:-}"
-SIZE="${2:-2K}"
-RATIO="${3:-16:9}"
-REFERENCE_IMAGES="${4:-}"
+PROMPT=""
+SIZE="2K"
+RATIO="16:9"
+REFERENCE_IMAGES=""
+
+if [ $# -gt 0 ] && [[ "$1" != --* ]]; then
+  PROMPT="${1:-}"
+  SIZE="${2:-2K}"
+  RATIO="${3:-16:9}"
+  REFERENCE_IMAGES="${4:-}"
+else
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      --prompt)
+        PROMPT="${2:-}"
+        shift 2
+        ;;
+      --size)
+        SIZE="${2:-2K}"
+        shift 2
+        ;;
+      --ratio)
+        RATIO="${2:-16:9}"
+        shift 2
+        ;;
+      --reference-images)
+        REFERENCE_IMAGES="${2:-}"
+        shift 2
+        ;;
+      --help)
+        echo "Usage: $0 \"<prompt>\" [size] [ratio] [reference_images]" >&2
+        echo "  size: 1K | 2K | 4K (default: 2K)" >&2
+        echo "  ratio: 16:9 | 1:1 | 9:16 | 2:3 | 3:2 | 3:4 | 4:3 | 21:9 (default: 16:9)" >&2
+        echo "  reference_images: comma-separated URLs (max 14), e.g. \"url1,url2\"" >&2
+        exit 0
+        ;;
+      *)
+        echo "Error: Unknown argument $1" >&2
+        exit 1
+        ;;
+    esac
+  done
+fi
 
 # Configuration
 API_ENDPOINT="https://api.labnana.com/openapi/v1/images/generation"
@@ -367,15 +406,18 @@ fi
 # ============================================
 
 if [ -z "$PROMPT" ]; then
-  echo "Usage: $0 \"<prompt>\" [size] [ratio] [reference_images]" >&2
+  echo "Usage: $0 --prompt \"<prompt>\" [--size 1K|2K|4K] [--ratio 16:9|1:1|9:16|2:3|3:2|3:4|4:3|21:9] [--reference-images \"url1,url2\"]" >&2
   echo "  size: 1K | 2K | 4K (default: 2K)" >&2
   echo "  ratio: 16:9 | 1:1 | 9:16 | 2:3 | 3:2 | 3:4 | 4:3 | 21:9 (default: 16:9)" >&2
-  echo "  reference_images: comma-separated URLs (max 14), e.g. \"url1,url2\"" >&2
+  echo "  reference-images: comma-separated URLs (max 14), e.g. \"url1,url2\"" >&2
   echo "" >&2
   echo "Examples:" >&2
+  echo "  $0 --prompt \"a cute cat\" --size 2K --ratio 1:1" >&2
+  echo "  $0 --prompt \"cyberpunk city at night\" --size 4K --ratio 16:9" >&2
+  echo "  $0 --prompt \"similar style\" --size 2K --ratio 16:9 --reference-images \"https://example.com/ref1.jpg,https://example.com/ref2.png\"" >&2
+  echo "" >&2
+  echo "Legacy positional form is still supported:" >&2
   echo "  $0 \"a cute cat\" 2K 1:1" >&2
-  echo "  $0 \"cyberpunk city at night\" 4K 16:9" >&2
-  echo "  $0 \"similar style\" 2K 16:9 \"https://example.com/ref1.jpg,https://example.com/ref2.png\"" >&2
   exit 1
 fi
 

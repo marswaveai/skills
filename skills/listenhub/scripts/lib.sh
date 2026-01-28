@@ -141,6 +141,26 @@ check_api_key
 
 API_BASE="https://api.marswave.ai/openapi/v1"
 
+# Basic JSON escaping (no jq)
+json_escape() {
+  local input="$1"
+  local escaped="$input"
+  escaped="${escaped//\\/\\\\}"
+  escaped="${escaped//\"/\\\"}"
+  escaped="${escaped//$'\n'/\\n}"
+  escaped="${escaped//$'\r'/\\r}"
+  escaped="${escaped//$'\t'/\\t}"
+  printf '%s' "$escaped"
+}
+
+# Trim leading and trailing whitespace
+trim_ws() {
+  local input="$1"
+  input="${input#"${input%%[![:space:]]*}"}"
+  input="${input%"${input##*[![:space:]]}"}"
+  printf '%s' "$input"
+}
+
 # Make authenticated POST request with JSON body
 # Usage: api_post "endpoint" 'json_body'
 api_post() {
