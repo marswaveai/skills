@@ -36,8 +36,10 @@ check_version() {
   IFS='.' read -r local_major local_minor local_patch <<< "$local_ver"
   IFS='.' read -r remote_major remote_minor remote_patch <<< "$remote_ver"
 
-  # Major or minor mismatch → auto-update via curl (non-interactive)
-  if [ "$local_major" != "$remote_major" ] || [ "$local_minor" != "$remote_minor" ]; then
+  # Only update if remote version is newer (not just different)
+  # This prevents downgrading when local version is ahead of remote
+  if [ "$remote_major" -gt "$local_major" ] || \
+     { [ "$remote_major" -eq "$local_major" ] && [ "$remote_minor" -gt "$local_minor" ]; }; then
     echo "┌─────────────────────────────────────────────────────┐" >&2
     echo "│  Auto-updating: $local_ver → $remote_ver" >&2
     echo "└─────────────────────────────────────────────────────┘" >&2
@@ -86,8 +88,9 @@ check_version() {
       echo "│  Auto-update failed. Run manually:                  │" >&2
       echo "│  npx skills add marswaveai/skills                   │" >&2
     fi
-  # Patch mismatch → notify only (optional update)
-  elif [ "$local_patch" != "$remote_patch" ]; then
+  # Patch update available (remote patch > local patch) → notify only
+  elif [ "$remote_major" -eq "$local_major" ] && [ "$remote_minor" -eq "$local_minor" ] && \
+       [ "$remote_patch" -gt "$local_patch" ]; then
     echo "┌─────────────────────────────────────────────────────┐" >&2
     echo "│  Patch update available: $local_ver → $remote_ver" >&2
     echo "│  Run: npx skills add marswaveai/skills             │" >&2
