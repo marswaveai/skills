@@ -91,16 +91,17 @@ source ~/.zshrc 2>/dev/null; [ -n "$LISTENHUB_API_KEY" ] && echo "ready" || echo
 ```
 
 If setup needed, guide user:
-1. Visit https://listenhub.ai/zh/settings/api-keys
+1. Visit https://listenhub.ai/settings/api-keys
 2. Paste key (only the `lh_sk_...` part)
 3. Auto-save to ~/.zshrc
 
-### Labnana API Key (for Image Generation)
+### Image Generation API Key
 
-API key stored in `$LABNANA_API_KEY`, output path in `$LABNANA_OUTPUT_DIR`.
+Image generation uses the same ListenHub API key stored in `$LISTENHUB_API_KEY`.
+Image generation output path defaults to the user downloads directory, stored in `$LISTENHUB_OUTPUT_DIR`.
 
 On first image generation, the script auto-guides configuration:
-1. Visit https://labnana.com/api-keys (requires subscription)
+1. Visit https://listenhub.ai/settings/api-keys (requires subscription)
 2. Paste API key
 3. Configure output path (default: ~/Downloads)
 4. Auto-save to shell rc file
@@ -111,9 +112,19 @@ On first image generation, the script auto-guides configuration:
 
 Auto-detect mode from user input:
 
-**→ Podcast (Two-person dialogue)**
-- Keywords: "podcast", "chat about", "discuss", "debate", "dialogue"
-- Use case: Topic exploration, opinion exchange, deep analysis
+**→ Podcast (1-2 speakers)**
+Supports single-speaker or dual-speaker podcasts. Debate mode requires 2 speakers.
+Default mode: `quick` unless explicitly requested.
+If speakers are not specified, call `get-speakers.sh` and select the first `speakerId`
+matching the chosen `language`.
+If reference materials are provided, pass them as `--source-url` or `--source-text`.
+When the user only provides a topic (e.g., "I want a podcast about X"), proceed with:
+1) detect `language` from user input,
+2) set `mode=quick`,
+3) choose one speaker via `get-speakers.sh` matching the language,
+4) create a single-speaker podcast without further clarification.
+1. Keywords: "podcast", "chat about", "discuss", "debate", "dialogue"
+2. Use case: Topic exploration, opinion exchange, deep analysis
 - Feature: Two voices, interactive feel
 
 **→ Explain (Explainer video)**
@@ -122,14 +133,35 @@ Auto-detect mode from user input:
 - Feature: Single narrator + AI-generated visuals, can export video
 
 **→ TTS (Text-to-speech)**
-- Keywords: "read aloud", "convert to speech", "tts", "voice"
-- Use case: Article to audio, note review, document narration
-- Feature: Fastest (1-2 min), pure audio
+TTS defaults to FlowSpeech `direct` for single-pass text or URL narration.
+Script arrays and multi-speaker dialogue belong to Speech as an advanced path, not the default TTS entry.
+Text-to-speech input is limited to 10,000 characters; split or use a URL when longer.
+1. Keywords: "read aloud", "convert to speech", "tts", "voice"
+2. Use case: Article to audio, note review, document narration
+3. Feature: Fastest (1-2 min), pure audio
+
+### Ambiguous "Convert to speech" Guidance
+
+When the request is ambiguous (e.g., "convert to speech", "read aloud"), apply:
+
+1. Default to FlowSpeech and prioritize `direct` to avoid altering content.
+2. Input type: URL uses `type=url`, plain text uses `type=text`.
+3. Speaker: if not specified, call `get-speakers` and pick the first `speakerId` matching `language`.
+4. Switch to Speech only when multi-line scripts or multi-speaker dialogue is explicitly requested, and require `scripts`.
+
+Example guidance:
+
+“This request can use FlowSpeech with the default direct mode; switch to smart for grammar and punctuation fixes. For per-line speaker assignment, provide scripts and switch to Speech.”
 
 **→ Image Generation**
 - Keywords: "generate image", "draw", "create picture", "visualize"
 - Use case: Creative visualization, concept art, illustrations
 - Feature: AI image generation via Labnana API, multiple resolutions and aspect ratios
+
+**Reference Images via Image Hosts**
+When reference images are local files, upload to a known image host and use the direct image URL in `--reference-images`.
+Recommended hosts: `imgbb.com`, `sm.ms`, `postimages.org`, `imgur.com`.
+Direct image URLs should end with `.jpg`, `.png`, `.webp`, or `.gif`.
 
 **Default**: If unclear, ask user which format they prefer.
 
@@ -161,7 +193,11 @@ For URLs, identify type:
 
   You can:
   • Wait and ask "done yet?"
-  • Check listenhub.ai/zh/app/library
+  • Use check-status via scripts
+  • View outputs in product pages:
+    - Podcast: https://listenhub.ai/app/podcast
+    - Explain: https://listenhub.ai/app/explainer
+    - Text-to-Speech: https://listenhub.ai/app/text-to-speech
   • Do other things, ask later
 ```
 
@@ -183,12 +219,16 @@ When user says "done yet?" / "ready?" / "check status":
 
   "{title}"
 
-  Listen: https://listenhub.ai/zh/app/library
+  Episode: https://listenhub.ai/app/episode/{episodeId}
 
   Duration: ~{duration} minutes
 
-  Need to download? Just say so.
+  Download audio: provide audioUrl or audioStreamUrl on request
 ```
+One-stage podcast creation generates an online task. When status is success,
+the episode detail already includes scripts and audio URLs. Download uses the
+returned audioUrl or audioStreamUrl without a second create call. Two-stage
+creation is only for script review or manual edits before audio generation.
 
 **Explain result**:
 ```
@@ -196,7 +236,7 @@ When user says "done yet?" / "ready?" / "check status":
 
   "{title}"
 
-  Watch: https://listenhub.ai/zh/app/explainer-video/slides/{episodeId}
+  Watch: https://listenhub.ai/app/explainer
 
   Duration: ~{duration} minutes
 
@@ -210,50 +250,52 @@ When user says "done yet?" / "ready?" / "check status":
   ~/Downloads/labnana-{timestamp}.jpg
 ```
 
+Image results are file-only and not shown in the web UI.
+
 **Important**: Prioritize web experience. Only provide download URLs when user explicitly requests.
 
 ## Script Reference
 
-All scripts are curl-based (no extra dependencies). Locate via `**/skills/listenhub/scripts/*.sh`.
+Scripts are shell-based. Locate via `**/skills/listenhub/scripts/`.
+Dependency: `jq` is required for request construction.
+The AI must ensure `curl` and `jq` are installed before invoking scripts.
 
 **⚠️ Long-running Tasks**: Generation may take 1-5 minutes. Use your CLI client's native background execution feature:
 
 - **Claude Code**: set `run_in_background: true` in Bash tool
 - **Other CLIs**: use built-in async/background job management if available
 
-**Invocation pattern**: `$SCRIPTS/script-name.sh [args]`
+**Invocation pattern**:
+
+```bash
+$SCRIPTS/script-name.sh [args]
+```
 
 Where `$SCRIPTS` = resolved path to `**/skills/listenhub/scripts/`
 
 ### Podcast (One-Stage)
+Default path. Use unless script review or manual editing is required.
 ```bash
-$SCRIPTS/create-podcast.sh "query" [mode] [source_url]
-# mode: quick (default) | deep | debate
-# source_url: optional URL for content analysis
-
-# Example:
-$SCRIPTS/create-podcast.sh "The future of AI development" deep
-$SCRIPTS/create-podcast.sh "Analyze this article" deep "https://example.com/article"
+$SCRIPTS/create-podcast.sh --query "The future of AI development" --language en --mode deep --speakers cozy-man-english
+$SCRIPTS/create-podcast.sh --query "Analyze this article" --language en --mode deep --speakers cozy-man-english --source-url "https://example.com/article"
 ```
 
 ### Podcast (Two-Stage: Text → Audio)
-For advanced workflows requiring script editing between generation:
+Advanced path. Use only when script review or edits are explicitly requested:
 
 ```bash
 # Stage 1: Generate text content
-$SCRIPTS/create-podcast-text.sh "query" [mode] [source_url]
-# Returns: episode_id + scripts array
+$SCRIPTS/create-podcast-text.sh --query "AI history" --language en --mode deep --speakers cozy-man-english,travel-girl-english
 
 # Stage 2: Generate audio from text
-$SCRIPTS/create-podcast-audio.sh "<episode-id>" [modified_scripts.json]
-# Without scripts file: uses original scripts
-# With scripts file: uses modified scripts
+$SCRIPTS/create-podcast-audio.sh --episode "<episode-id>"
+$SCRIPTS/create-podcast-audio.sh --episode "<episode-id>" --scripts modified-scripts.json
 ```
 
 ### Speech (Multi-Speaker)
 ```bash
-$SCRIPTS/create-speech.sh <scripts_json_file>
-# Or pipe: echo '{"scripts":[...]}' | $SCRIPTS/create-speech.sh -
+$SCRIPTS/create-speech.sh --scripts scripts.json
+echo '{"scripts":[{"content":"Hello","speakerId":"cozy-man-english"}]}' | $SCRIPTS/create-speech.sh --scripts -
 
 # scripts.json format:
 # {
@@ -266,9 +308,13 @@ $SCRIPTS/create-speech.sh <scripts_json_file>
 
 ### Get Available Speakers
 ```bash
-$SCRIPTS/get-speakers.sh [language]
-# language: zh (default) | en
+$SCRIPTS/get-speakers.sh --language zh
+$SCRIPTS/get-speakers.sh --language en
 ```
+
+**Guidance**:
+1. 若用户未指定音色，必须先调用 `get-speakers.sh` 获取可用列表。
+2. 默认值兜底：取与 `language` 匹配的列表首个 `speakerId` 作为默认音色。
 
 **Response structure** (for AI parsing):
 ```json
@@ -291,34 +337,26 @@ $SCRIPTS/get-speakers.sh [language]
 
 ### Explain
 ```bash
-$SCRIPTS/create-explainer.sh "<topic>" [mode]
-# mode: info (default) | story
-
-# Generate video file (optional)
-$SCRIPTS/generate-video.sh "<episode-id>"
+$SCRIPTS/create-explainer.sh --content "Introduce ListenHub" --language en --mode info --speakers cozy-man-english
+$SCRIPTS/generate-video.sh --episode "<episode-id>"
 ```
 
 ### TTS
 ```bash
-$SCRIPTS/create-tts.sh "<text>" [mode]
-# mode: smart (default) | direct
+$SCRIPTS/create-tts.sh --type text --content "Welcome to ListenHub" --language en --mode smart --speakers cozy-man-english
 ```
 
 ### Image Generation
 ```bash
-$SCRIPTS/generate-image.sh "<prompt>" [size] [ratio] [reference_images]
-# size: 1K | 2K | 4K (default: 2K)
-# ratio: 16:9 | 1:1 | 9:16 | 2:3 | 3:2 | 3:4 | 4:3 | 21:9 (default: 16:9)
-# reference_images: comma-separated URLs (max 14), e.g. "url1,url2"
-#   - Provides visual guidance for style, composition, or content
-#   - Supports jpg, png, gif, webp, bmp formats
-#   - URLs must be publicly accessible
+$SCRIPTS/generate-image.sh --prompt "sunset over mountains" --size 2K --ratio 16:9
+$SCRIPTS/generate-image.sh --prompt "style reference" --reference-images "https://example.com/ref1.jpg,https://example.com/ref2.png"
 ```
 
 ### Check Status
 ```bash
-$SCRIPTS/check-status.sh "<episode-id>" <type>
-# type: podcast | explainer | tts
+$SCRIPTS/check-status.sh --episode "<episode-id>" --type podcast
+$SCRIPTS/check-status.sh --episode "<episode-id>" --type flow-speech
+$SCRIPTS/check-status.sh --episode "<episode-id>" --type explainer
 ```
 
 ## Language Adaptation
@@ -422,7 +460,7 @@ When generating images, optimize user prompts by adding:
 
   You can:
   • Wait and ask "done yet?"
-  • Check listenhub.ai/zh/app/library
+  • Check listenhub.ai/app/library
 </response>
 </example>
 
@@ -475,6 +513,7 @@ When generating images, optimize user prompts by adding:
 
   Prompt: a futuristic car
   Reference images: 1
+  Reference image URL: https://example.com/style-ref.jpg
   Resolution: 2K (16:9)
 
 ✓ Image generated!
@@ -489,7 +528,7 @@ When generating images, optimize user prompts by adding:
 
   "AI Revolution: From GPT to AGI"
 
-  Listen: https://listenhub.ai/zh/app/library
+  Listen: https://listenhub.ai/app/podcast
 
   Duration: ~8 minutes
 

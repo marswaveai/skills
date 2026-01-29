@@ -18,6 +18,9 @@ check_version() {
   local local_ver remote_ver http_code response
   local_ver=$(cat "$VERSION_FILE" 2>/dev/null | tr -d '[:space:]')
 
+  # Validate local version before integer comparisons
+  [[ "$local_ver" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || return 0
+
   # Fetch remote version with 5s timeout, check HTTP status
   response=$(curl -sS --max-time 5 -w "\n%{http_code}" "$REMOTE_VERSION_URL" 2>/dev/null) || return 0
   http_code=$(echo "$response" | tail -1)
@@ -36,8 +39,10 @@ check_version() {
   IFS='.' read -r local_major local_minor local_patch <<< "$local_ver"
   IFS='.' read -r remote_major remote_minor remote_patch <<< "$remote_ver"
 
-  # Major or minor mismatch → auto-update via curl (non-interactive)
-  if [ "$local_major" != "$remote_major" ] || [ "$local_minor" != "$remote_minor" ]; then
+  # Only update if remote version is newer (not just different)
+  # This prevents downgrading when local version is ahead of remote
+  if [ "$remote_major" -gt "$local_major" ] || \
+     { [ "$remote_major" -eq "$local_major" ] && [ "$remote_minor" -gt "$local_minor" ]; }; then
     echo "┌─────────────────────────────────────────────────────┐" >&2
     echo "│  Auto-updating: $local_ver → $remote_ver" >&2
     echo "└─────────────────────────────────────────────────────┘" >&2
@@ -86,8 +91,9 @@ check_version() {
       echo "│  Auto-update failed. Run manually:                  │" >&2
       echo "│  npx skills add marswaveai/skills                   │" >&2
     fi
-  # Patch mismatch → notify only (optional update)
-  elif [ "$local_patch" != "$remote_patch" ]; then
+  # Patch update available (remote patch > local patch) → notify only
+  elif [ "$remote_major" -eq "$local_major" ] && [ "$remote_minor" -eq "$local_minor" ] && \
+       [ "$remote_patch" -gt "$local_patch" ]; then
     echo "┌─────────────────────────────────────────────────────┐" >&2
     echo "│  Patch update available: $local_ver → $remote_ver" >&2
     echo "│  Run: npx skills add marswaveai/skills             │" >&2
@@ -118,13 +124,29 @@ check_curl() {
   fi
 }
 
+check_jq() {
+  if ! command -v jq &>/dev/null; then
+    cat >&2 <<'EOF'
+Error: jq not found
+
+Install:
+  macOS (Homebrew): brew install jq
+  Ubuntu/Debian: apt-get install jq
+  RHEL/CentOS: yum install jq
+  Fedora: dnf install jq
+  Arch: pacman -S jq
+EOF
+    exit 127
+  fi
+}
+
 check_api_key() {
   if [ -z "${LISTENHUB_API_KEY:-}" ]; then
     cat >&2 <<'EOF'
 Error: LISTENHUB_API_KEY not set
 
 Setup:
-  1. Get API key from https://listenhub.ai/zh/settings/api-keys
+  1. Get API key from https://listenhub.ai/settings/api-keys
   2. Add to ~/.zshrc or ~/.bashrc:
      export LISTENHUB_API_KEY="lh_sk_..."
   3. Run: source ~/.zshrc
@@ -140,6 +162,14 @@ check_api_key
 # === API Helpers ===
 
 API_BASE="https://api.marswave.ai/openapi/v1"
+
+# Trim leading and trailing whitespace
+trim_ws() {
+  local input="$1"
+  input="${input#"${input%%[![:space:]]*}"}"
+  input="${input%"${input##*[![:space:]]}"}"
+  printf '%s' "$input"
+}
 
 # Make authenticated POST request with JSON body
 # Usage: api_post "endpoint" 'json_body'
