@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 # Generate audio from podcast text content (Stage 2 of two-stage generation)
-# Usage: ./create-podcast-audio.sh <episode-id> [scripts_json_file]
+# Usage: ./create-podcast-audio.sh --episode <episode-id> [--scripts <scripts_json_file>]
 #
 # Examples:
 #   # Use original scripts
-#   ./create-podcast-audio.sh "68d699ebc4b373bd1ae50dde"
+#   ./create-podcast-audio.sh --episode "68d699ebc4b373bd1ae50dde"
 #
 #   # Use modified scripts
-#   ./create-podcast-audio.sh "68d699ebc4b373bd1ae50dde" modified-scripts.json
+#   ./create-podcast-audio.sh --episode "68d699ebc4b373bd1ae50dde" --scripts modified-scripts.json
 #
 # modified-scripts.json format:
 # {
@@ -20,19 +20,22 @@
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${SCRIPT_DIR}/lib.sh"
 
-EPISODE_ID="${1:-}"
-SCRIPTS_FILE="${2:-}"
+EPISODE_ID=""
+SCRIPTS_FILE=""
 
-if [ -z "$EPISODE_ID" ]; then
+usage() {
   cat >&2 <<'EOF'
-Usage: ./create-podcast-audio.sh <episode-id> [scripts_json_file]
+Usage: ./create-podcast-audio.sh --episode <episode-id> [--scripts <scripts_json_file>]
 
 Examples:
   # Use original scripts
-  ./create-podcast-audio.sh "68d699ebc4b373bd1ae50dde"
+  ./create-podcast-audio.sh --episode "68d699ebc4b373bd1ae50dde"
 
   # Use modified scripts
-  ./create-podcast-audio.sh "68d699ebc4b373bd1ae50dde" modified-scripts.json
+  ./create-podcast-audio.sh --episode "68d699ebc4b373bd1ae50dde" --scripts modified-scripts.json
+
+  # Use stdin for scripts
+  echo '{"scripts":[{"content":"Hello","speakerId":"cozy-man-english"}]}' | ./create-podcast-audio.sh --episode "68d699ebc4b373bd1ae50dde" --scripts -
 
 modified-scripts.json format:
 {
@@ -42,17 +45,47 @@ modified-scripts.json format:
   ]
 }
 EOF
+}
+
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --episode)
+      EPISODE_ID="${2:-}"
+      shift 2
+      ;;
+    --scripts)
+      SCRIPTS_FILE="${2:-}"
+      shift 2
+      ;;
+    --help)
+      usage
+      exit 0
+      ;;
+    *)
+      echo "Error: Unknown argument $1" >&2
+      usage
+      exit 1
+      ;;
+  esac
+done
+
+if [ -z "$EPISODE_ID" ]; then
+  echo "Error: --episode is required" >&2
+  usage
   exit 1
 fi
 
 # Build request body
 if [ -n "$SCRIPTS_FILE" ]; then
-  if [ ! -f "$SCRIPTS_FILE" ]; then
-    echo "Error: File not found: $SCRIPTS_FILE" >&2
-    exit 1
+  if [ "$SCRIPTS_FILE" = "-" ]; then
+    BODY=$(cat)
+  else
+    if [ ! -f "$SCRIPTS_FILE" ]; then
+      echo "Error: File not found: $SCRIPTS_FILE" >&2
+      exit 1
+    fi
+    BODY=$(cat "$SCRIPTS_FILE")
   fi
-
-  BODY=$(cat "$SCRIPTS_FILE")
 
   # Validate JSON format
   if command -v jq &>/dev/null; then

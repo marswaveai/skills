@@ -7,10 +7,49 @@ set -euo pipefail
 # Platform: macOS, Linux, Windows (Git Bash/WSL)
 # ============================================
 
-PROMPT="${1:-}"
-SIZE="${2:-2K}"
-RATIO="${3:-16:9}"
-REFERENCE_IMAGES="${4:-}"
+PROMPT=""
+SIZE="2K"
+RATIO="16:9"
+REFERENCE_IMAGES=""
+
+if [ $# -gt 0 ] && [[ "$1" != --* ]]; then
+  PROMPT="${1:-}"
+  SIZE="${2:-2K}"
+  RATIO="${3:-16:9}"
+  REFERENCE_IMAGES="${4:-}"
+else
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      --prompt)
+        PROMPT="${2:-}"
+        shift 2
+        ;;
+      --size)
+        SIZE="${2:-2K}"
+        shift 2
+        ;;
+      --ratio)
+        RATIO="${2:-16:9}"
+        shift 2
+        ;;
+      --reference-images)
+        REFERENCE_IMAGES="${2:-}"
+        shift 2
+        ;;
+      --help)
+        echo "Usage: $0 \"<prompt>\" [size] [ratio] [reference_images]" >&2
+        echo "  size: 1K | 2K | 4K (default: 2K)" >&2
+        echo "  ratio: 16:9 | 1:1 | 9:16 | 2:3 | 3:2 | 3:4 | 4:3 | 21:9 (default: 16:9)" >&2
+        echo "  reference_images: comma-separated URLs (max 14), e.g. \"url1,url2\"" >&2
+        exit 0
+        ;;
+      *)
+        echo "Error: Unknown argument $1" >&2
+        exit 1
+        ;;
+    esac
+  done
+fi
 
 # Configuration
 API_ENDPOINT="https://api.labnana.com/openapi/v1/images/generation"
@@ -198,8 +237,8 @@ load_env_var() {
   return 1
 }
 
-[ -z "${LABNANA_API_KEY:-}" ] && load_env_var "LABNANA_API_KEY" || true
-[ -z "${LABNANA_OUTPUT_DIR:-}" ] && load_env_var "LABNANA_OUTPUT_DIR" || true
+[ -z "${LISTENHUB_API_KEY:-}" ] && load_env_var "LISTENHUB_API_KEY" || true
+[ -z "${LISTENHUB_OUTPUT_DIR:-}" ] && load_env_var "LISTENHUB_OUTPUT_DIR" || true
 
 # ============================================
 # Dependency check and installation guide
@@ -302,9 +341,9 @@ setup_config() {
   check_dependencies
 
   # Configure API Key
-  if [ -z "${LABNANA_API_KEY:-}" ]; then
+  if [ -z "${LISTENHUB_API_KEY:-}" ]; then
     echo "1. API Key" >&2
-    echo "   Visit https://labnana.com/api-keys" >&2
+    echo "   Visit https://listenhub.ai/settings/api-keys" >&2
     echo "   (Requires subscription)" >&2
     echo "" >&2
     echo -n "   Please paste your API key: " >&2
@@ -316,18 +355,18 @@ setup_config() {
     fi
 
     # Check if config already exists (avoid duplicate append)
-    if ! grep -q "^export LABNANA_API_KEY=" "$shell_rc" 2>/dev/null; then
-      echo "export LABNANA_API_KEY=\"$api_key\"" >> "$shell_rc"
+    if ! grep -q "^export LISTENHUB_API_KEY=" "$shell_rc" 2>/dev/null; then
+      echo "export LISTENHUB_API_KEY=\"$api_key\"" >> "$shell_rc"
     else
       # If exists, replace
-      sed_inplace "$shell_rc" "s|^export LABNANA_API_KEY=.*|export LABNANA_API_KEY=\"$api_key\"|"
+      sed_inplace "$shell_rc" "s|^export LISTENHUB_API_KEY=.*|export LISTENHUB_API_KEY=\"$api_key\"|"
     fi
-    export LABNANA_API_KEY="$api_key"
+    export LISTENHUB_API_KEY="$api_key"
     echo "" >&2
   fi
 
   # Configure output path
-  if [ -z "${LABNANA_OUTPUT_DIR:-}" ]; then
+  if [ -z "${LISTENHUB_OUTPUT_DIR:-}" ]; then
     echo "2. Output path" >&2
     echo -n "   Image save location (default: ~/Downloads): " >&2
     read -r output_dir
@@ -344,12 +383,12 @@ setup_config() {
     mkdir -p "$output_dir"
 
     # Check if config already exists (avoid duplicate append)
-    if ! grep -q "^export LABNANA_OUTPUT_DIR=" "$shell_rc" 2>/dev/null; then
-      echo "export LABNANA_OUTPUT_DIR=\"$output_dir\"" >> "$shell_rc"
+    if ! grep -q "^export LISTENHUB_OUTPUT_DIR=" "$shell_rc" 2>/dev/null; then
+      echo "export LISTENHUB_OUTPUT_DIR=\"$output_dir\"" >> "$shell_rc"
     else
-      sed_inplace "$shell_rc" "s|^export LABNANA_OUTPUT_DIR=.*|export LABNANA_OUTPUT_DIR=\"$output_dir\"|"
+      sed_inplace "$shell_rc" "s|^export LISTENHUB_OUTPUT_DIR=.*|export LISTENHUB_OUTPUT_DIR=\"$output_dir\"|"
     fi
-    export LABNANA_OUTPUT_DIR="$output_dir"
+    export LISTENHUB_OUTPUT_DIR="$output_dir"
     echo "" >&2
   fi
 
@@ -358,7 +397,7 @@ setup_config() {
 }
 
 # Check and execute first-time configuration
-if [ -z "${LABNANA_API_KEY:-}" ] || [ -z "${LABNANA_OUTPUT_DIR:-}" ]; then
+  if [ -z "${LISTENHUB_API_KEY:-}" ] || [ -z "${LISTENHUB_OUTPUT_DIR:-}" ]; then
   setup_config
 fi
 
@@ -367,15 +406,18 @@ fi
 # ============================================
 
 if [ -z "$PROMPT" ]; then
-  echo "Usage: $0 \"<prompt>\" [size] [ratio] [reference_images]" >&2
+  echo "Usage: $0 --prompt \"<prompt>\" [--size 1K|2K|4K] [--ratio 16:9|1:1|9:16|2:3|3:2|3:4|4:3|21:9] [--reference-images \"url1,url2\"]" >&2
   echo "  size: 1K | 2K | 4K (default: 2K)" >&2
   echo "  ratio: 16:9 | 1:1 | 9:16 | 2:3 | 3:2 | 3:4 | 4:3 | 21:9 (default: 16:9)" >&2
-  echo "  reference_images: comma-separated URLs (max 14), e.g. \"url1,url2\"" >&2
+  echo "  reference-images: comma-separated URLs (max 14), e.g. \"url1,url2\"" >&2
   echo "" >&2
   echo "Examples:" >&2
+  echo "  $0 --prompt \"a cute cat\" --size 2K --ratio 1:1" >&2
+  echo "  $0 --prompt \"cyberpunk city at night\" --size 4K --ratio 16:9" >&2
+  echo "  $0 --prompt \"similar style\" --size 2K --ratio 16:9 --reference-images \"https://example.com/ref1.jpg,https://example.com/ref2.png\"" >&2
+  echo "" >&2
+  echo "Legacy positional form is still supported:" >&2
   echo "  $0 \"a cute cat\" 2K 1:1" >&2
-  echo "  $0 \"cyberpunk city at night\" 4K 16:9" >&2
-  echo "  $0 \"similar style\" 2K 16:9 \"https://example.com/ref1.jpg,https://example.com/ref2.png\"" >&2
   exit 1
 fi
 
@@ -537,7 +579,7 @@ call_api_with_retry() {
 
     response=$("$curl_cmd" -s -w "\n%{http_code}" -X POST \
       "$API_ENDPOINT" \
-      -H "Authorization: Bearer $LABNANA_API_KEY" \
+      -H "Authorization: Bearer $LISTENHUB_API_KEY" \
       -H "Content-Type: application/json" \
       -d "$payload" \
       --max-time "$timeout" 2>&1) || true
@@ -570,7 +612,7 @@ call_api_with_retry() {
         ;;
       401)
         echo "Error: API Key invalid or expired" >&2
-        echo "  Please check LABNANA_API_KEY or get a new one: https://labnana.com/api-keys" >&2
+        echo "  Please check LISTENHUB_API_KEY or get a new one: https://listenhub.ai/settings/api-keys" >&2
         return 1
         ;;
       402)
@@ -664,7 +706,7 @@ generate_unique_filename() {
 # ============================================
 
 # Ensure output directory exists
-mkdir -p "$LABNANA_OUTPUT_DIR"
+mkdir -p "$LISTENHUB_OUTPUT_DIR"
 
 # Build request
 PAYLOAD=$(build_json_payload "$PROMPT" "$SIZE" "$RATIO" "$REFERENCE_IMAGES")
@@ -681,7 +723,7 @@ if [ -z "$BASE64_DATA" ]; then
 fi
 
 # Generate unique filename
-OUTPUT_FILE=$(generate_unique_filename "$LABNANA_OUTPUT_DIR" "labnana" "jpg")
+OUTPUT_FILE=$(generate_unique_filename "$LISTENHUB_OUTPUT_DIR" "listenhub" "jpg")
 TEMP_OUTPUT_FILE="$OUTPUT_FILE"  # Mark as temp file for trap cleanup
 
 # Decode and save (cross-platform)
