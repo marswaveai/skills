@@ -56,8 +56,6 @@ Claude Code · Cursor · Windsurf · OpenCode · Codex · Trae · and more.
 
 If you have any questions, feel free to reach out: support@marswave.ai
 
-If any issues are found, PRs and feedback are welcome.
-
 ## License
 
 MIT
