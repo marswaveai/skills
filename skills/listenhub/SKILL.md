@@ -528,7 +528,7 @@ When generating images, optimize user prompts by adding:
 
   "AI Revolution: From GPT to AGI"
 
-  Listen: https://listenhub.ai/app/library
+  Listen: https://listenhub.ai/app/podcast
 
   Duration: ~8 minutes
 

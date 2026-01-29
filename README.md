@@ -15,11 +15,6 @@ English | <a href="./README.zh.md">简体中文</a>
 
 ---
 
-> [!NOTE]
-> This project is in **beta**. You may encounter bugs or unexpected behavior.
->
-> Windows is not officially supported. Contributions and forks are welcome.
-
 You have ideas worth sharing. [ListenHub](https://listenhub.ai) turns them into content people actually want to watch and listen to — no editing skills required.
 
 ## Install
@@ -60,6 +55,8 @@ Keys auto-configure on first use.
 Claude Code · Cursor · Windsurf · OpenCode · Codex · Trae · and more.
 
 If you have any questions, feel free to reach out: support@marswave.ai
+
+If any issues are found, PRs and feedback are welcome.
 
 ## License
 
