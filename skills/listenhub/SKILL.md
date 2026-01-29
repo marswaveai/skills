@@ -158,6 +158,11 @@ Example guidance:
 - Use case: Creative visualization, concept art, illustrations
 - Feature: AI image generation via Labnana API, multiple resolutions and aspect ratios
 
+**Reference Images via Image Hosts**
+When reference images are local files, upload to a known image host and use the direct image URL in `--reference-images`.
+Recommended hosts: `imgbb.com`, `sm.ms`, `postimages.org`, `imgur.com`.
+Direct image URLs should end with `.jpg`, `.png`, `.webp`, or `.gif`.
+
 **Default**: If unclear, ask user which format they prefer.
 
 **Explicit override**: User can say "make it a podcast" / "I want explainer video" / "just voice" / "generate image" to override auto-detection.
@@ -508,6 +513,7 @@ When generating images, optimize user prompts by adding:
 
   Prompt: a futuristic car
   Reference images: 1
+  Reference image URL: https://example.com/style-ref.jpg
   Resolution: 2K (16:9)
 
 ✓ Image generated!

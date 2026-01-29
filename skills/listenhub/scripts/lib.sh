@@ -18,6 +18,9 @@ check_version() {
   local local_ver remote_ver http_code response
   local_ver=$(cat "$VERSION_FILE" 2>/dev/null | tr -d '[:space:]')
 
+  # Validate local version before integer comparisons
+  [[ "$local_ver" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || return 0
+
   # Fetch remote version with 5s timeout, check HTTP status
   response=$(curl -sS --max-time 5 -w "\n%{http_code}" "$REMOTE_VERSION_URL" 2>/dev/null) || return 0
   http_code=$(echo "$response" | tail -1)
