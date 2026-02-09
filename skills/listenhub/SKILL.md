@@ -403,7 +403,7 @@ Agents SHOULD use `--wait` instead of manual polling loops.
 | `--timeout` | 300 | Maximum total wait (seconds) |
 | `--interval` | 10 | Base poll interval (seconds) |
 
-Exit codes: `0` = completed, `1` = failed, `2` = timeout (still pending).
+Exit codes: `0` = completed, `1` = failed, `2` = timeout or rate-limited (still pending, safe to retry after a short wait).
 
 ## Language Adaptation
 

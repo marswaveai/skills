@@ -8,7 +8,7 @@
 # Exit codes:
 #   0 = success (or single-shot completed)
 #   1 = generation failed / error
-#   2 = timeout (max polls or timeout reached, still pending)
+#   2 = timeout or rate-limited (still pending, safe to retry after a short wait)
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${SCRIPT_DIR}/lib.sh"
@@ -126,19 +126,19 @@ while true; do
     exit 2
   fi
 
-  RESPONSE=$(api_get "$ENDPOINT")
-
-  # Check for rate limit (back off and retry)
-  RESP_CODE=$(echo "$RESPONSE" | jq -r '.code // 0' 2>/dev/null)
-  if [ "$RESP_CODE" = "429" ] || [ "$RESP_CODE" = "25429" ]; then
-    CURRENT_INTERVAL=$((CURRENT_INTERVAL * 2))
-    echo "Poll $POLL_COUNT: rate limited, backing off to ${CURRENT_INTERVAL}s" >&2
+  # Fetch status; catch transient network errors (curl failures) and retry
+  if ! RESPONSE=$(api_get "$ENDPOINT"); then
+    echo "Poll $POLL_COUNT: network error, retrying in ${CURRENT_INTERVAL}s" >&2
     sleep "$CURRENT_INTERVAL"
     continue
   fi
 
-  # Reset interval after successful request (in case it was doubled by rate limit)
-  CURRENT_INTERVAL=$INTERVAL
+  # Rate-limited — exit and let the calling agent decide when to retry
+  RESP_CODE=$(echo "$RESPONSE" | jq -r '.code // 0' 2>/dev/null)
+  if [ "$RESP_CODE" = "429" ] || [ "$RESP_CODE" = "25429" ]; then
+    echo "Error: Rate limited (429). Retry after a short wait." >&2
+    exit 2
+  fi
 
   # Check process status
   STATUS=$(echo "$RESPONSE" | jq -r '.data.processStatus // "unknown"' 2>/dev/null)
