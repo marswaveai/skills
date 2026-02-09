@@ -295,7 +295,7 @@ $SCRIPTS/create-podcast-text.sh --query "AI history" --language en --mode deep -
 
 **Review Gate (mandatory)**: After text generation completes, the agent MUST:
 
-1. Run `check-status.sh --wait` to poll until completion (handles rate limiting and timeout internally).
+1. Run `check-status.sh --wait` to poll until completion. On exit code 2 (timeout or rate-limited), wait briefly and retry.
 2. Save **two files** from the response:
    - `~/Downloads/podcast-draft-<episode-id>.md` — human-readable version assembled from the response fields (`title`, `outline`, `sourceProcessResult.content`, and the `scripts` array formatted as readable dialogue). This is for the user to review.
    - `~/Downloads/podcast-scripts-<episode-id>.json` — the raw `{"scripts": [...]}` object extracted from the response, exactly in the format that `create-podcast-audio.sh --scripts` expects. This is the machine-readable source of truth for Stage 2.
@@ -393,8 +393,8 @@ $SCRIPTS/check-status.sh --episode "<episode-id>" --type explainer --wait --time
 
 `tts` is accepted as an alias for `flow-speech`.
 
-**`--wait` mode** handles polling internally with rate-limit awareness and configurable limits.
-Agents SHOULD use `--wait` instead of manual polling loops.
+**`--wait` mode** handles polling internally with configurable limits.
+Agents SHOULD use `--wait` instead of manual polling loops. On exit code 2, wait briefly and retry the command.
 
 | Option | Default | Description |
 |---|---|---|
