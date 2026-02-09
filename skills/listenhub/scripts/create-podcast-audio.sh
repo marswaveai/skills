@@ -98,7 +98,4 @@ else
   BODY="{}"
 fi
 
-curl -sS -X POST "${API_BASE}/podcast/episodes/${EPISODE_ID}/audio" \
-  -H "Authorization: Bearer ${LISTENHUB_API_KEY}" \
-  -H "Content-Type: application/json" \
-  -d "$BODY"
+api_post "podcast/episodes/${EPISODE_ID}/audio" "$BODY"

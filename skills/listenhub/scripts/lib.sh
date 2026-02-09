@@ -162,6 +162,7 @@ check_api_key
 # === API Helpers ===
 
 API_BASE="https://api.marswave.ai/openapi/v1"
+AGENT_SKILLS_CLIENT_ID="PJBkELS1o_q9nJ~NzF2_Fmr21TNX&~eoJR49FFdFhD3U"
 
 # Trim leading and trailing whitespace
 trim_ws() {
@@ -180,6 +181,7 @@ api_post() {
   curl -sS -X POST "${API_BASE}/${endpoint}" \
     -H "Authorization: Bearer ${LISTENHUB_API_KEY}" \
     -H "Content-Type: application/json" \
+    -H "x-marswave-client-id: ${AGENT_SKILLS_CLIENT_ID}" \
     -d "$body"
 }
 
@@ -189,5 +191,6 @@ api_get() {
   local endpoint="$1"
 
   curl -sS -X GET "${API_BASE}/${endpoint}" \
-    -H "Authorization: Bearer ${LISTENHUB_API_KEY}"
+    -H "Authorization: Bearer ${LISTENHUB_API_KEY}" \
+    -H "x-marswave-client-id: ${AGENT_SKILLS_CLIENT_ID}"
 }

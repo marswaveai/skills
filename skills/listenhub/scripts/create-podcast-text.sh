@@ -103,19 +103,23 @@ if [ "$MODE" = "debate" ] && [ ${#SPEAKER_IDS[@]} -ne 2 ]; then
 fi
 
 SOURCE_URLS_CLEAN=()
-for url in "${SOURCE_URLS[@]}"; do
-  url=$(trim_ws "$url")
-  if [ -n "$url" ]; then
-    SOURCE_URLS_CLEAN+=("$url")
-  fi
-done
+if [ ${#SOURCE_URLS[@]} -gt 0 ]; then
+  for url in "${SOURCE_URLS[@]}"; do
+    url=$(trim_ws "$url")
+    if [ -n "$url" ]; then
+      SOURCE_URLS_CLEAN+=("$url")
+    fi
+  done
+fi
 SOURCE_TEXTS_CLEAN=()
-for text in "${SOURCE_TEXTS[@]}"; do
-  text=$(trim_ws "$text")
-  if [ -n "$text" ]; then
-    SOURCE_TEXTS_CLEAN+=("$text")
-  fi
-done
+if [ ${#SOURCE_TEXTS[@]} -gt 0 ]; then
+  for text in "${SOURCE_TEXTS[@]}"; do
+    text=$(trim_ws "$text")
+    if [ -n "$text" ]; then
+      SOURCE_TEXTS_CLEAN+=("$text")
+    fi
+  done
+fi
 
 QUERY_JSON=$(jq -n --arg q "$QUERY" '$q')
 SPEAKERS_JSON=$(printf '%s\n' "${SPEAKER_IDS[@]}" | jq -R '{speakerId: .}' | jq -s '.')

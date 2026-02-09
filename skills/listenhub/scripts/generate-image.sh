@@ -53,6 +53,7 @@ fi
 
 # Configuration
 API_ENDPOINT="https://api.labnana.com/openapi/v1/images/generation"
+AGENT_SKILLS_CLIENT_ID="PJBkELS1o_q9nJ~NzF2_Fmr21TNX&~eoJR49FFdFhD3U"
 MAX_RETRIES=3
 INITIAL_TIMEOUT=600
 RETRY_DELAY=5
@@ -581,6 +582,7 @@ call_api_with_retry() {
       "$API_ENDPOINT" \
       -H "Authorization: Bearer $LISTENHUB_API_KEY" \
       -H "Content-Type: application/json" \
+      -H "x-marswave-client-id: $AGENT_SKILLS_CLIENT_ID" \
       -d "$payload" \
       --max-time "$timeout" 2>&1) || true
 
