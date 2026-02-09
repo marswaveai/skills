@@ -134,14 +134,14 @@ while true; do
   fi
 
   # Rate-limited — exit and let the calling agent decide when to retry
-  RESP_CODE=$(echo "$RESPONSE" | jq -r '.code // 0' 2>/dev/null)
+  RESP_CODE=$(echo "$RESPONSE" | jq -r '.code // 0' 2>/dev/null || echo "0")
   if [ "$RESP_CODE" = "429" ] || [ "$RESP_CODE" = "25429" ]; then
     echo "Error: Rate limited (429). Retry after a short wait." >&2
     exit 2
   fi
 
-  # Check process status
-  STATUS=$(echo "$RESPONSE" | jq -r '.data.processStatus // "unknown"' 2>/dev/null)
+  # Check process status (default to "unknown" if response is not valid JSON)
+  STATUS=$(echo "$RESPONSE" | jq -r '.data.processStatus // "unknown"' 2>/dev/null || echo "unknown")
 
   case "$STATUS" in
     success|completed)
