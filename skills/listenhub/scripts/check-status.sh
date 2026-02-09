@@ -108,7 +108,6 @@ check_jq
 
 START_TIME=$(date +%s)
 POLL_COUNT=0
-CURRENT_INTERVAL=$INTERVAL
 
 while true; do
   POLL_COUNT=$((POLL_COUNT + 1))
@@ -128,8 +127,8 @@ while true; do
 
   # Fetch status; catch transient network errors (curl failures) and retry
   if ! RESPONSE=$(api_get "$ENDPOINT"); then
-    echo "Poll $POLL_COUNT: network error, retrying in ${CURRENT_INTERVAL}s" >&2
-    sleep "$CURRENT_INTERVAL"
+    echo "Poll $POLL_COUNT: network error, retrying in ${INTERVAL}s" >&2
+    sleep "$INTERVAL"
     continue
   fi
 
@@ -155,7 +154,7 @@ while true; do
     *)
       REMAINING=$((TIMEOUT - ELAPSED))
       echo "Poll $POLL_COUNT: status=$STATUS, elapsed=${ELAPSED}s, remaining=${REMAINING}s" >&2
-      sleep "$CURRENT_INTERVAL"
+      sleep "$INTERVAL"
       ;;
   esac
 done
