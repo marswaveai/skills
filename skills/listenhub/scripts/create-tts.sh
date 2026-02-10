@@ -43,7 +43,7 @@ while [ $# -gt 0 ]; do
       shift 2
       ;;
     --mode)
-      MODE="${2:-smart}"
+      MODE="${2:-direct}"
       shift 2
       ;;
     --speakers)

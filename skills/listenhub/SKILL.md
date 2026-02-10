@@ -280,15 +280,39 @@ $SCRIPTS/create-podcast.sh --query "The future of AI development" --language en 
 $SCRIPTS/create-podcast.sh --query "Analyze this article" --language en --mode deep --speakers cozy-man-english --source-url "https://example.com/article"
 ```
 
-### Podcast (Two-Stage: Text → Audio)
-Advanced path. Use only when script review or edits are explicitly requested:
+Multiple `--source-url` and `--source-text` arguments are supported to combine several references in one request.
 
+### Podcast (Two-Stage: Text → Review → Audio)
+Advanced path. Use only when script review or edits are explicitly requested.
+
+**The entire value of two-stage generation is human review between stages.
+Skipping review reduces it to one-stage with extra latency — never do this.**
+
+**Stage 1**: Generate text content.
 ```bash
-# Stage 1: Generate text content
 $SCRIPTS/create-podcast-text.sh --query "AI history" --language en --mode deep --speakers cozy-man-english,travel-girl-english
+```
 
-# Stage 2: Generate audio from text
+**Review Gate (mandatory)**: After text generation completes, the agent MUST:
+
+1. Run `check-status.sh --wait` to poll until completion. On exit code 2 (timeout or rate-limited), wait briefly and retry.
+2. Save **two files** from the response:
+   - `~/Downloads/podcast-draft-<episode-id>.md` — human-readable version assembled from the response fields (`title`, `outline`, `sourceProcessResult.content`, and the `scripts` array formatted as readable dialogue). This is for the user to review.
+   - `~/Downloads/podcast-scripts-<episode-id>.json` — the raw `{"scripts": [...]}` object extracted from the response, exactly in the format that `create-podcast-audio.sh --scripts` expects. This is the machine-readable source of truth for Stage 2.
+3. Inform the user that both files have been saved, and offer to open the markdown draft for review (use the `open` command on macOS).
+4. **STOP and wait for explicit user approval** before proceeding to Stage 2.
+5. On user approval:
+   - **No changes**: run `create-podcast-audio.sh --episode <id>` without `--scripts` (server uses original).
+   - **With edits**: the user may edit the JSON file directly, or describe changes for the agent to apply. Pass the modified file via `--scripts`.
+
+The agent MUST NOT proceed to Stage 2 automatically. This is a hard constraint, not a suggestion.
+
+**Stage 2**: Generate audio from reviewed/approved text.
+```bash
+# User approved without changes:
 $SCRIPTS/create-podcast-audio.sh --episode "<episode-id>"
+
+# User provided edits:
 $SCRIPTS/create-podcast-audio.sh --episode "<episode-id>" --scripts modified-scripts.json
 ```
 
@@ -352,12 +376,34 @@ $SCRIPTS/generate-image.sh --prompt "sunset over mountains" --size 2K --ratio 16
 $SCRIPTS/generate-image.sh --prompt "style reference" --reference-images "https://example.com/ref1.jpg,https://example.com/ref2.png"
 ```
 
+Supported sizes: `1K | 2K | 4K` (default: `2K`).
+Supported aspect ratios: `16:9 | 1:1 | 9:16 | 2:3 | 3:2 | 3:4 | 4:3 | 21:9` (default: `16:9`).
+Reference images: comma-separated URLs, maximum 14.
+
 ### Check Status
 ```bash
+# Single-shot query
 $SCRIPTS/check-status.sh --episode "<episode-id>" --type podcast
-$SCRIPTS/check-status.sh --episode "<episode-id>" --type flow-speech
-$SCRIPTS/check-status.sh --episode "<episode-id>" --type explainer
+
+# Wait mode (recommended for automated polling)
+$SCRIPTS/check-status.sh --episode "<episode-id>" --type podcast --wait
+$SCRIPTS/check-status.sh --episode "<episode-id>" --type flow-speech --wait --timeout 60
+$SCRIPTS/check-status.sh --episode "<episode-id>" --type explainer --wait --timeout 600
 ```
+
+`tts` is accepted as an alias for `flow-speech`.
+
+**`--wait` mode** handles polling internally with configurable limits.
+Agents SHOULD use `--wait` instead of manual polling loops. On exit code 2, wait briefly and retry the command.
+
+| Option | Default | Description |
+|---|---|---|
+| `--wait` | off | Enable polling mode |
+| `--max-polls` | 30 | Maximum poll attempts |
+| `--timeout` | 300 | Maximum total wait (seconds) |
+| `--interval` | 10 | Base poll interval (seconds) |
+
+Exit codes: `0` = completed, `1` = failed, `2` = timeout or rate-limited (still pending, safe to retry after a short wait).
 
 ## Language Adaptation
 
@@ -411,40 +457,37 @@ Your job is NOT to:
 - Server has full AI capability to process content
 - If user needs specific speakers → call `get-speakers.sh` first to list options
 
-**Labnana mode (enhance)**:
-- Image Generation → client-side AI optimizes prompt
-- Thin forwarding layer, needs client intelligence enhancement
+**Labnana mode (passthrough by default)**:
+- Image Generation → pass the user's prompt through as-is by default
+- The generation model handles prompt interpretation; client-side rewriting is not required
 
-## Prompt Optimization (Image Generation)
+## Prompt Handling (Image Generation)
 
-When generating images, optimize user prompts by adding:
+**Default behavior: transparent forwarding.** Pass the user's prompt directly to the script without modification.
 
-**Style Enhancement**:
-- "cyberpunk" → add "neon lights, futuristic, dystopian"
-- "ink painting" → add "Chinese ink painting, traditional art style"
-- "photorealistic" → add "highly detailed, 8K quality"
+**When to offer optimization**:
+- The user provides only a short topic or phrase (e.g., "a cat"), AND
+- The user has not explicitly stated they want verbatim generation
 
-**Scene Details**:
-- Time: at night / at sunset / in the morning
-- Lighting: dramatic lighting / soft lighting / neon glow
-- Weather: rainy / foggy / clear sky
+In this case, ask whether the user would like help enriching the prompt. Do not optimize without confirmation.
 
-**Composition Quality**:
-- Composition: cinematic composition / wide-angle / close-up
-- Quality: highly detailed / 8K quality / professional photography
+**When to never modify**:
+- The user pastes a long, structured, or detailed prompt — treat them as experienced
+- The user explicitly says "use this prompt exactly" or similar
 
-**DO**:
-- Understand user intent, add missing details
+**If the user agrees to optimization**, the following techniques are available as reference:
+
+**Style**: "cyberpunk" → add "neon lights, futuristic, dystopian"; "ink painting" → add "Chinese ink painting, traditional art style"
+
+**Scene**: time of day, lighting conditions, weather
+
+**Quality**: "highly detailed", "8K quality", "cinematic composition"
+
+**Rules when optimizing**:
 - Use English keywords (models trained on English)
-- Add quality descriptors
-- Keep user's core intent unchanged
-- Show optimized prompt transparently
-
-**DON'T**:
-- Drastically change user's original meaning
-- Add elements user explicitly doesn't want
-- Over-stack complex terminology
-- If user wants "simple", don't add "highly detailed"
+- Show the optimized prompt transparently before submitting
+- Keep the user's core intent unchanged
+- Do not over-stack terminology or add unwanted elements
 
 </instructions>
 
@@ -487,19 +530,23 @@ When generating images, optimize user prompts by adding:
 </response>
 </example>
 
-<example name="image-generation">
+<example name="image-generation-short-prompt">
 <user>Generate an image: cyberpunk city at night</user>
+<response>
+→ Short prompt detected. Would you like help enriching it with style/lighting/composition details, or use it as-is?
+</response>
+</example>
+
+<example name="image-generation-detailed-prompt">
+<user>Generate an image: "Cyberpunk city at night, neon lights reflecting on wet streets, towering skyscrapers with holographic ads, flying vehicles, cinematic composition, highly detailed, 8K quality"</user>
 <response>
 → Generating image...
 
-  Original: cyberpunk city at night
-
-  Optimized prompt:
-  "Cyberpunk city at night, neon lights reflecting on wet streets,
+  Prompt: Cyberpunk city at night, neon lights reflecting on wet streets,
    towering skyscrapers with holographic ads, flying vehicles,
-   cinematic composition, highly detailed, 8K quality"
+   cinematic composition, highly detailed, 8K quality
 
-  Resolution: 4K (16:9)
+  Resolution: 2K (16:9)
 
 ✓ Image generated!
   ~/Downloads/labnana-20260121-143145.jpg
