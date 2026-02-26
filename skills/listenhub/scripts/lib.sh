@@ -51,7 +51,10 @@ check_version() {
 }
 
 # Run version check (notify-only, no auto-update)
-check_version
+# Set LISTENHUB_SKIP_VERSION_CHECK=1 to disable
+if [ "${LISTENHUB_SKIP_VERSION_CHECK:-}" != "1" ]; then
+  check_version
+fi
 
 # Load API key from shell config (try multiple sources)
 # Extract value safely without eval to prevent code injection
