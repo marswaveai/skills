@@ -69,12 +69,24 @@ else
     line=$(grep -m1 '^[[:space:]]*export[[:space:]]\{1,\}LISTENHUB_API_KEY=' "$file" 2>/dev/null) || return 1
     # Strip everything up to and including the first =
     local value="${line#*=}"
-    # Remove surrounding quotes (single or double)
-    value="${value#\"}" ; value="${value%\"}"
-    value="${value#\'}" ; value="${value%\'}"
-    # Remove trailing comments and whitespace
-    value="${value%%#*}"
-    value=$(printf '%s' "$value" | sed 's/[[:space:]]*$//')
+    # Extract based on quoting style
+    case "$value" in
+      \"*)
+        # Double-quoted: extract between first and last double quote
+        value="${value#\"}"
+        value="${value%\"*}"
+        ;;
+      \'*)
+        # Single-quoted: extract between first and last single quote
+        value="${value#\'}"
+        value="${value%\'*}"
+        ;;
+      *)
+        # Unquoted: strip trailing comments and whitespace
+        value="${value%%#*}"
+        value="${value%"${value##*[![:space:]]}"}"
+        ;;
+    esac
     [ -n "$value" ] && printf '%s' "$value"
   }
   _key=$(_extract_api_key ~/.zshrc) || _key=$(_extract_api_key ~/.bashrc) || _key=""
