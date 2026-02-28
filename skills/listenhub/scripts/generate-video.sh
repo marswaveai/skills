@@ -35,4 +35,6 @@ if [ -z "$EPISODE_ID" ]; then
   exit 1
 fi
 
+validate_id "$EPISODE_ID" "episode-id"
+
 api_post "storybook/episodes/${EPISODE_ID}/video" "{}"

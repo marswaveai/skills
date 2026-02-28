@@ -39,80 +39,62 @@ check_version() {
   IFS='.' read -r local_major local_minor local_patch <<< "$local_ver"
   IFS='.' read -r remote_major remote_minor remote_patch <<< "$remote_ver"
 
-  # Only update if remote version is newer (not just different)
-  # This prevents downgrading when local version is ahead of remote
+  # Notify if remote version is newer (major/minor bump or patch bump)
   if [ "$remote_major" -gt "$local_major" ] || \
-     { [ "$remote_major" -eq "$local_major" ] && [ "$remote_minor" -gt "$local_minor" ]; }; then
+     { [ "$remote_major" -eq "$local_major" ] && [ "$remote_minor" -gt "$local_minor" ]; } || \
+     { [ "$remote_major" -eq "$local_major" ] && [ "$remote_minor" -eq "$local_minor" ] && [ "$remote_patch" -gt "$local_patch" ]; }; then
     echo "┌─────────────────────────────────────────────────────┐" >&2
-    echo "│  Auto-updating: $local_ver → $remote_ver" >&2
-    echo "└─────────────────────────────────────────────────────┘" >&2
-
-    # Download and replace scripts using curl (non-interactive, no git required)
-    local base_url="https://raw.githubusercontent.com/marswaveai/skills/main/skills/listenhub"
-    local api_url="https://api.github.com/repos/marswaveai/skills/contents/skills/listenhub/scripts"
-    local update_success=true
-
-    # Update VERSION file
-    if ! curl -fsSL --max-time 10 "$base_url/VERSION" -o "$VERSION_FILE.tmp" 2>/dev/null; then
-      update_success=false
-    fi
-
-    # Fetch remote script list from GitHub API and download all scripts
-    if [ "$update_success" = true ]; then
-      local script_list
-      script_list=$(curl -fsSL --max-time 10 "$api_url" 2>/dev/null | grep -o '"name":"[^"]*\.sh"' | cut -d'"' -f4)
-
-      if [ -z "$script_list" ]; then
-        update_success=false
-      else
-        for script_name in $script_list; do
-          if ! curl -fsSL --max-time 10 "$base_url/scripts/$script_name" -o "$SCRIPT_DIR/$script_name.tmp" 2>/dev/null; then
-            update_success=false
-            break
-          fi
-        done
-      fi
-    fi
-
-    # If all downloads succeeded, replace files atomically
-    if [ "$update_success" = true ]; then
-      # Move all script files first
-      for script_tmp in "$SCRIPT_DIR"/*.sh.tmp; do
-        [ -f "$script_tmp" ] || continue
-        local script="${script_tmp%.tmp}"
-        mv -f "$script_tmp" "$script" && chmod +x "$script"
-      done
-      # Only update VERSION after all scripts are successfully moved
-      mv -f "$VERSION_FILE.tmp" "$VERSION_FILE" 2>/dev/null || true
-      echo "│  ✓ Updated successfully to $remote_ver                  │" >&2
-    else
-      # Cleanup temp files on failure
-      rm -f "$VERSION_FILE.tmp" "$SCRIPT_DIR"/*.sh.tmp 2>/dev/null || true
-      echo "│  Auto-update failed. Run manually:                  │" >&2
-      echo "│  npx skills add marswaveai/skills                   │" >&2
-    fi
-  # Patch update available (remote patch > local patch) → notify only
-  elif [ "$remote_major" -eq "$local_major" ] && [ "$remote_minor" -eq "$local_minor" ] && \
-       [ "$remote_patch" -gt "$local_patch" ]; then
-    echo "┌─────────────────────────────────────────────────────┐" >&2
-    echo "│  Patch update available: $local_ver → $remote_ver" >&2
+    echo "│  Update available: $local_ver → $remote_ver" >&2
     echo "│  Run: npx skills add marswaveai/skills             │" >&2
     echo "└─────────────────────────────────────────────────────┘" >&2
   fi
 }
 
-# Run version check (auto-update via curl if available)
-check_version
+# Run version check (notify-only, no auto-update)
+# Set LISTENHUB_SKIP_VERSION_CHECK=1 to disable
+if [ "${LISTENHUB_SKIP_VERSION_CHECK:-}" != "1" ]; then
+  check_version
+fi
 
 # Load API key from shell config (try multiple sources)
-# Note: source may fail on zsh-specific syntax, so we use || true
+# Extract value safely without eval to prevent code injection
 if [ -n "${LISTENHUB_API_KEY:-}" ]; then
   : # Already set, skip loading
-elif [ -f ~/.zshrc ]; then
-  # Extract just the export line to avoid zsh syntax issues
-  eval "$(grep 'export LISTENHUB_API_KEY' ~/.zshrc 2>/dev/null || true)"
-elif [ -f ~/.bashrc ]; then
-  eval "$(grep 'export LISTENHUB_API_KEY' ~/.bashrc 2>/dev/null || true)"
+else
+  _extract_api_key() {
+    local file="$1"
+    [ -f "$file" ] || return 1
+    # Match: export LISTENHUB_API_KEY="value" or export LISTENHUB_API_KEY='value' or unquoted
+    local line
+    line=$(grep -m1 '^[[:space:]]*export[[:space:]]\{1,\}LISTENHUB_API_KEY=' "$file" 2>/dev/null) || return 1
+    # Strip everything up to and including the first =
+    local value="${line#*=}"
+    # Extract based on quoting style
+    case "$value" in
+      \"*)
+        # Double-quoted: extract between first and last double quote
+        value="${value#\"}"
+        value="${value%\"*}"
+        ;;
+      \'*)
+        # Single-quoted: extract between first and last single quote
+        value="${value#\'}"
+        value="${value%\'*}"
+        ;;
+      *)
+        # Unquoted: strip trailing comments and whitespace
+        value="${value%%#*}"
+        value="${value%"${value##*[![:space:]]}"}"
+        ;;
+    esac
+    [ -n "$value" ] && printf '%s' "$value"
+  }
+  _key=$(_extract_api_key ~/.zshrc) || _key=$(_extract_api_key ~/.bashrc) || _key=""
+  if [ -n "$_key" ]; then
+    export LISTENHUB_API_KEY="$_key"
+  fi
+  unset -f _extract_api_key
+  unset _key
 fi
 
 # === Environment Checks ===
@@ -158,6 +140,19 @@ EOF
 # Run checks
 check_curl
 check_api_key
+
+# === Input Validation ===
+
+# Validate that an ID contains only safe characters (alphanumeric, hyphen, underscore)
+# Usage: validate_id "value" "field_name"
+validate_id() {
+  local value="$1"
+  local name="${2:-id}"
+  if [[ ! "$value" =~ ^[a-zA-Z0-9_-]+$ ]]; then
+    echo "Error: Invalid $name (only alphanumeric, hyphen, underscore allowed): $value" >&2
+    exit 1
+  fi
+}
 
 # === API Helpers ===
 

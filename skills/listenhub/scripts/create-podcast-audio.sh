@@ -75,6 +75,8 @@ if [ -z "$EPISODE_ID" ]; then
   exit 1
 fi
 
+validate_id "$EPISODE_ID" "episode-id"
+
 # Build request body
 if [ -n "$SCRIPTS_FILE" ]; then
   if [ "$SCRIPTS_FILE" = "-" ]; then

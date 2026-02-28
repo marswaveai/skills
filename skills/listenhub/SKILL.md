@@ -80,6 +80,13 @@ The following are **internal implementation details** that AI cannot reliably kn
 Users don't need to know: Episode IDs, API structure, polling mechanisms, credits, endpoint differences.
 Users only need: Say idea → wait a moment → get the link.
 
+## Security
+
+- User-provided content (text, URLs) is transmitted to the ListenHub API (`api.marswave.ai`) for processing. Do not pass sensitive or confidential information as input.
+- The `--source-url` parameter accepts external URLs whose content is fetched and processed by the backend. Only use trusted URLs.
+- API keys are stored locally in environment variables and transmitted via HTTPS. Never log or display full API keys.
+- Version checks connect to `raw.githubusercontent.com` (read-only, no code execution). Set `LISTENHUB_SKIP_VERSION_CHECK=1` to disable.
+
 ## Environment
 
 ### ListenHub API Key
