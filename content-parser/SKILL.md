@@ -29,7 +29,7 @@ Extract and normalize content from URLs across supported platforms. Returns stru
 - Always read `shared/authentication.md` for API key and headers
 - Follow `shared/common-patterns.md` for polling, errors, and interaction patterns
 - URL must be a valid HTTP(S) URL
-- **TEMPORARY**: Content extract API is at `http://api.staging.listenhub.ai/openapi/v1` (not the production base URL). Use this until the endpoint goes live.
+- **TEMPORARY**: Content extract API is at `https://staging-api.marswave.ai/openapi/v1` (not the production base URL). Use this until the endpoint goes live.
 
 <HARD-GATE>
 Use the AskUserQuestion tool for every multiple-choice step — do NOT print options as plain text. Ask one question at a time. Wait for the user's answer before proceeding to the next step. After collecting URL and language preference, confirm with the user before calling the extraction API.
@@ -90,7 +90,7 @@ Wait for explicit confirmation before calling the API.
 
 ## API Reference
 
-- Content extract: `shared/api-reference.md` § 7. Content Extract
+- Content extract: `shared/api-reference.md` § 5. Content Extract
 - Supported platforms: `references/supported-platforms.md`
 - Polling: `shared/common-patterns.md` § Async Polling
 - Error handling: `shared/common-patterns.md` § Error Handling
@@ -105,7 +105,7 @@ Wait for explicit confirmation before calling the API.
 3. Submit extraction
 
 ```bash
-curl -sS -X POST "http://api.staging.listenhub.ai/openapi/v1/content/extract" \
+curl -sS -X POST "https://staging-api.marswave.ai/openapi/v1/content/extract" \
   -H "Authorization: Bearer $LISTENHUB_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{"url": "https://en.wikipedia.org/wiki/Topology"}'
@@ -114,7 +114,7 @@ curl -sS -X POST "http://api.staging.listenhub.ai/openapi/v1/content/extract" \
 4. Poll until complete:
 
 ```bash
-curl -sS "http://api.staging.listenhub.ai/openapi/v1/content/extract/69a7dac700cf95938f86d9bb" \
+curl -sS "https://staging-api.marswave.ai/openapi/v1/content/extract/69a7dac700cf95938f86d9bb" \
   -H "Authorization: Bearer $LISTENHUB_API_KEY"
 ```
 

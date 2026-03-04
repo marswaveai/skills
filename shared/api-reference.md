@@ -1,13 +1,46 @@
 # ListenHub API Reference
 
-Complete API reference for ListenHub and Labnana services. Source of truth for all skills.
+Complete API reference for ListenHub services. Source of truth for all skills.
 
 **Base URL**: `https://api.marswave.ai/openapi/v1`
 **Authentication**: See [authentication.md](./authentication.md)
 
 ---
 
-## 1. Speakers
+## 1. Auth
+
+### GET /auth/api-key
+
+Get a user's API key by email. Requires admin API key.
+
+**Parameters (query string):**
+
+| Param | Required | Type | Description |
+|-------|----------|------|-------------|
+| email | **Yes** | string | User email address |
+
+**curl:**
+
+```bash
+curl -sS "https://api.marswave.ai/openapi/v1/auth/api-key?email=user@example.com" \
+  -H "Authorization: Bearer $LISTENHUB_API_KEY"
+```
+
+**Response:**
+
+```json
+{
+  "code": 0,
+  "message": "",
+  "data": {
+    "apiKey": "lh_sk_abc123_def456"
+  }
+}
+```
+
+---
+
+## 2. Speakers
 
 ### GET /speakers/list
 
@@ -24,8 +57,7 @@ Get available voice speakers, optionally filtered by language.
 
 ```bash
 curl -sS "https://api.marswave.ai/openapi/v1/speakers/list?language=en" \
-  -H "Authorization: Bearer $LISTENHUB_API_KEY" \
-
+  -H "Authorization: Bearer $LISTENHUB_API_KEY"
 ```
 
 **Response:**
@@ -60,20 +92,21 @@ curl -sS "https://api.marswave.ai/openapi/v1/speakers/list?language=en" \
 
 ---
 
-## 2. Podcast
+## 3. Podcast
 
 ### POST /podcast/episodes
 
-Create a podcast episode (one-stage: text + audio generated together).
+Create a podcast episode.
 
 **Request body:**
 
 | Field | Required | Type | Description |
 |-------|----------|------|-------------|
-| sources | **Yes** | array | Content sources (see Sources format below) |
 | speakers | **Yes** | array | 1-2 speaker objects `[{speakerId: "..."}]` |
+| query | No | string | Topic or prompt text |
+| sources | No | array | Content sources (see Sources format below) |
 | language | No | string | `en` or `zh` |
-| mode | No | string | `quick` (default), `deep`, or `debate` |
+| mode | No | string | `deep` or `quick` |
 
 **Sources format:**
 
@@ -85,7 +118,6 @@ Create a podcast episode (one-stage: text + audio generated together).
 ```
 
 **Constraints:**
-- `debate` mode requires exactly 2 speakers
 - Max 2 speakers
 
 **curl:**
@@ -95,7 +127,8 @@ curl -sS -X POST "https://api.marswave.ai/openapi/v1/podcast/episodes" \
   -H "Authorization: Bearer $LISTENHUB_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
-    "sources": [{"type": "text", "content": "The future of AI development"}],
+    "query": "The future of AI development",
+    "sources": [{"type": "text", "content": "Reference material about AI trends"}],
     "speakers": [{"speakerId": "cozy-man-english"}],
     "language": "en",
     "mode": "deep"
@@ -114,61 +147,6 @@ curl -sS -X POST "https://api.marswave.ai/openapi/v1/podcast/episodes" \
 }
 ```
 
-### POST /podcast/episodes/text-content
-
-Create podcast text content only (two-stage step 1). Same request body as POST /podcast/episodes.
-
-**curl:**
-
-```bash
-curl -sS -X POST "https://api.marswave.ai/openapi/v1/podcast/episodes/text-content" \
-  -H "Authorization: Bearer $LISTENHUB_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "sources": [{"type": "text", "content": "AI history"}],
-    "speakers": [{"speakerId": "cozy-man-english"}, {"speakerId": "travel-girl-english"}],
-    "language": "en",
-    "mode": "deep"
-  }'
-```
-
-**Response:** Same as POST /podcast/episodes — returns `{data: {episodeId: "..."}}`
-
-### POST /podcast/episodes/{episodeId}/audio
-
-Generate audio from reviewed text (two-stage step 2).
-
-**Path params:**
-
-| Param | Type | Description |
-|-------|------|-------------|
-| episodeId | string | 24-char hex episode ID |
-
-**Request body (optional):**
-
-If user edited scripts, pass modified scripts:
-
-```json
-{
-  "scripts": [
-    {"content": "Hello everyone", "speakerId": "cozy-man-english"},
-    {"content": "Welcome to the show", "speakerId": "travel-girl-english"}
-  ]
-}
-```
-
-If no edits, send `{}` to use original scripts.
-
-**curl:**
-
-```bash
-# No edits:
-curl -sS -X POST "https://api.marswave.ai/openapi/v1/podcast/episodes/688c9a27348f001e707ba331/audio" \
-  -H "Authorization: Bearer $LISTENHUB_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{}'
-```
-
 ### GET /podcast/episodes/{episodeId}
 
 Get podcast episode details and status.
@@ -183,8 +161,7 @@ Get podcast episode details and status.
 
 ```bash
 curl -sS "https://api.marswave.ai/openapi/v1/podcast/episodes/688c9a27348f001e707ba331" \
-  -H "Authorization: Bearer $LISTENHUB_API_KEY" \
-
+  -H "Authorization: Bearer $LISTENHUB_API_KEY"
 ```
 
 **Response:**
@@ -245,100 +222,43 @@ curl -sS "https://api.marswave.ai/openapi/v1/podcast/episodes/688c9a27348f001e70
 
 ---
 
-## 3. Explainer (Storybook)
-
-### POST /storybook/episodes
-
-Create an explainer episode with narration and optional video.
-
-**Request body:**
-
-| Field | Required | Type | Description |
-|-------|----------|------|-------------|
-| sources | **Yes** | array | Content sources: `[{type: "text", content: "..."}]` |
-| speakers | **Yes** | array | Exactly 1 speaker: `[{speakerId: "..."}]` |
-| language | **Yes** | string | `zh` or `en` |
-| mode | No | string | `info` (default) or `story` |
-
-**curl:**
-
-```bash
-curl -sS -X POST "https://api.marswave.ai/openapi/v1/storybook/episodes" \
-  -H "Authorization: Bearer $LISTENHUB_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "sources": [{"type": "text", "content": "Introduce ListenHub features"}],
-    "speakers": [{"speakerId": "cozy-man-english"}],
-    "language": "en",
-    "mode": "info"
-  }'
-```
-
-**Response:**
-
-```json
-{
-  "code": 0,
-  "message": "",
-  "data": {
-    "episodeId": "688c9a27348f001e707ba331"
-  }
-}
-```
-
-### POST /storybook/episodes/{episodeId}/video
-
-Generate video for an explainer episode (after text/audio is ready).
-
-**Path params:**
-
-| Param | Type | Description |
-|-------|------|-------------|
-| episodeId | string | 24-char hex episode ID |
-
-**Request body:** `{}` (empty object)
-
-**curl:**
-
-```bash
-curl -sS -X POST "https://api.marswave.ai/openapi/v1/storybook/episodes/688c9a27348f001e707ba331/video" \
-  -H "Authorization: Bearer $LISTENHUB_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{}'
-```
-
-### GET /storybook/episodes/{episodeId}
-
-Get explainer episode details and status. Same polling pattern as podcast.
-
-**curl:**
-
-```bash
-curl -sS "https://api.marswave.ai/openapi/v1/storybook/episodes/688c9a27348f001e707ba331" \
-  -H "Authorization: Bearer $LISTENHUB_API_KEY" \
-
-```
-
-**Response:** Same structure as podcast episode info (`processStatus`, `title`, `audioUrl`, etc.).
-
----
-
-## 4. FlowSpeech (TTS)
+## 4. FlowSpeech
 
 ### POST /flow-speech/episodes
 
-Create a FlowSpeech episode for single-speaker text-to-speech.
+Create a FlowSpeech episode.
 
 **Request body:**
 
 | Field | Required | Type | Description |
 |-------|----------|------|-------------|
-| sources | **Yes** | array | 1 source: `[{type: "text"|"url", content: "..."}]` |
+| sources | **Yes** | array | Exactly 1 source (see Sources format below) |
 | speakers | **Yes** | array | 1-2 speakers: `[{speakerId: "..."}]` |
 | language | No | string | `en` or `zh` |
-| mode | No | string | `direct` (default) or `smart` (fixes grammar/punctuation) |
 
-**Text content limit:** 10,000 characters.
+**Sources format:**
+
+```json
+[
+  {
+    "type": "text",
+    "content": "Text content to convert to speech",
+    "uri": "https://example.com/source",
+    "metadata": {}
+  }
+]
+```
+
+| Field | Required | Type | Description |
+|-------|----------|------|-------------|
+| type | **Yes** | string | `text` or `url` |
+| content | **Yes** | string | Source text or description |
+| uri | No | string | Source URI |
+| metadata | No | object | Additional metadata |
+
+**Constraints:**
+- Exactly 1 source
+- Max 2 speakers
 
 **curl:**
 
@@ -349,8 +269,7 @@ curl -sS -X POST "https://api.marswave.ai/openapi/v1/flow-speech/episodes" \
   -d '{
     "sources": [{"type": "text", "content": "Welcome to ListenHub audio service"}],
     "speakers": [{"speakerId": "cozy-man-english"}],
-    "language": "en",
-    "mode": "smart"
+    "language": "en"
   }'
 ```
 
@@ -370,12 +289,17 @@ curl -sS -X POST "https://api.marswave.ai/openapi/v1/flow-speech/episodes" \
 
 Get FlowSpeech episode details and status.
 
+**Path params:**
+
+| Param | Type | Description |
+|-------|------|-------------|
+| episodeId | string | 24-char hex episode ID |
+
 **curl:**
 
 ```bash
 curl -sS "https://api.marswave.ai/openapi/v1/flow-speech/episodes/688c9a27348f001e707ba331" \
-  -H "Authorization: Bearer $LISTENHUB_API_KEY" \
-
+  -H "Authorization: Bearer $LISTENHUB_API_KEY"
 ```
 
 **Response:**
@@ -405,139 +329,23 @@ curl -sS "https://api.marswave.ai/openapi/v1/flow-speech/episodes/688c9a27348f00
 }
 ```
 
----
+**Key fields:**
 
-## 5. Speech (Multi-Speaker)
-
-### POST /speech
-
-Create multi-speaker audio from a scripts array.
-
-**Request body:**
-
-```json
-{
-  "scripts": [
-    {"content": "Hello everyone", "speakerId": "cozy-man-english"},
-    {"content": "Welcome to the show", "speakerId": "travel-girl-english"}
-  ]
-}
-```
-
-| Field | Required | Type | Description |
-|-------|----------|------|-------------|
-| scripts | **Yes** | array | Array of script segments |
-| scripts[].content | **Yes** | string | Text content for this segment |
-| scripts[].speakerId | **Yes** | string | Speaker ID for this segment |
-
-**curl:**
-
-```bash
-curl -sS -X POST "https://api.marswave.ai/openapi/v1/speech" \
-  -H "Authorization: Bearer $LISTENHUB_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "scripts": [
-      {"content": "Hello everyone", "speakerId": "cozy-man-english"},
-      {"content": "Welcome to the show", "speakerId": "travel-girl-english"}
-    ]
-  }'
-```
-
-**Response:** Returns `episodeId` for status polling (poll via flow-speech endpoint).
+| Field | Type | Description |
+|-------|------|-------------|
+| processStatus | string | `pending`, `success`, or `failed` |
+| audioUrl | string | Direct audio download URL |
+| audioStreamUrl | string | Streaming audio URL |
+| scripts | string | Script content (string, not array) |
+| title | string | Generated title |
+| outline | string | Generated outline |
+| credits | integer | Credits consumed |
 
 ---
 
-## 6. Image Generation (Labnana)
+## 5. Content Extract
 
-**Base URL:** `https://api.labnana.com/openapi/v1` (different from ListenHub API)
-
-### POST /images/generation
-
-Generate an AI image. Returns base64-encoded image data.
-
-**Request body:**
-
-| Field | Required | Type | Description |
-|-------|----------|------|-------------|
-| provider | **Yes** | string | Always `"google"` |
-| prompt | **Yes** | string | Image description |
-| imageConfig.imageSize | No | string | `1K`, `2K` (default), or `4K` |
-| imageConfig.aspectRatio | No | string | `16:9` (default), `1:1`, `9:16`, `2:3`, `3:2`, `3:4`, `4:3`, `21:9` |
-| referenceImages | No | array | Up to 14 reference images (see format below) |
-
-**Reference images format:**
-
-```json
-[
-  {
-    "fileData": {
-      "fileUri": "https://example.com/ref.jpg",
-      "mimeType": "image/jpeg"
-    }
-  }
-]
-```
-
-Supported MIME types: `image/jpeg`, `image/png`, `image/gif`, `image/webp`, `image/bmp`.
-
-**curl:**
-
-```bash
-curl -sS -X POST "https://api.labnana.com/openapi/v1/images/generation" \
-  -H "Authorization: Bearer $LISTENHUB_API_KEY" \
-  -H "Content-Type: application/json" \
-  --max-time 600 \
-  -d '{
-    "provider": "google",
-    "prompt": "Sunset over mountains, cinematic composition",
-    "imageConfig": {
-      "imageSize": "2K",
-      "aspectRatio": "16:9"
-    }
-  }'
-```
-
-**Response:**
-
-The image data is returned as base64 in the response. Extract via:
-
-```
-.candidates[0].content.parts[0].inlineData.data
-```
-
-or fallback paths:
-
-```
-.candidates[0].content.parts[0].inline_data.data
-.data
-```
-
-**Saving the image:**
-
-```bash
-# Extract base64 and decode
-IMAGE_DATA=$(echo "$RESPONSE" | jq -r '.candidates[0].content.parts[0].inlineData.data // .data')
-echo "$IMAGE_DATA" | base64 -d > output.jpg   # Linux
-echo "$IMAGE_DATA" | base64 -D > output.jpg   # macOS (older)
-```
-
-**Output directory**: Save to `$LISTENHUB_OUTPUT_DIR` (default: `~/Downloads`).
-**Filename format**: `listenhub-YYYYMMDD-HHMMSS-XXXX.jpg` (XXXX = random 4-digit).
-
-**Error codes:**
-
-| HTTP | Meaning |
-|------|---------|
-| 401 | Invalid API key |
-| 402 | Insufficient credits |
-| 429 | Rate limited — wait and retry |
-
----
-
-## 7. Content Extract
-
-> **TEMPORARY**: Content extract endpoints use `http://localhost:3040/openapi/v1` instead of the production base URL. Update when the endpoint goes live.
+> **TEMPORARY**: Content extract endpoints use `https://staging-api.marswave.ai/openapi/v1` instead of the production base URL. Update when the endpoint goes live.
 
 ### POST /v1/content/extract
 
@@ -553,7 +361,7 @@ Create a content extraction task for a URL. Returns a `taskId` for polling.
 **curl:**
 
 ```bash
-curl -sS -X POST "http://localhost:3040/openapi/v1/content/extract" \
+curl -sS -X POST "https://staging-api.marswave.ai/openapi/v1/content/extract" \
   -H "Authorization: Bearer $LISTENHUB_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{"url": "https://en.wikipedia.org/wiki/Topology", "language": "en"}'
@@ -591,7 +399,7 @@ Get extraction task status and results.
 **curl:**
 
 ```bash
-curl -sS "http://localhost:3040/openapi/v1/content/extract/69a7dac700cf95938f86d9bb" \
+curl -sS "https://staging-api.marswave.ai/openapi/v1/content/extract/69a7dac700cf95938f86d9bb" \
   -H "Authorization: Bearer $LISTENHUB_API_KEY"
 ```
 
