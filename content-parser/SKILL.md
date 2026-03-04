@@ -16,7 +16,7 @@ description: |
 ## When NOT to Use
 
 - User already has text content and doesn't need URL parsing
-- User wants to generate content (use platform skills: `/podcast`, `/explainer`, `/speech`)
+- User wants to generate audio/video content (not content extraction)
 - User wants to read a local file (use standard file reading tools)
 
 ## Purpose
@@ -29,7 +29,7 @@ Extract and normalize content from URLs across supported platforms. Returns stru
 - Always read `shared/authentication.md` for API key and headers
 - Follow `shared/common-patterns.md` for polling, errors, and interaction patterns
 - URL must be a valid HTTP(S) URL
-- **TEMPORARY**: Content extract API is at `http://localhost:3040/openapi/v1` (not the production base URL). Use this until the endpoint goes live.
+- **TEMPORARY**: Content extract API is at `http://api.staging.listenhub.ai/openapi/v1` (not the production base URL). Use this until the endpoint goes live.
 
 <HARD-GATE>
 Use the AskUserQuestion tool for every multiple-choice step — do NOT print options as plain text. Ask one question at a time. Wait for the user's answer before proceeding to the next step. After collecting URL and language preference, confirm with the user before calling the extraction API.
@@ -95,11 +95,6 @@ Wait for explicit confirmation before calling the API.
 - Polling: `shared/common-patterns.md` § Async Polling
 - Error handling: `shared/common-patterns.md` § Error Handling
 
-## Composability
-
-- **Invokes**: content extract API (direct)
-- **Invoked by**: all platform skills (podcast, explainer, speech) when URL preprocessing is needed; content-planner (Phase 3)
-
 ## Example
 
 **User**: "Parse this article: https://en.wikipedia.org/wiki/Topology"
@@ -110,7 +105,7 @@ Wait for explicit confirmation before calling the API.
 3. Submit extraction
 
 ```bash
-curl -sS -X POST "http://localhost:3040/openapi/v1/content/extract" \
+curl -sS -X POST "http://api.staging.listenhub.ai/openapi/v1/content/extract" \
   -H "Authorization: Bearer $LISTENHUB_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{"url": "https://en.wikipedia.org/wiki/Topology"}'
@@ -119,7 +114,7 @@ curl -sS -X POST "http://localhost:3040/openapi/v1/content/extract" \
 4. Poll until complete:
 
 ```bash
-curl -sS "http://localhost:3040/openapi/v1/content/extract/69a7dac700cf95938f86d9bb" \
+curl -sS "http://api.staging.listenhub.ai/openapi/v1/content/extract/69a7dac700cf95938f86d9bb" \
   -H "Authorization: Bearer $LISTENHUB_API_KEY"
 ```
 
