@@ -1,4 +1,4 @@
-<h1 align="center">ListenHub Skills</h1>
+<h1 align="center">MarsWave Skills</h1>
 
 <p align="center">
 <strong>解说万物，一键生成视频、播客、语音</strong>
@@ -23,16 +23,15 @@
 npx skills add marswaveai/skills
 ```
 
-## 你能创作什么
+## 技能列表
 
-| 这样说...                  | 得到这个               |
-| -------------------------- | ---------------------- |
-| "做个关于量子计算的播客"   | 两位主持人讨论你的话题 |
-| "把这篇文章做成解说视频"   | 带 AI 配图的解说视频   |
-| "朗读这个"                 | 自然语音音频           |
-| "生成一张图片：山顶的日落" | AI 生成的图像          |
-
-只需描述你想要什么，ListenHub 搞定其余的。
+| 技能 | 触发词 | 功能 |
+|------|--------|------|
+| `/podcast` | "做播客"、"podcast" | 生成播客单集（独白、对话、辩论） |
+| `/explainer` | "解说视频"、"explainer video" | 带 AI 配图的解说视频 |
+| `/speech` | "朗读"、"TTS"、"语音合成" | 文字转语音、配音 |
+| `/image-gen` | "生成图片"、"画一张" | AI 图片生成 |
+| `/content-parser` | "解析链接"、"提取内容" | URL 内容提取 |
 
 ## 支持的输入
 
@@ -48,7 +47,17 @@ npx skills add marswaveai/skills
 
 首次使用时自动配置。
 
-**CLI 输出语言**：Skills CLI 会自动检测您的系统语言，并相应地以中文或英文输出。
+## 目录结构
+
+```
+├── shared/              # API 参考、认证、通用模式
+├── podcast/             # 播客生成
+├── explainer/           # 解说视频
+├── speech/              # 文字转语音
+├── image-gen/           # AI 图片生成
+├── content-parser/      # URL 内容提取
+└── listenhub/           # 已弃用（见 DEPRECATED.md）
+```
 
 ## 支持的客户端
 

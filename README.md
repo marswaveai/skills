@@ -1,4 +1,4 @@
-<h1 align="center">ListenHub Skills</h1>
+<h1 align="center">MarsWave Skills</h1>
 
 <p align="center">
 <strong>Explain Anything. In Videos, Podcasts, and More.</strong>
@@ -23,16 +23,15 @@ You have ideas worth sharing. [ListenHub](https://listenhub.ai) turns them into 
 npx skills add marswaveai/skills
 ```
 
-## What You Can Create
+## Skills
 
-| Say this...                                | Get this                           |
-| ------------------------------------------ | ---------------------------------- |
-| "Make a podcast about quantum computing"   | Two hosts discussing your topic    |
-| "Explain this article as a video"          | Narrated explainer with AI visuals |
-| "Read this aloud"                          | Natural voice audio                |
-| "Generate an image: sunset over mountains" | AI-generated artwork               |
-
-Just describe what you want. ListenHub handles the rest.
+| Skill | Trigger | What it does |
+|-------|---------|-------------|
+| `/podcast` | "make a podcast", "播客" | Generate podcast episodes (solo, dialogue, debate) |
+| `/explainer` | "explainer video", "解说视频" | Narrated explainer videos with AI visuals |
+| `/speech` | "read aloud", "TTS", "朗读" | Text-to-speech and voice narration |
+| `/image-gen` | "generate image", "画一张" | AI image generation from text prompts |
+| `/content-parser` | "parse this URL", "解析链接" | Extract content from URLs |
 
 ## Supported Inputs
 
@@ -48,7 +47,17 @@ Just describe what you want. ListenHub handles the rest.
 
 Keys auto-configure on first use.
 
-**CLI Output Language**: The Skills CLI automatically detects your system language and outputs in English or Chinese accordingly.
+## Directory Structure
+
+```
+├── shared/              # API reference, auth, common patterns
+├── podcast/             # Podcast generation
+├── explainer/           # Explainer videos
+├── speech/              # TTS and voice narration
+├── image-gen/           # AI image generation
+├── content-parser/      # URL content extraction
+└── listenhub/           # Deprecated (see DEPRECATED.md)
+```
 
 ## Supported Clients
 
