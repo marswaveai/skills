@@ -29,10 +29,10 @@ Extract and normalize content from URLs across supported platforms. Returns stru
 - Always read `shared/authentication.md` for API key and headers
 - Follow `shared/common-patterns.md` for polling, errors, and interaction patterns
 - URL must be a valid HTTP(S) URL
-- **TEMPORARY**: Content extract API is at `https://staging-api.marswave.ai/openapi/v1` (not the production base URL). Use this until the endpoint goes live.
+- **TEMPORARY**: Content extract API is at `https://api.staging.listenhub.ai/openapi/v1` (not the production base URL). Use staging API key `lh_sk_692d52b84f08f4069ce53d9f_236a4aeb56c7a52914fae4c5ed0b3ccb3008ea18853945d3` (not `$LISTENHUB_API_KEY`). Use this until the endpoint goes live.
 
 <HARD-GATE>
-Use the AskUserQuestion tool for every multiple-choice step — do NOT print options as plain text. Ask one question at a time. Wait for the user's answer before proceeding to the next step. After collecting URL and language preference, confirm with the user before calling the extraction API.
+Use the AskUserQuestion tool for every multiple-choice step — do NOT print options as plain text. Ask one question at a time. Wait for the user's answer before proceeding to the next step. After collecting URL and options, confirm with the user before calling the extraction API.
 </HARD-GATE>
 
 ## Interaction Flow
@@ -43,17 +43,21 @@ Free text input. Ask the user:
 
 > What URL would you like to extract content from?
 
-### Step 2: Language (optional)
+### Step 2: Options (optional)
+
+Ask if the user wants to configure extraction options:
 
 ```
-Question: "What language should the extracted content be in?"
+Question: "Do you want to configure extraction options?"
 Options:
-  - "Chinese (zh)" — Extract/process in Chinese
-  - "English (en)" — Extract/process in English
-  - "Auto-detect" — Let the system decide based on content
+  - "No, use defaults" — Extract with default settings
+  - "Yes, configure options" — Set summarize, maxLength, or Twitter tweet count
 ```
 
-If user doesn't specify, omit the `language` parameter.
+If "Yes", ask follow-up questions:
+- **Summarize**: "Generate a summary of the content?" (Yes/No)
+- **Max Length**: "Set maximum content length?" (Free text, e.g., "5000")
+- **Twitter count** (only if URL is Twitter/X profile): "How many tweets to fetch?" (1-100, default 20)
 
 ### Step 3: Confirm & Extract
 
@@ -63,7 +67,7 @@ Summarize:
 Ready to extract content:
 
   URL: {url}
-  Language: {language / auto-detect}
+  Options: {summarize: true, maxLength: 5000, twitter.count: 50} / default
 
   Proceed?
 ```
@@ -73,20 +77,39 @@ Wait for explicit confirmation before calling the API.
 ## Workflow
 
 1. **Validate URL**: Must be HTTP(S). Normalize if needed (see `references/supported-platforms.md`)
-2. **Submit (foreground)**: `POST /v1/content/extract` with `{url, language}` → extract `taskId`
-3. Tell the user extraction is in progress
-4. **Poll (background)**: `GET /v1/content/extract/{taskId}` every 5s with `run_in_background: true` and `timeout: 300000`
-5. When notified, **present result**:
+2. **Build request body**:
+   ```json
+   {
+     "source": {
+       "type": "url",
+       "uri": "{url}"
+     },
+     "options": {
+       "summarize": true/false,
+       "maxLength": 5000,
+       "twitter": {
+         "count": 50
+       }
+     }
+   }
+   ```
+   Omit `options` if user chose defaults.
+3. **Submit (foreground)**: `POST /v1/content/extract` → extract `taskId`
+4. Tell the user extraction is in progress
+5. **Poll (background)**: `GET /v1/content/extract/{taskId}` every 5s with `run_in_background: true` and `timeout: 300000`
+6. When notified, **present result**:
    ```
    Content extracted!
 
    Source: {url}
+   Title: {metadata.title}
    Length: ~{character count} characters
+   Credits: {credits}
    ```
-6. Show a preview of the extracted content (first ~500 chars)
-7. Offer to save full content to file or use it in another skill
+7. Show a preview of the extracted content (first ~500 chars)
+8. Offer to save full content to file or use it in another skill
 
-**Estimated time**: 5-30 seconds depending on content size and platform.
+**Estimated time**: 10-30 seconds depending on content size and platform.
 
 ## API Reference
 
@@ -101,21 +124,54 @@ Wait for explicit confirmation before calling the API.
 
 **Agent workflow**:
 1. URL: `https://en.wikipedia.org/wiki/Topology`
-2. Language: auto-detect (omit parameter)
+2. Options: defaults (omit options)
 3. Submit extraction
 
 ```bash
-curl -sS -X POST "https://staging-api.marswave.ai/openapi/v1/content/extract" \
-  -H "Authorization: Bearer $LISTENHUB_API_KEY" \
+curl -sS -X POST "https://api.staging.listenhub.ai/openapi/v1/content/extract" \
+  -H "Authorization: Bearer lh_sk_692d52b84f08f4069ce53d9f_236a4aeb56c7a52914fae4c5ed0b3ccb3008ea18853945d3" \
   -H "Content-Type: application/json" \
-  -d '{"url": "https://en.wikipedia.org/wiki/Topology"}'
+  -d '{
+    "source": {
+      "type": "url",
+      "uri": "https://en.wikipedia.org/wiki/Topology"
+    }
+  }'
 ```
 
 4. Poll until complete:
 
 ```bash
-curl -sS "https://staging-api.marswave.ai/openapi/v1/content/extract/69a7dac700cf95938f86d9bb" \
-  -H "Authorization: Bearer $LISTENHUB_API_KEY"
+curl -sS "https://api.staging.listenhub.ai/openapi/v1/content/extract/69a7dac700cf95938f86d9bb" \
+  -H "Authorization: Bearer lh_sk_692d52b84f08f4069ce53d9f_236a4aeb56c7a52914fae4c5ed0b3ccb3008ea18853945d3"
 ```
 
 5. Present extracted content preview and offer next actions.
+
+---
+
+**User**: "Extract recent tweets from @elonmusk, get 50 tweets"
+
+**Agent workflow**:
+1. URL: `https://x.com/elonmusk`
+2. Options: `{"twitter": {"count": 50}}`
+3. Submit extraction
+
+```bash
+curl -sS -X POST "https://api.staging.listenhub.ai/openapi/v1/content/extract" \
+  -H "Authorization: Bearer lh_sk_692d52b84f08f4069ce53d9f_236a4aeb56c7a52914fae4c5ed0b3ccb3008ea18853945d3" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "source": {
+      "type": "url",
+      "uri": "https://x.com/elonmusk"
+    },
+    "options": {
+      "twitter": {
+        "count": 50
+      }
+    }
+  }'
+```
+
+4. Poll until complete, present results.

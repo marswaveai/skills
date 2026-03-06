@@ -6,13 +6,11 @@
 |----------|-------------|---------------|
 | YouTube | `youtube.com/watch?v=`, `youtu.be/` | Video transcripts |
 | Bilibili | `bilibili.com/video/` | Video transcripts |
-| Twitter/X | `twitter.com/`, `x.com/` | Profile pages |
+| Twitter/X | `twitter.com/`, `x.com/` | Profile tweets, single tweets |
 | WeChat | `mp.weixin.qq.com/s/`, `mp.weixin.qq.com/s?__biz=` | Public articles |
 | PDF | Direct `.pdf` URL | Document text |
 | DOCX | Direct `.docx` URL | Document text |
 | Images | Direct image URL (`.jpg`, `.png`, etc.) | Image description/OCR |
-| arXiv | `arxiv.org/` | Paper content |
-| GitHub | `github.com/` | Repository/page content |
 | General web | Any HTTP(S) URL | Article text, blog posts |
 
 ## URL Normalization
@@ -39,7 +37,7 @@ The parser identifies content type based on:
 - Rate limits apply per the standard API limits
 - Very long content may be truncated
 - Some platforms may block automated access
-- Twitter/X: only profile pages are supported (not individual tweets)
+- Twitter/X: profile pages and single tweets are supported
 
 ## Platform-Specific Notes
 
@@ -53,8 +51,9 @@ The parser identifies content type based on:
 - Supports BV-format video IDs
 
 ### Twitter/X
-- Extracts profile information
-- Individual tweet/thread extraction not currently supported
+- Extracts profile tweets or single tweet content
+- For profile URLs, use `options.twitter.count` to control how many tweets to fetch (1-100, default 20)
+- Supports both `twitter.com` and `x.com` domains
 
 ### WeChat
 - Extracts article content from public account posts
@@ -72,4 +71,3 @@ The parser identifies content type based on:
 - Extracts main article body using content extraction
 - Removes navigation, ads, sidebars
 - Preserves headings and paragraph structure
-- Optimized handling for Wikipedia, arXiv, GitHub
