@@ -23,6 +23,23 @@ You have ideas worth sharing. [ListenHub](https://listenhub.ai) turns them into 
 npx skills add marswaveai/skills
 ```
 
+## Update
+
+**Via npx skills** (recommended for most users):
+
+```bash
+npx skills update -g
+```
+
+**Via Git** (for contributors or local development):
+
+```bash
+cd path/to/marswaveai/skills
+git pull origin main
+```
+
+Restart your agent (Claude Code, Cursor, etc.) after updating.
+
 ## Skills
 
 | Skill | Trigger | What it does |

@@ -23,6 +23,23 @@
 npx skills add marswaveai/skills
 ```
 
+## 更新
+
+**通过 npx skills**（推荐大多数用户使用）：
+
+```bash
+npx skills update -g
+```
+
+**通过 Git**（适合贡献者或本地开发）：
+
+```bash
+cd path/to/marswaveai/skills
+git pull origin main
+```
+
+更新后需重启你的 agent（Claude Code、Cursor 等）。
+
 ## 技能列表
 
 | 技能 | 触发词 | 功能 |

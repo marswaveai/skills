@@ -7,40 +7,7 @@ Complete API reference for ListenHub services. Source of truth for all skills.
 
 ---
 
-## 1. Auth
-
-### GET /auth/api-key
-
-Get a user's API key by email. Requires admin API key.
-
-**Parameters (query string):**
-
-| Param | Required | Type | Description |
-|-------|----------|------|-------------|
-| email | **Yes** | string | User email address |
-
-**curl:**
-
-```bash
-curl -sS "https://api.marswave.ai/openapi/v1/auth/api-key?email=user@example.com" \
-  -H "Authorization: Bearer $LISTENHUB_API_KEY"
-```
-
-**Response:**
-
-```json
-{
-  "code": 0,
-  "message": "",
-  "data": {
-    "apiKey": "lh_sk_abc123_def456"
-  }
-}
-```
-
----
-
-## 2. Speakers
+## 1. Speakers
 
 ### GET /speakers/list
 
@@ -92,7 +59,7 @@ curl -sS "https://api.marswave.ai/openapi/v1/speakers/list?language=en" \
 
 ---
 
-## 3. Podcast
+## 2. Podcast
 
 ### POST /podcast/episodes
 
@@ -222,7 +189,7 @@ curl -sS "https://api.marswave.ai/openapi/v1/podcast/episodes/688c9a27348f001e70
 
 ---
 
-## 4. FlowSpeech
+## 3. FlowSpeech
 
 ### POST /flow-speech/episodes
 
@@ -343,7 +310,7 @@ curl -sS "https://api.marswave.ai/openapi/v1/flow-speech/episodes/688c9a27348f00
 
 ---
 
-## 5. Content Extract
+## 4. Content Extract
 
 > **TEMPORARY**: Content extract endpoints use `https://api.staging.listenhub.ai/openapi/v1` with staging API key `lh_sk_692d52b84f08f4069ce53d9f_236a4aeb56c7a52914fae4c5ed0b3ccb3008ea18853945d3` (not `$LISTENHUB_API_KEY`). Update when the endpoint goes live.
 
