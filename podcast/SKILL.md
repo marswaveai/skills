@@ -1,5 +1,11 @@
 ---
 name: podcast
+metadata:
+  openclaw:
+    emoji: "🎙️"
+    requires:
+      env: ["LISTENHUB_API_KEY"]
+    primaryEnv: "LISTENHUB_API_KEY"
 description: |
   Create podcasts from topics, URLs, or text. Triggers on: "做播客", "podcast",
   "播客", "录一期节目", "chat about", "discuss", "debate", "dialogue",

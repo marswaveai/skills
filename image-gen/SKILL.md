@@ -1,5 +1,11 @@
 ---
 name: image-gen
+metadata:
+  openclaw:
+    emoji: "🖼️"
+    requires:
+      env: ["LISTENHUB_API_KEY"]
+    primaryEnv: "LISTENHUB_API_KEY"
 description: |
   Generate AI images from text prompts. Triggers on: "生成图片", "画一张",
   "AI图", "generate image", "配图", "create picture", "draw", "visualize",

@@ -1,5 +1,11 @@
 ---
 name: speech
+metadata:
+  openclaw:
+    emoji: "🔊"
+    requires:
+      env: ["LISTENHUB_API_KEY"]
+    primaryEnv: "LISTENHUB_API_KEY"
 description: |
   Text-to-speech and voice narration. Triggers on: "朗读这段", "配音", "TTS",
   "语音合成", "text to speech", "read this aloud", "convert to speech",

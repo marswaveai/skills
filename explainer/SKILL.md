@@ -1,5 +1,11 @@
 ---
 name: explainer
+metadata:
+  openclaw:
+    emoji: "🎬"
+    requires:
+      env: ["LISTENHUB_API_KEY"]
+    primaryEnv: "LISTENHUB_API_KEY"
 description: |
   Create explainer videos with narration and AI-generated visuals. Triggers on:
   "解说视频", "explainer video", "explain this as a video", "tutorial video",

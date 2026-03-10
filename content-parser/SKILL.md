@@ -1,5 +1,11 @@
 ---
 name: content-parser
+metadata:
+  openclaw:
+    emoji: "🔗"
+    requires:
+      env: ["LISTENHUB_API_KEY"]
+    primaryEnv: "LISTENHUB_API_KEY"
 description: |
   Extract and parse content from URLs. Triggers on: user provides a URL to extract
   content from, another skill needs to parse source material, "parse this URL",
