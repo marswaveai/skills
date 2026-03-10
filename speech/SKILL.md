@@ -34,7 +34,7 @@ Convert text or URL content into natural-sounding speech audio. Two paths:
 
 ## Hard Constraints
 
-- No shell scripts. Construct curl commands from `shared/api-reference.md`
+- No shell scripts. Construct curl commands from the API reference files listed in Resources
 - Always read `shared/authentication.md` for API key and headers
 - Follow `shared/common-patterns.md` for polling, errors, and interaction patterns
 - Never hardcode speaker IDs — always fetch from the speakers API
@@ -147,10 +147,10 @@ Wait for explicit confirmation before calling any API.
 
 ## API Reference
 
-- Speaker list: `shared/api-reference.md` § 1. Speakers
+- Speaker list: `shared/api-speakers.md`
 - Speaker selection guide: `shared/speaker-selection.md`
-- FlowSpeech: `shared/api-reference.md` § 4. FlowSpeech (TTS)
-- Multi-speaker: `shared/api-reference.md` § 5. Speech (Multi-Speaker)
+- FlowSpeech (TTS): `shared/api-speech.md`
+- Multi-speaker: `shared/api-speech.md` § Multi-Speaker
 - Polling: `shared/common-patterns.md` § Async Polling
 
 ## Composability

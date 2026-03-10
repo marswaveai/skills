@@ -31,7 +31,7 @@ Extract and normalize content from URLs across supported platforms. Returns stru
 
 ## Hard Constraints
 
-- No shell scripts. Construct curl commands from `shared/api-reference.md`
+- No shell scripts. Construct curl commands from the API reference files listed in Resources
 - Always read `shared/authentication.md` for API key and headers
 - Follow `shared/common-patterns.md` for polling, errors, and interaction patterns
 - URL must be a valid HTTP(S) URL
@@ -119,7 +119,7 @@ Wait for explicit confirmation before calling the API.
 
 ## API Reference
 
-- Content extract: `shared/api-reference.md` § 5. Content Extract
+- Content extract: `shared/api-content-extract.md`
 - Supported platforms: `references/supported-platforms.md`
 - Polling: `shared/common-patterns.md` § Async Polling
 - Error handling: `shared/common-patterns.md` § Error Handling

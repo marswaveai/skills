@@ -32,7 +32,7 @@ Generate podcast episodes with 1-2 AI speakers discussing a topic. Supports quic
 
 ## Hard Constraints
 
-- No shell scripts. Construct curl commands from `shared/api-reference.md`
+- No shell scripts. Construct curl commands from the API reference files listed in Resources
 - Always read `shared/authentication.md` for API key and headers
 - Follow `shared/common-patterns.md` for polling, errors, and interaction patterns
 - Never hardcode speaker IDs — always fetch from the speakers API
@@ -159,9 +159,9 @@ Wait for explicit confirmation before calling any API.
 
 ## API Reference
 
-- Speaker list: `shared/api-reference.md` § 1. Speakers
+- Speaker list: `shared/api-speakers.md`
 - Speaker selection guide: `shared/speaker-selection.md`
-- Episode creation: `shared/api-reference.md` § 2. Podcast
+- Episode creation: `shared/api-podcast.md`
 - Polling: `shared/common-patterns.md` § Async Polling
 
 ## Composability

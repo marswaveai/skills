@@ -32,7 +32,7 @@ Generate AI images using the Labnana API. Supports text prompts with optional re
 
 ## Hard Constraints
 
-- No shell scripts. Construct curl commands from `shared/api-reference.md`
+- No shell scripts. Construct curl commands from the API reference files listed in Resources
 - Always read `shared/authentication.md` for API key and headers
 - Follow `shared/common-patterns.md` for error handling
 - Image generation uses a **different base URL**: `https://api.labnana.com/openapi/v1`
@@ -150,7 +150,7 @@ echo "$BASE64_DATA" | base64 --decode > output.jpg
 
 ## API Reference
 
-- Image generation: `shared/api-reference.md` § 6. Image Generation (Labnana)
+- Image generation: `shared/api-image.md`
 - Error handling: `shared/common-patterns.md` § Error Handling
 
 ## Composability
