@@ -1,5 +1,5 @@
 ---
-name: speech
+name: tts
 metadata:
   openclaw:
     emoji: "🔊"
@@ -14,10 +14,10 @@ description: |
 
 ## When to Use
 
-- User wants to convert text or a URL to spoken audio
+- User wants to convert text to spoken audio
 - User asks for "read aloud", "TTS", "text to speech", "voice narration"
 - User says "朗读", "配音", "语音合成"
-- User wants multi-speaker scripted audio
+- User wants multi-speaker scripted audio or dialogue
 
 ## When NOT to Use
 
@@ -27,159 +27,230 @@ description: |
 
 ## Purpose
 
-Convert text or URL content into natural-sounding speech audio. Two paths:
+Convert text into natural-sounding speech audio. Two paths:
 
-1. **FlowSpeech** (default): Single-speaker reading of text or URL content. Simple and fast.
-2. **Speech** (advanced): Multi-speaker scripted audio with per-segment speaker assignment.
+1. **Quick mode** (`/v1/tts`): Single voice, low-latency, sync MP3 stream. For casual chat, reading snippets, instant audio.
+2. **Script mode** (`/v1/speech`): Multi-speaker, per-segment voice assignment. For dialogue, audiobooks, scripted content.
 
 ## Hard Constraints
 
 - No shell scripts. Construct curl commands from the API reference files listed in Resources
 - Always read `shared/authentication.md` for API key and headers
-- Follow `shared/common-patterns.md` for polling, errors, and interaction patterns
+- Follow `shared/common-patterns.md` for errors and interaction patterns
 - Never hardcode speaker IDs — always fetch from the speakers API
-- Text content limit: 10,000 characters for FlowSpeech
+- Always read `tts/user-config.json` before asking the user about voice preferences
 
 <HARD-GATE>
 Use the AskUserQuestion tool for every multiple-choice step — do NOT print options as plain text. Ask one question at a time. Wait for the user's answer before proceeding to the next step. After all parameters are collected, summarize the choices and ask the user to confirm. Do NOT call any generation API until the user has explicitly confirmed.
 </HARD-GATE>
 
+## Mode Detection
+
+Determine the mode from the user's input **automatically** before asking any questions:
+
+| Signal | Mode |
+|--------|------|
+| "多角色", "脚本", "对话", "script", "dialogue", "multi-speaker" | Script |
+| Multiple characters mentioned by name or role | Script |
+| Input contains structured segments (A: ..., B: ...) | Script |
+| Single paragraph of text, no character markers | Quick |
+| "读一下", "read this", "TTS", "朗读" with plain text | Quick |
+| Ambiguous | Quick (default) |
+
 ## Interaction Flow
 
-### Step 1: Input Type
+### Step 0: Read config
+
+Before doing anything, read `tts/user-config.json`. Note the values for `quickVoice`, `scriptVoices`, and `language`. These will be used to skip asking the user where preferences are already saved.
+
+### Quick Mode — `POST /v1/tts`
+
+**Step 1: Extract text**
+
+Get the text to convert. If the user hasn't provided it, ask:
+
+> "What text would you like me to read aloud?"
+
+**Step 2: Determine voice**
+
+- If `user-config.json.quickVoice` is set → use it silently (skip to Step 4)
+- Otherwise: `GET /speakers/list?language={detected-language}`, then ask:
 
 ```
-Question: "What would you like to convert to speech?"
+Question: "Which voice?"
+Options: [one per speaker — label: name, description: gender]
+```
+
+**Step 3: Save preference**
+
+```
+Question: "Save {voice name} as your default quick voice?"
 Options:
-  - "Text" — Paste or type text content
-  - "URL" — Provide a URL to read aloud
+  - "Yes" — update user-config.json
+  - "No" — use for this session only
 ```
 
-### Step 2: Content
-
-Free text input: the text to read or the URL.
-
-### Step 3: Language
+**Step 4: Confirm**
 
 ```
-Question: "What language?"
+Ready to generate:
+
+  Text: "{first 80 chars}..."
+  Voice: {voice name}
+
+Proceed?
+```
+
+**Step 5: Generate**
+
+```bash
+curl -sS -X POST "https://api.marswave.ai/openapi/v1/tts" \
+  -H "Authorization: Bearer $LISTENHUB_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"input": "...", "voice": "..."}' \
+  --output /tmp/tts-output.mp3
+```
+
+**Step 6: Present result**
+
+```
+Audio generated!
+
+  File: /tmp/tts-output.mp3
+  Tip: Open the file to listen, or move it to your preferred location.
+```
+
+---
+
+### Script Mode — `POST /v1/speech`
+
+**Step 1: Get scripts**
+
+Determine whether the user already has a scripts array:
+
+- **Already provided** (JSON or clear segments): parse and display for confirmation
+- **Not yet provided**: help the user structure segments. Ask:
+
+  > "Please provide the script with speaker assignments. Format: each line as `SpeakerName: text content`. I'll convert it."
+
+  Once the user provides the script, parse it into the `scripts` JSON format.
+
+**Step 2: Assign voices per character**
+
+For each unique character in the script:
+
+- If `user-config.json.scriptVoices` has a saved voice → auto-assign silently
+- Otherwise: fetch `GET /speakers/list?language={detected-language}` and ask:
+
+```
+Question: "Which voice for {character name}?"
+Options: [one per speaker — label: name, description: gender]
+```
+
+**Step 3: Save preferences**
+
+After all voices are assigned (if any were new):
+
+```
+Question: "Save these voice assignments for future sessions?"
 Options:
-  - "Chinese (zh)" — Chinese voice output
-  - "English (en)" — English voice output
+  - "Yes" — update scriptVoices in user-config.json
+  - "No" — use for this session only
 ```
 
-### Step 4: Mode
+**Step 4: Confirm**
 
 ```
-Question: "Processing mode?"
-Options:
-  - "Direct" — Read as-is, no modifications
-  - "Smart" — Fix grammar and punctuation before reading
+Ready to generate:
+
+  Characters:
+    {name}: {voice}
+    {name}: {voice}
+  Segments: {count}
+  Title: (auto-generated)
+
+Proceed?
 ```
 
-### Step 5: Speaker Selection
+**Step 5: Generate**
 
-Call `GET /speakers/list?language={language}` and present options.
+Write the request body to a temp file, then submit:
 
-### Step 6: Multi-Speaker Check
-
-If user explicitly requests multiple speakers or per-segment speaker assignment:
-
-```
-Question: "This requires a multi-speaker script. Would you like to:"
-Options:
-  - "Write the script" — Provide a JSON script with speaker assignments
-  - "Let AI assign speakers" — Auto-generate script segments (not yet supported)
-```
-
-If multi-speaker, guide the user to create a scripts JSON:
-
-```json
+```bash
+# Write request to temp file
+cat > /tmp/lh-speech-request.json << 'ENDJSON'
 {
   "scripts": [
-    {"content": "Hello everyone", "speakerId": "cozy-man-english"},
-    {"content": "Welcome to the show", "speakerId": "travel-girl-english"}
+    {"content": "...", "speakerId": "..."},
+    {"content": "...", "speakerId": "..."}
   ]
 }
+ENDJSON
+
+# Submit
+curl -sS -X POST "https://api.marswave.ai/openapi/v1/speech" \
+  -H "Authorization: Bearer $LISTENHUB_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d @/tmp/lh-speech-request.json
+
+rm /tmp/lh-speech-request.json
 ```
 
-### Step 7: Confirm & Generate
-
-Summarize all choices:
+**Step 6: Present result**
 
 ```
-Ready to generate speech:
+Audio generated!
 
-  Input: {text / URL}
-  Language: {language}
-  Mode: {direct / smart}
-  Speaker: {speaker name(s)}
-  Path: {FlowSpeech / Multi-Speaker}
-
-  Proceed?
+  Listen: {audioUrl}
+  Subtitles: {subtitlesUrl}
+  Duration: {audioDuration / 1000}s
+  Credits used: {credits}
 ```
 
-Wait for explicit confirmation before calling any API.
+---
 
-## Workflow
+## Updating user-config.json
 
-### Single Speaker (FlowSpeech) — Default Path
+When saving preferences, edit only the relevant key(s) in `tts/user-config.json`. Do not overwrite unchanged keys.
 
-1. **Submit (foreground)**: `POST /flow-speech/episodes` with source, speaker, language, mode → extract `episodeId`
-2. Tell the user the task is submitted
-3. **Poll (background)**: `GET /flow-speech/episodes/{episodeId}` every 10s with `run_in_background: true` and `timeout: 600000`
-4. When notified, **present result**:
-   ```
-   Audio generated!
-
-   Listen: https://listenhub.ai/app/text-to-speech
-   Duration: ~{estimated} minutes
-   ```
-
-**Estimated time**: 1-2 minutes.
-
-### Multi-Speaker (Speech) — Advanced Path
-
-1. **Collect scripts**: User provides or agent helps create scripts JSON
-2. **Submit (foreground)**: `POST /speech` with scripts array → extract `episodeId`
-3. **Poll (background)**: via flow-speech episode endpoint with `run_in_background: true` and `timeout: 600000`
-4. When notified, **present result**: same as above
+- Quick voice: set `quickVoice` to the selected `speakerId`
+- Script voices: replace `scriptVoices` with the full list of `speakerId` values assigned in the current session
+- Language: set `language` if the user explicitly specifies it
 
 ## API Reference
 
+- TTS & Speech endpoints: `shared/api-tts.md`
 - Speaker list: `shared/api-speakers.md`
 - Speaker selection guide: `shared/speaker-selection.md`
-- FlowSpeech (TTS): `shared/api-speech.md`
-- Multi-speaker: `shared/api-speech.md` § Multi-Speaker
-- Polling: `shared/common-patterns.md` § Async Polling
+- Error handling: `shared/common-patterns.md` § Error Handling
+- Long text input: `shared/common-patterns.md` § Long Text Input
 
 ## Composability
 
 - **Invokes**: speakers API (for speaker selection)
-- **Invoked by**: explainer (for voiceover), platform skills (Phase 2)
+- **Invoked by**: explainer (for voiceover)
 
-## Example
+## Examples
 
-**User**: "Read this article aloud: https://blog.example.com/article"
+**Quick mode:**
 
-**Agent workflow**:
-1. Input type: URL
-2. Content: `https://blog.example.com/article`
-3. Ask language → "English"
-4. Ask mode → "Direct"
-5. Fetch speakers, user picks "cozy-man-english"
-6. Single speaker → FlowSpeech path
+> "TTS this: The server will be down for maintenance at midnight."
 
-```bash
-curl -sS -X POST "https://api.marswave.ai/openapi/v1/flow-speech/episodes" \
-  -H "Authorization: Bearer $LISTENHUB_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "sources": [{"type": "url", "content": "https://blog.example.com/article"}],
-    "speakers": [{"speakerId": "cozy-man-english"}],
-    "language": "en",
-    "mode": "direct"
-  }'
-```
+1. Detect: Quick mode (plain text, "TTS this")
+2. Read config: `quickVoice` is `null`
+3. Fetch speakers, user picks "Yuanye"
+4. Ask to save → yes → update config
+5. `POST /v1/tts` with `input` + `voice`
+6. Present: `/tmp/tts-output.mp3`
 
-Poll until complete, then present audio link.
+**Script mode:**
+
+> "帮我做一段双人对话配音，A说：欢迎大家，B说：谢谢邀请"
+
+1. Detect: Script mode ("双人对话")
+2. Parse segments: A → "欢迎大家", B → "谢谢邀请"
+3. Read config: `scriptVoices` empty
+4. Fetch `zh` speakers, assign A and B voices
+5. Ask to save → yes → update config
+6. `POST /v1/speech` with scripts array
+7. Present: `audioUrl`, `subtitlesUrl`, duration
