@@ -1,68 +1,59 @@
 # TTS Guide
 
-## FlowSpeech vs Speech API
+## Quick Mode vs Script Mode
 
-| Feature | FlowSpeech | Speech |
-|---------|-----------|--------|
-| Speakers | 1 (single voice) | Multiple (per-segment assignment) |
-| Input | Text or URL | Scripts JSON array |
-| Endpoint | `POST /flow-speech/episodes` | `POST /speech` |
-| Modes | `direct`, `smart` | N/A |
-| Best for | Simple reading, articles | Dialogue, narrated scripts |
-| Speed | Faster (~1-2 min) | Moderate (~2-3 min) |
+| Feature | Quick (`/v1/tts`) | Script (`/v1/speech`) |
+|---------|-------------------|----------------------|
+| Speakers | 1 (single voice) | Multiple (per-segment) |
+| Input | Plain text | `scripts` JSON array |
+| Response | Sync MP3 stream | Sync JSON with `audioUrl` |
+| Best for | Chat, notifications, quick reads | Dialogue, audiobooks, narrated scripts |
 
 ## When to Use Each
 
-### FlowSpeech (Default)
+### Quick Mode (`/v1/tts`)
 
-Use FlowSpeech when:
-- Reading a single piece of text or URL content
-- One voice is sufficient
-- User says "read aloud", "TTS", "convert to speech"
-- No per-segment speaker assignment needed
+Use when:
+- Single paragraph or short text
+- User says "read this", "TTS this", "朗读"
+- No character roles or speaker assignments needed
+- Instant audio for in-conversation use
 
-### Speech (Multi-Speaker)
+### Script Mode (`/v1/speech`)
 
-Use Speech when:
-- User explicitly requests multiple voices
-- Content has dialogue with different characters
+Use when:
+- User mentions multiple characters, roles, or voices
+- Content is dialogue (A says X, B replies Y)
+- User says "多角色", "脚本", "对话", "script", "dialogue"
 - User provides or wants to create per-segment speaker assignments
-- User says "multi-speaker", "dialogue script"
 
-## FlowSpeech Modes
-
-### Direct
-
-- Reads text exactly as provided, no modifications
-- Best for: well-formatted text, articles, prepared content
-- Default mode when no preference is stated
-
-### Smart
-
-- Fixes grammar, punctuation, and formatting before reading
-- Best for: rough drafts, notes, casual text
-- May slightly alter content for better speech flow
-
-## Multi-Speaker Script Format
+## Script Format
 
 ```json
 {
   "scripts": [
-    {"content": "Hello everyone, welcome to the show.", "speakerId": "cozy-man-english"},
-    {"content": "Thanks for having me! Let's dive in.", "speakerId": "travel-girl-english"},
-    {"content": "Today we're talking about...", "speakerId": "cozy-man-english"}
+    {"content": "Hello everyone, welcome.", "speakerId": "EN-Man-General-01"},
+    {"content": "Thanks for having me!", "speakerId": "EN-Woman-General-01"},
+    {"content": "Today we are talking about...", "speakerId": "EN-Man-General-01"}
   ]
 }
 ```
 
-Each segment is spoken by the assigned speaker in order. Tips:
+Tips:
+- Keep segments at natural speech boundaries (sentences or short paragraphs)
+- Alternate speakers for a natural dialogue feel
+- All `speakerId` values must be valid IDs from the speakers API
+- Speakers should share the same language
 
-- Keep segments at natural speech boundaries (sentences or paragraphs)
-- Alternate speakers for dialogue feel
-- Each segment's `speakerId` must be a valid ID from the speakers API
-- All speakers should share the same language
+## Language Auto-Detection
 
-## Text Length Limits
+- Read `user-config.json.language` first
+- If null: detect from text content — Chinese characters → `zh`, Latin script → `en`
+- Never ask the user about language
 
-- FlowSpeech text input: max 10,000 characters
-- For longer content: split into multiple requests, or use a URL input (the API will fetch and process it)
+## Voice Preference Persistence
+
+- `user-config.json.quickVoice` — used for Quick mode
+- `user-config.json.scriptVoices` — list of voices for Script mode characters
+- After a new selection, ask: "Save this voice as your default?" — update file on yes
+- On next run, if config has a value, use it silently without asking
