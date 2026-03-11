@@ -3,7 +3,9 @@
 **Base URL**: `https://api.marswave.ai/openapi/v1`
 **Authentication**: See [authentication.md](./authentication.md)
 
-Used by: `/explainer` skill (mode=`info`), `/slides` skill (mode=`slides`)
+Used by:
+- `/explainer` skill — mode=`info` (factual/informational) or mode=`story` (narrative)
+- `/slides` skill — mode=`slides` (PPT-style presentation)
 
 ---
 

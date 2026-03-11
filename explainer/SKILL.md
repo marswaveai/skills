@@ -37,6 +37,7 @@ Generate explainer videos that combine a single narrator's voiceover with AI-gen
 - Follow `shared/common-patterns.md` for polling, errors, and interaction patterns
 - Never hardcode speaker IDs — always fetch from the speakers API
 - Explainer uses exactly 1 speaker
+- Mode must be `info` (for Info style) or `story` (for Story style) — never `slides` (use `/slides` skill instead)
 
 <HARD-GATE>
 Use the AskUserQuestion tool for every multiple-choice step — do NOT print options as plain text. Ask one question at a time. Wait for the user's answer before proceeding to the next step. After all parameters are collected, summarize the choices and ask the user to confirm. Do NOT call any generation API until the user has explicitly confirmed.
