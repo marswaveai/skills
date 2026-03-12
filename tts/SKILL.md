@@ -38,7 +38,9 @@ Convert text into natural-sounding speech audio. Two paths:
 - Always read `shared/authentication.md` for API key and headers
 - Follow `shared/common-patterns.md` for errors and interaction patterns
 - Never hardcode speaker IDs — always fetch from the speakers API
-- Always read `tts/user-config.json` before asking the user about voice preferences
+- Always read config following `shared/config-pattern.md` before any interaction
+- Always follow `shared/speaker-selection.md` for speaker selection (text table + pagination)
+- Never save files to `~/Downloads/` or `/tmp/` as primary output — use `.listenhub/tts/`
 
 <HARD-GATE>
 Use the AskUserQuestion tool for every multiple-choice step — do NOT print options as plain text. Ask one question at a time. Wait for the user's answer before proceeding to the next step. After all parameters are collected, summarize the choices and ask the user to confirm. Do NOT call any generation API until the user has explicitly confirmed.
@@ -61,7 +63,22 @@ Determine the mode from the user's input **automatically** before asking any que
 
 ### Step 0: Read config
 
-Before doing anything, read `tts/user-config.json`. Note the values for `quickVoice`, `scriptVoices`, and `language`. These will be used to skip asking the user where preferences are already saved.
+Before doing anything, load config following `shared/config-pattern.md`:
+
+1. Look for `{CWD}/.listenhub/tts/config.json`, then `~/.listenhub/tts/config.json`
+2. If neither exists, use `AskUserQuestion` to ask global vs current directory, then create it
+
+Initial default config for tts:
+```json
+{
+  "outputDir": ".listenhub",
+  "autoDownload": true,
+  "language": null,
+  "defaultSpeakers": {}
+}
+```
+
+Note saved values for `language`, `defaultSpeakers`, `autoDownload`.
 
 ### Quick Mode — `POST /v1/tts`
 
@@ -73,20 +90,15 @@ Get the text to convert. If the user hasn't provided it, ask:
 
 **Step 2: Determine voice**
 
-- If `user-config.json.quickVoice` is set → use it silently (skip to Step 4)
-- Otherwise: `GET /speakers/list?language={detected-language}`, then ask:
-
-```
-Question: "Which voice?"
-Options: [one per speaker — label: name, description: gender]
-```
+- If `config.defaultSpeakers.{language}[0]` is set → use it silently (skip to Step 4)
+- Otherwise: `GET /speakers/list?language={detected-language}`, then follow `shared/speaker-selection.md` (text table + paginated AskUserQuestion)
 
 **Step 3: Save preference**
 
 ```
-Question: "Save {voice name} as your default quick voice?"
+Question: "Save {voice name} as your default voice for {language}?"
 Options:
-  - "Yes" — update user-config.json
+  - "Yes" — update .listenhub/tts/config.json
   - "No" — use for this session only
 ```
 
@@ -111,14 +123,23 @@ curl -sS -X POST "https://api.marswave.ai/openapi/v1/tts" \
   --output /tmp/tts-output.mp3
 ```
 
-**Step 6: Present result**
+**Step 6: Download and present result**
 
+If `autoDownload` is `true`:
+- The TTS endpoint returns audio directly (not async) — save the output during the curl call
+- Use a timestamped jobId: `$(date +%s)`
+- Create `.listenhub/tts/YYYY-MM-DD-{jobId}/`
+- Save as `{jobId}.mp3` via `curl ... --output {dir}/{jobId}.mp3`
+
+Present:
 ```
 Audio generated!
 
-  File: /tmp/tts-output.mp3
-  Tip: Open the file to listen, or move it to your preferred location.
+已下载到 .listenhub/tts/{YYYY-MM-DD}-{jobId}/：
+  {jobId}.mp3
 ```
+
+If `autoDownload` is `false`, save to `/tmp/tts-{jobId}.mp3` and show that path.
 
 ---
 
@@ -139,13 +160,8 @@ Determine whether the user already has a scripts array:
 
 For each unique character in the script:
 
-- If `user-config.json.scriptVoices` has a saved voice → auto-assign silently
-- Otherwise: fetch `GET /speakers/list?language={detected-language}` and ask:
-
-```
-Question: "Which voice for {character name}?"
-Options: [one per speaker — label: name, description: gender]
-```
+- If `config.defaultSpeakers.{language}` has saved voices → auto-assign silently (one per character in order)
+- Otherwise: fetch `GET /speakers/list?language={detected-language}` and follow `shared/speaker-selection.md` for each character
 
 **Step 3: Save preferences**
 
@@ -154,7 +170,7 @@ After all voices are assigned (if any were new):
 ```
 Question: "Save these voice assignments for future sessions?"
 Options:
-  - "Yes" — update scriptVoices in user-config.json
+  - "Yes" — update defaultSpeakers in .listenhub/tts/config.json
   - "No" — use for this session only
 ```
 
@@ -196,25 +212,34 @@ curl -sS -X POST "https://api.marswave.ai/openapi/v1/speech" \
 rm /tmp/lh-speech-request.json
 ```
 
-**Step 6: Present result**
+**Step 6: Download and present result**
 
+If `autoDownload` is `true`:
+- Create `.listenhub/tts/YYYY-MM-DD-{jobId}/`
+- `curl -sS -o {dir}/{jobId}.mp3 {audioUrl}`
+
+Present:
 ```
 Audio generated!
 
-  Listen: {audioUrl}
-  Subtitles: {subtitlesUrl}
-  Duration: {audioDuration / 1000}s
-  Credits used: {credits}
+在线收听：{audioUrl}
+字幕：{subtitlesUrl}
+时长：{audioDuration / 1000}s
+消耗积分：{credits}
+
+已下载到 .listenhub/tts/{YYYY-MM-DD}-{jobId}/：
+  {jobId}.mp3
 ```
 
 ---
 
-## Updating user-config.json
+## Updating Config
 
-When saving preferences, edit only the relevant key(s) in `tts/user-config.json`. Do not overwrite unchanged keys.
+When saving preferences, merge into `.listenhub/tts/config.json` — do not overwrite unchanged keys.
+Follow the merge pattern in `shared/config-pattern.md`.
 
-- Quick voice: set `quickVoice` to the selected `speakerId`
-- Script voices: replace `scriptVoices` with the full list of `speakerId` values assigned in the current session
+- Quick voice: set `defaultSpeakers.{language}[0]` to the selected `speakerId`
+- Script voices: set `defaultSpeakers.{language}` to the full array assigned this session
 - Language: set `language` if the user explicitly specifies it
 
 ## API Reference
