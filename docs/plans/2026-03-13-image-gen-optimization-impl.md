@@ -4,7 +4,7 @@
 
 **Goal:** Update the image-gen skill and API reference to match the new Labnana API spec.
 
-**Architecture:** Two files need editing — `shared/api-image.md` (API reference) and `/Users/fango/.claude/skills/listenhub-image-gen/SKILL.md` (interaction flow). No new files. No tests (these are markdown docs).
+**Architecture:** Two files need editing — `shared/api-image.md` (API reference) and `image-gen/SKILL.md` (interaction flow). No new files. No tests (these are markdown docs).
 
 **Tech Stack:** Markdown
 
@@ -150,10 +150,10 @@ git commit -m "docs(api-image): add model param, fix referenceImages format, exp
 
 ---
 
-### Task 2: Update `listenhub-image-gen/SKILL.md` interaction flow
+### Task 2: Update `image-gen/SKILL.md` interaction flow
 
 **Files:**
-- Modify: `/Users/fango/.claude/skills/listenhub-image-gen/SKILL.md`
+- Modify: `image-gen/SKILL.md`
 
 **What to change:**
 
@@ -255,14 +255,14 @@ In `## Workflow`, find the curl command in the example section and add `"model":
 **Step 6: Commit**
 
 ```bash
-git -C /Users/fango/.claude/skills add listenhub-image-gen/SKILL.md
-git -C /Users/fango/.claude/skills commit -m "feat(image-gen): add model selection, fix referenceImages format, expand aspect ratios"
+git add image-gen/SKILL.md
+git commit -m "feat(image-gen): add model selection, fix referenceImages format, expand aspect ratios"
 ```
 
 Wait — the skills directory may be a separate repo. Check first:
 
 ```bash
-ls /Users/fango/.claude/skills/.git
+ls .git
 ```
 
 If it exists, commit from there. If not, commit from the marswave/skills repo working directory.

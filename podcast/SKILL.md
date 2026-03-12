@@ -278,7 +278,7 @@ NEW_CONFIG=$(echo "$CONFIG" | jq \
   --arg mode "{mode}" \
   --arg method "{one-step/two-step}" \
   --argjson speakers '{"{language}": ["{speakerId}"]}' \
-  '. + {"language": $lang, "defaultMode": $mode, "defaultMethod": $method, "defaultSpeakers": ($speakers + .defaultSpeakers)}')
+  '. + {"language": $lang, "defaultMode": $mode, "defaultMethod": $method, "defaultSpeakers": (.defaultSpeakers + $speakers)}')
 echo "$NEW_CONFIG" > "$CONFIG_PATH"
 ```
 
