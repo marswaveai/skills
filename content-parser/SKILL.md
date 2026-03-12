@@ -1,15 +1,15 @@
 ---
 name: content-parser
+description: |
+  Extract and parse content from URLs. Triggers on: user provides a URL to extract
+  content from, another skill needs to parse source material, "parse this URL",
+  "extract content", "解析链接", "提取内容".
 metadata:
   openclaw:
     emoji: "🔗"
     requires:
       env: ["LISTENHUB_API_KEY"]
     primaryEnv: "LISTENHUB_API_KEY"
-description: |
-  Extract and parse content from URLs. Triggers on: user provides a URL to extract
-  content from, another skill needs to parse source material, "parse this URL",
-  "extract content", "解析链接", "提取内容".
 ---
 
 ## When to Use
@@ -36,25 +36,43 @@ Extract and normalize content from URLs across supported platforms. Returns stru
 - Follow `shared/common-patterns.md` for polling, errors, and interaction patterns
 - URL must be a valid HTTP(S) URL
 - Always read config following `shared/config-pattern.md` before any interaction
-- Never save files to `~/Downloads/` — use `.listenhub/content-parser/`
+- Never save files to `~/Downloads/` or `.listenhub/` — save to the current working directory
 
 <HARD-GATE>
 Use the AskUserQuestion tool for every multiple-choice step — do NOT print options as plain text. Ask one question at a time. Wait for the user's answer before proceeding to the next step. After collecting URL and options, confirm with the user before calling the extraction API.
 </HARD-GATE>
 
-## Step 0: Read Config
+## Step 0: Config Setup
 
-Load config following `shared/config-pattern.md`:
+Follow `shared/config-pattern.md` Step 0.
 
-1. Look for `{CWD}/.listenhub/content-parser/config.json`, then `~/.listenhub/content-parser/config.json`
-2. If neither exists, use `AskUserQuestion` to ask global vs current directory, then create it
+**If file doesn't exist** — ask location, then create immediately:
+```bash
+mkdir -p ".listenhub/content-parser"
+echo '{"autoDownload":true}' > ".listenhub/content-parser/config.json"
+CONFIG_PATH=".listenhub/content-parser/config.json"
+# (or $HOME/.listenhub/content-parser/config.json for global)
+```
+Then run **Setup Flow** below.
 
-Initial default config for content-parser:
-```json
-{
-  "outputDir": ".listenhub",
-  "autoDownload": true
-}
+**If file exists** — read config, display summary, and confirm:
+```
+当前配置 (content-parser)：
+  自动下载：{是 / 否}
+```
+Ask: "使用已保存的配置？" → **确认，直接继续** / **重新配置**
+
+### Setup Flow (first run or reconfigure)
+
+1. **autoDownload**: "自动保存提取的内容到当前目录？"
+   - "是（推荐）" → `autoDownload: true`
+   - "否" → `autoDownload: false`
+
+Save immediately:
+```bash
+NEW_CONFIG=$(echo "$CONFIG" | jq --argjson dl {true/false} '. + {"autoDownload": $dl}')
+echo "$NEW_CONFIG" > "$CONFIG_PATH"
+CONFIG=$(cat "$CONFIG_PATH")
 ```
 
 ## Interaction Flow
@@ -118,13 +136,32 @@ Wait for explicit confirmation before calling the API.
    Omit `options` if user chose defaults.
 3. **Submit (foreground)**: `POST /v1/content/extract` → extract `taskId`
 4. Tell the user extraction is in progress
-5. **Poll (background)**: `GET /v1/content/extract/{taskId}` every 5s with `run_in_background: true` and `timeout: 300000`
+5. **Poll (background)**: Run the following **exact** bash command with `run_in_background: true` and `timeout: 300000`. Note: status field is `.data.status` (not `processStatus`), interval is 5s, values are `processing`/`completed`/`failed`:
+
+   ```bash
+   TASK_ID="<id-from-step-3>"
+   for i in $(seq 1 60); do
+     RESULT=$(curl -sS "https://api.marswave.ai/openapi/v1/content/extract/$TASK_ID" \
+       -H "Authorization: Bearer $LISTENHUB_API_KEY" 2>/dev/null)
+     STATUS=$(echo "$RESULT" | tr -d '\000-\037\177' | jq -r '.data.status // "processing"')
+     case "$STATUS" in
+       completed) echo "$RESULT"; exit 0 ;;
+       failed) echo "FAILED: $RESULT" >&2; exit 1 ;;
+       *) sleep 5 ;;
+     esac
+   done
+   echo "TIMEOUT" >&2; exit 2
+   ```
 6. When notified, **download and present result**:
 
    If `autoDownload` is `true`:
-   - Create `.listenhub/content-parser/YYYY-MM-DD-{taskId}/`
-   - Write `{taskId}.md` — full extracted content in markdown
-   - Write `{taskId}.json` — full raw API response data
+   - Write `{taskId}-extracted.md` to the **current directory** — full extracted content in markdown
+   - Write `{taskId}-extracted.json` to the **current directory** — full raw API response data
+
+   ```bash
+   echo "$CONTENT_MD" > "${TASK_ID}-extracted.md"
+   echo "$RESULT" > "${TASK_ID}-extracted.json"
+   ```
 
    Present:
    ```
@@ -135,9 +172,9 @@ Wait for explicit confirmation before calling the API.
    长度：~{character count} 字符
    消耗积分：{credits}
 
-   已保存到 .listenhub/content-parser/{YYYY-MM-DD}-{taskId}/：
-     {taskId}.md
-     {taskId}.json
+   已保存到当前目录：
+     {taskId}-extracted.md
+     {taskId}-extracted.json
    ```
 
 7. Show a preview of the extracted content (first ~500 chars)
