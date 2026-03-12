@@ -73,7 +73,7 @@ Never overwrite keys you didn't change — always use `jq '. + {...}'` merge.
 
 ```bash
 CONFIG=$(cat "$CONFIG_PATH" 2>/dev/null || echo "{}")
-AUTO_DOWNLOAD=$(echo "$CONFIG" | jq -r '.autoDownload // true')
+OUTPUT_MODE=$(echo "$CONFIG" | jq -r '.outputMode // "inline"')
 LANGUAGE=$(echo "$CONFIG" | jq -r '.language // empty')
 ```
 
