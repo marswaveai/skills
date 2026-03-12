@@ -85,7 +85,18 @@ Free text input. Ask the user:
 
 If the prompt is very short (< 10 words) and the user hasn't asked for verbatim generation, offer to help enrich the prompt. Otherwise, use as-is.
 
-### Step 2: Resolution and Aspect Ratio
+### Step 2: Model
+
+Ask:
+
+```
+Question: "Which model?"
+Options:
+  - "pro (recommended)" — gemini-3-pro-image-preview, higher quality
+  - "flash" — gemini-3.1-flash-image-preview, faster and cheaper, unlocks extreme aspect ratios (1:4, 4:1, 1:8, 8:1)
+```
+
+### Step 3: Resolution and Aspect Ratio
 
 Ask both together (independent parameters):
 
@@ -99,14 +110,16 @@ Options:
 
 ```
 Question: "What aspect ratio?"
-Options:
+Options (all models):
   - "16:9" — Landscape, widescreen
   - "1:1" — Square
   - "9:16" — Portrait, phone screen
   - "Other" — 2:3, 3:2, 3:4, 4:3, 21:9
 ```
 
-### Step 3: Reference Images (optional)
+If flash model was selected, also offer: `1:4` (narrow portrait), `4:1` (wide landscape), `1:8` (extreme portrait), `8:1` (panoramic)
+
+### Step 4: Reference Images (optional)
 
 ```
 Question: "Any reference images for style guidance?"
@@ -115,9 +128,13 @@ Options:
   - "No references" — Generate from prompt only
 ```
 
-If yes, collect URLs (comma-separated, max 14). URLs must be direct image links ending in `.jpg`, `.png`, `.webp`, or `.gif`.
+If yes, collect URLs (comma-separated, max 14). For each URL, infer mimeType from suffix and build:
+```json
+{ "fileData": { "fileUri": "<url>", "mimeType": "<inferred>" } }
+```
+Suffix mapping: `.jpg`/`.jpeg` → `image/jpeg`, `.png` → `image/png`, `.webp` → `image/webp`, `.gif` → `image/gif`
 
-### Step 4: Confirm & Generate
+### Step 5: Confirm & Generate
 
 Summarize all choices:
 
@@ -125,6 +142,7 @@ Summarize all choices:
 Ready to generate image:
 
   Prompt: {prompt text}
+  Model: {pro / flash}
   Resolution: {1K / 2K / 4K}
   Aspect ratio: {ratio}
   References: {yes (N URLs) / no}
@@ -136,7 +154,7 @@ Wait for explicit confirmation before calling the API.
 
 ## Workflow
 
-1. **Build request**: Construct JSON with provider, prompt, imageConfig, and optional referenceImages
+1. **Build request**: Construct JSON with provider, model, prompt, imageConfig, and optional referenceImages
 2. **Submit**: `POST https://api.labnana.com/openapi/v1/images/generation` with timeout of 600s
 3. **Extract image**: Parse base64 data from response
 4. **Decode and present result**
@@ -223,9 +241,10 @@ echo "$BASE64_DATA" | base64 --decode > output.jpg
 
 **Agent workflow**:
 1. Prompt is short → offer enrichment → user declines
-2. Ask resolution → "2K"
-3. Ask ratio → "16:9"
-4. No references
+2. Ask model → "pro"
+3. Ask resolution → "2K"
+4. Ask ratio → "16:9"
+5. No references
 
 ```bash
 RESPONSE=$(curl -sS -X POST "https://api.labnana.com/openapi/v1/images/generation" \
@@ -234,6 +253,7 @@ RESPONSE=$(curl -sS -X POST "https://api.labnana.com/openapi/v1/images/generatio
   --max-time 600 \
   -d '{
     "provider": "google",
+    "model": "gemini-3-pro-image-preview",
     "prompt": "cyberpunk city at night",
     "imageConfig": {"imageSize": "2K", "aspectRatio": "16:9"}
   }')
