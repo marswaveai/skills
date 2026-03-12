@@ -35,11 +35,27 @@ Extract and normalize content from URLs across supported platforms. Returns stru
 - Always read `shared/authentication.md` for API key and headers
 - Follow `shared/common-patterns.md` for polling, errors, and interaction patterns
 - URL must be a valid HTTP(S) URL
-- **TEMPORARY**: Content extract API is at `https://api.staging.listenhub.ai/openapi/v1` (not the production base URL). Use staging API key `lh_sk_692d52b84f08f4069ce53d9f_236a4aeb56c7a52914fae4c5ed0b3ccb3008ea18853945d3` (not `$LISTENHUB_API_KEY`). Use this until the endpoint goes live.
+- Always read config following `shared/config-pattern.md` before any interaction
+- Never save files to `~/Downloads/` — use `.listenhub/content-parser/`
 
 <HARD-GATE>
 Use the AskUserQuestion tool for every multiple-choice step — do NOT print options as plain text. Ask one question at a time. Wait for the user's answer before proceeding to the next step. After collecting URL and options, confirm with the user before calling the extraction API.
 </HARD-GATE>
+
+## Step 0: Read Config
+
+Load config following `shared/config-pattern.md`:
+
+1. Look for `{CWD}/.listenhub/content-parser/config.json`, then `~/.listenhub/content-parser/config.json`
+2. If neither exists, use `AskUserQuestion` to ask global vs current directory, then create it
+
+Initial default config for content-parser:
+```json
+{
+  "outputDir": ".listenhub",
+  "autoDownload": true
+}
+```
 
 ## Interaction Flow
 
@@ -103,17 +119,29 @@ Wait for explicit confirmation before calling the API.
 3. **Submit (foreground)**: `POST /v1/content/extract` → extract `taskId`
 4. Tell the user extraction is in progress
 5. **Poll (background)**: `GET /v1/content/extract/{taskId}` every 5s with `run_in_background: true` and `timeout: 300000`
-6. When notified, **present result**:
-   ```
-   Content extracted!
+6. When notified, **download and present result**:
 
-   Source: {url}
-   Title: {metadata.title}
-   Length: ~{character count} characters
-   Credits: {credits}
+   If `autoDownload` is `true`:
+   - Create `.listenhub/content-parser/YYYY-MM-DD-{taskId}/`
+   - Write `{taskId}.md` — full extracted content in markdown
+   - Write `{taskId}.json` — full raw API response data
+
+   Present:
    ```
+   内容提取完成！
+
+   来源：{url}
+   标题：{metadata.title}
+   长度：~{character count} 字符
+   消耗积分：{credits}
+
+   已保存到 .listenhub/content-parser/{YYYY-MM-DD}-{taskId}/：
+     {taskId}.md
+     {taskId}.json
+   ```
+
 7. Show a preview of the extracted content (first ~500 chars)
-8. Offer to save full content to file or use it in another skill
+8. Offer to use content in another skill (e.g. `/podcast`, `/tts`)
 
 **Estimated time**: 10-30 seconds depending on content size and platform.
 
@@ -123,6 +151,7 @@ Wait for explicit confirmation before calling the API.
 - Supported platforms: `references/supported-platforms.md`
 - Polling: `shared/common-patterns.md` § Async Polling
 - Error handling: `shared/common-patterns.md` § Error Handling
+- Config pattern: `shared/config-pattern.md`
 
 ## Example
 
@@ -134,8 +163,8 @@ Wait for explicit confirmation before calling the API.
 3. Submit extraction
 
 ```bash
-curl -sS -X POST "https://api.staging.listenhub.ai/openapi/v1/content/extract" \
-  -H "Authorization: Bearer lh_sk_692d52b84f08f4069ce53d9f_236a4aeb56c7a52914fae4c5ed0b3ccb3008ea18853945d3" \
+curl -sS -X POST "https://api.marswave.ai/openapi/v1/content/extract" \
+  -H "Authorization: Bearer $LISTENHUB_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
     "source": {
@@ -148,8 +177,8 @@ curl -sS -X POST "https://api.staging.listenhub.ai/openapi/v1/content/extract" \
 4. Poll until complete:
 
 ```bash
-curl -sS "https://api.staging.listenhub.ai/openapi/v1/content/extract/69a7dac700cf95938f86d9bb" \
-  -H "Authorization: Bearer lh_sk_692d52b84f08f4069ce53d9f_236a4aeb56c7a52914fae4c5ed0b3ccb3008ea18853945d3"
+curl -sS "https://api.marswave.ai/openapi/v1/content/extract/69a7dac700cf95938f86d9bb" \
+  -H "Authorization: Bearer $LISTENHUB_API_KEY"
 ```
 
 5. Present extracted content preview and offer next actions.
@@ -164,8 +193,8 @@ curl -sS "https://api.staging.listenhub.ai/openapi/v1/content/extract/69a7dac700
 3. Submit extraction
 
 ```bash
-curl -sS -X POST "https://api.staging.listenhub.ai/openapi/v1/content/extract" \
-  -H "Authorization: Bearer lh_sk_692d52b84f08f4069ce53d9f_236a4aeb56c7a52914fae4c5ed0b3ccb3008ea18853945d3" \
+curl -sS -X POST "https://api.marswave.ai/openapi/v1/content/extract" \
+  -H "Authorization: Bearer $LISTENHUB_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
     "source": {
