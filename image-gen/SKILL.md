@@ -36,12 +36,27 @@ Generate AI images using the Labnana API. Supports text prompts with optional re
 - Always read `shared/authentication.md` for API key and headers
 - Follow `shared/common-patterns.md` for error handling
 - Image generation uses a **different base URL**: `https://api.labnana.com/openapi/v1`
-- Output saved to `$LISTENHUB_OUTPUT_DIR` (default: `~/Downloads`)
-- Filename format: `listenhub-YYYYMMDD-HHMMSS-XXXX.jpg`
+- Always read config following `shared/config-pattern.md` before any interaction
+- Output saved to `.listenhub/image-gen/YYYY-MM-DD-{jobId}/` — never `~/Downloads/`
 
 <HARD-GATE>
 Use the AskUserQuestion tool for every multiple-choice step — do NOT print options as plain text. Ask one question at a time. Wait for the user's answer before proceeding to the next step. After all parameters are collected, summarize the choices and ask the user to confirm. Do NOT call the image generation API until the user has explicitly confirmed.
 </HARD-GATE>
+
+## Step 0: Read Config
+
+Load config following `shared/config-pattern.md`:
+
+1. Look for `{CWD}/.listenhub/image-gen/config.json`, then `~/.listenhub/image-gen/config.json`
+2. If neither exists, use `AskUserQuestion` to ask global vs current directory, then create it
+
+Initial default config for image-gen:
+```json
+{
+  "outputDir": ".listenhub",
+  "autoDownload": true
+}
+```
 
 ## Interaction Flow
 
@@ -107,12 +122,24 @@ Wait for explicit confirmation before calling the API.
 1. **Build request**: Construct JSON with provider, prompt, imageConfig, and optional referenceImages
 2. **Submit**: `POST https://api.labnana.com/openapi/v1/images/generation` with timeout of 600s
 3. **Extract image**: Parse base64 data from response
-4. **Save**: Decode base64 and save to `$LISTENHUB_OUTPUT_DIR/listenhub-YYYYMMDD-HHMMSS-XXXX.jpg`
+4. **Save**: Generate a timestamp-based jobId (`$(date +%s)`), then:
+   - Create `.listenhub/image-gen/YYYY-MM-DD-{jobId}/`
+   - Decode base64 and save as `{jobId}.jpg`
+
+   ```bash
+   JOB_ID=$(date +%s)
+   DATE=$(date +%Y-%m-%d)
+   JOB_DIR=".listenhub/image-gen/${DATE}-${JOB_ID}"
+   mkdir -p "$JOB_DIR"
+   echo "$BASE64_DATA" | base64 -D > "${JOB_DIR}/${JOB_ID}.jpg"
+   ```
+
 5. **Present result**:
    ```
-   Image generated!
+   图片已生成！
 
-   ~/Downloads/listenhub-20260304-143145-0001.jpg
+   已保存到 .listenhub/image-gen/{YYYY-MM-DD}-{jobId}/：
+     {jobId}.jpg
    ```
 
 **Base64 decoding** (cross-platform):
@@ -180,7 +207,11 @@ RESPONSE=$(curl -sS -X POST "https://api.labnana.com/openapi/v1/images/generatio
   }')
 
 BASE64_DATA=$(echo "$RESPONSE" | jq -r '.candidates[0].content.parts[0].inlineData.data // .data')
-echo "$BASE64_DATA" | base64 -D > ~/Downloads/listenhub-20260304-143145-0001.jpg
+JOB_ID=$(date +%s)
+DATE=$(date +%Y-%m-%d)
+JOB_DIR=".listenhub/image-gen/${DATE}-${JOB_ID}"
+mkdir -p "$JOB_DIR"
+echo "$BASE64_DATA" | base64 -D > "${JOB_DIR}/${JOB_ID}.jpg"
 ```
 
-Present the saved file path to the user.
+Present `.listenhub/image-gen/2026-03-12-{jobId}/{jobId}.jpg` to the user.
