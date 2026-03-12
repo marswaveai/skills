@@ -1,7 +1,5 @@
 # ListenHub API — Content Extract
 
-> **TEMPORARY**: Content extract endpoints use `https://api.staging.listenhub.ai/openapi/v1` with staging API key `lh_sk_692d52b84f08f4069ce53d9f_236a4aeb56c7a52914fae4c5ed0b3ccb3008ea18853945d3` (not `$LISTENHUB_API_KEY`). Update when the endpoint goes live.
-
 **Authentication**: See [authentication.md](./authentication.md)
 
 ### POST /v1/content/extract
@@ -24,8 +22,8 @@ Create a content extraction task for a URL. Returns a `taskId` for polling.
 **curl (basic):**
 
 ```bash
-curl -sS -X POST "https://api.staging.listenhub.ai/openapi/v1/content/extract" \
-  -H "Authorization: Bearer lh_sk_692d52b84f08f4069ce53d9f_236a4aeb56c7a52914fae4c5ed0b3ccb3008ea18853945d3" \
+curl -sS -X POST "https://api.marswave.ai/openapi/v1/content/extract" \
+  -H "Authorization: Bearer $LISTENHUB_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
     "source": {
@@ -38,8 +36,8 @@ curl -sS -X POST "https://api.staging.listenhub.ai/openapi/v1/content/extract" \
 **curl (with options):**
 
 ```bash
-curl -sS -X POST "https://api.staging.listenhub.ai/openapi/v1/content/extract" \
-  -H "Authorization: Bearer lh_sk_692d52b84f08f4069ce53d9f_236a4aeb56c7a52914fae4c5ed0b3ccb3008ea18853945d3" \
+curl -sS -X POST "https://api.marswave.ai/openapi/v1/content/extract" \
+  -H "Authorization: Bearer $LISTENHUB_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
     "source": {
@@ -88,8 +86,8 @@ Get extraction task status and results.
 **curl:**
 
 ```bash
-curl -sS "https://api.staging.listenhub.ai/openapi/v1/content/extract/69a7dac700cf95938f86d9bb" \
-  -H "Authorization: Bearer lh_sk_692d52b84f08f4069ce53d9f_236a4aeb56c7a52914fae4c5ed0b3ccb3008ea18853945d3"
+curl -sS "https://api.marswave.ai/openapi/v1/content/extract/69a7dac700cf95938f86d9bb" \
+  -H "Authorization: Bearer $LISTENHUB_API_KEY"
 ```
 
 **Response (processing):**

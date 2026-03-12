@@ -4,7 +4,7 @@ This monolithic skill has been decomposed into individual skills:
 
 - `/podcast` — Podcast generation (solo, dialogue, debate)
 - `/explainer` — Explainer videos with narration and AI visuals
-- `/speech` — Text-to-speech and voice narration (FlowSpeech + multi-speaker)
+- `/tts` — Text-to-speech and voice narration
 - `/image-gen` — AI image generation
 - `/content-parser` — URL content extraction
 

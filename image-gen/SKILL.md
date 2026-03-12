@@ -43,6 +43,10 @@ Generate AI images using the Labnana API. Supports text prompts with optional re
 Use the AskUserQuestion tool for every multiple-choice step — do NOT print options as plain text. Ask one question at a time. Wait for the user's answer before proceeding to the next step. After all parameters are collected, summarize the choices and ask the user to confirm. Do NOT call the image generation API until the user has explicitly confirmed.
 </HARD-GATE>
 
+## Step -1: API Key Check
+
+Follow `shared/config-pattern.md` § API Key Check. If the key is missing, stop immediately.
+
 ## Step 0: Config Setup
 
 Follow `shared/config-pattern.md` Step 0.

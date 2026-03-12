@@ -44,8 +44,11 @@ Generate podcast episodes with 1-2 AI speakers discussing a topic. Supports quic
 <HARD-GATE>
 Use the AskUserQuestion tool for every multiple-choice step — do NOT print options as plain text. Ask one question at a time. Wait for the user's answer before proceeding to the next step. After all parameters are collected, summarize the choices and ask the user to confirm. Do NOT call any generation API until the user has explicitly confirmed.
 
-Respond in the user's language: Chinese input → Chinese output, English input → English output.
 </HARD-GATE>
+
+## Step -1: API Key Check
+
+Follow `shared/config-pattern.md` § API Key Check. If the key is missing, stop immediately.
 
 ## Step 0: Config Setup
 

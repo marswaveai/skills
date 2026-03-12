@@ -42,6 +42,10 @@ Extract and normalize content from URLs across supported platforms. Returns stru
 Use the AskUserQuestion tool for every multiple-choice step — do NOT print options as plain text. Ask one question at a time. Wait for the user's answer before proceeding to the next step. After collecting URL and options, confirm with the user before calling the extraction API.
 </HARD-GATE>
 
+## Step -1: API Key Check
+
+Follow `shared/config-pattern.md` § API Key Check. If the key is missing, stop immediately.
+
 ## Step 0: Config Setup
 
 Follow `shared/config-pattern.md` Step 0.

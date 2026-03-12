@@ -2,6 +2,10 @@
 
 Reusable patterns for all skills that call ListenHub APIs.
 
+<HARD-GATE>
+**Language Adaptation**: Always respond in the user's language. Chinese input → Chinese output. English input → English output. Mixed → follow dominant language. This applies to all UI text, questions, confirmations, and error messages.
+</HARD-GATE>
+
 ## Async Polling
 
 Most generation endpoints are asynchronous: submit a task, get an ID, then poll until completion.
@@ -38,9 +42,9 @@ Run this as a **separate Bash call** with `run_in_background: true`:
 EPISODE_ID="<id-from-step-1>"
 for i in $(seq 1 30); do
   RESULT=$(curl -sS "https://api.marswave.ai/openapi/v1/podcast/episodes/$EPISODE_ID" \
-    -H "Authorization: Bearer $LISTENHUB_API_KEY")
+    -H "Authorization: Bearer $LISTENHUB_API_KEY" 2>/dev/null)
 
-  STATUS=$(echo "$RESULT" | jq -r '.data.processStatus // "pending"')
+  STATUS=$(echo "$RESULT" | tr -d '\000-\037\177' | jq -r '.data.processStatus // "pending"')
 
   case "$STATUS" in
     success|completed) echo "$RESULT"; exit 0 ;;
@@ -172,10 +176,3 @@ For **free text** steps (topic, URL, prompt), just ask the question in a normal 
 - **Sequential when dependent**: e.g., speaker list depends on language choice — ask language first, then fetch speakers and present list
 - **Batch when independent**: e.g., resolution + aspect ratio can be asked together in one AskUserQuestion call (multiple questions)
 - **Options include descriptions**: not just labels — explain what each choice means
-
-## Language Adaptation
-
-Match the user's input language for all responses:
-- Chinese input → Chinese output
-- English input → English output
-- Mixed → follow dominant language

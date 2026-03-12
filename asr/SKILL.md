@@ -42,7 +42,6 @@ plain text. Ask one question at a time. Wait for the user's answer before procee
 After all parameters are collected, summarize and ask the user to confirm before
 running any transcription.
 
-Respond in the user's language: Chinese input → Chinese output, English input → English output.
 </HARD-GATE>
 
 ## Interaction Flow

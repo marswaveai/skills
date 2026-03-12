@@ -2,6 +2,27 @@
 
 Reusable pattern for per-skill config lookup, creation, and update.
 
+## API Key Check
+
+Run this **before Step 0** in every skill that requires `LISTENHUB_API_KEY`. Hard gate — if missing, stop immediately and do not proceed.
+
+```bash
+[ -z "$LISTENHUB_API_KEY" ] && echo "MISSING" || echo "OK"
+```
+
+**If `OK`**: proceed to Step 0.
+
+**If `MISSING`**: tell the user that `LISTENHUB_API_KEY` is not set, and show the steps below to configure it. Then stop — do NOT proceed to Step 0 or any interaction flow.
+
+### Missing Key Message
+
+Tell the user:
+- `LISTENHUB_API_KEY` is not set
+- Get an API key at https://listenhub.ai/settings/api-keys (Pro plan required)
+- Add `export LISTENHUB_API_KEY="lh_sk_..."` to `~/.zshrc` (macOS) or `~/.bashrc` (Linux)
+- Run `source ~/.zshrc` to reload
+- Re-run this skill after configuring
+
 ## Config Location
 
 Each skill stores config at:
