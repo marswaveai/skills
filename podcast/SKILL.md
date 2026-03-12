@@ -1,15 +1,15 @@
 ---
 name: podcast
+description: |
+  Create podcasts from topics, URLs, or text. Triggers on: "做播客", "podcast",
+  "播客", "录一期节目", "chat about", "discuss", "debate", "dialogue",
+  "make a podcast about".
 metadata:
   openclaw:
     emoji: "🎙️"
     requires:
       env: ["LISTENHUB_API_KEY"]
     primaryEnv: "LISTENHUB_API_KEY"
-description: |
-  Create podcasts from topics, URLs, or text. Triggers on: "做播客", "podcast",
-  "播客", "录一期节目", "chat about", "discuss", "debate", "dialogue",
-  "make a podcast about".
 ---
 
 ## When to Use
@@ -38,22 +38,70 @@ Generate podcast episodes with 1-2 AI speakers discussing a topic. Supports quic
 - Never hardcode speaker IDs — always fetch from the speakers API
 - Never fabricate API endpoints or parameters
 - Always read config following `shared/config-pattern.md` before any interaction
-- Always follow `shared/speaker-selection.md` for speaker selection (text table + pagination)
+- Always follow `shared/speaker-selection.md` for speaker selection (text table + free-text input)
 - Never save files to `~/Downloads/` — use `.listenhub/podcast/` from config
 
 <HARD-GATE>
 Use the AskUserQuestion tool for every multiple-choice step — do NOT print options as plain text. Ask one question at a time. Wait for the user's answer before proceeding to the next step. After all parameters are collected, summarize the choices and ask the user to confirm. Do NOT call any generation API until the user has explicitly confirmed.
+
+Respond in the user's language: Chinese input → Chinese output, English input → English output.
 </HARD-GATE>
 
-## Step 0: Read Config
+## Step 0: Config Setup
 
-Before any interaction, load config following `shared/config-pattern.md`:
+Follow `shared/config-pattern.md` Step 0.
 
-1. Look for `{CWD}/.listenhub/podcast/config.json`, then `~/.listenhub/podcast/config.json`
-2. If neither exists, use `AskUserQuestion` to ask global vs current directory, then create it
-3. Note saved values: `language`, `defaultMode`, `defaultSpeakers`, `autoDownload`
+**If file doesn't exist** — ask location, then create immediately:
+```bash
+mkdir -p ".listenhub/podcast"
+echo '{"outputDir":".listenhub","outputMode":"inline","language":null,"defaultMode":null,"defaultMethod":null,"defaultSpeakers":{}}' > ".listenhub/podcast/config.json"
+CONFIG_PATH=".listenhub/podcast/config.json"
+# (or $HOME/.listenhub/podcast/config.json for global)
+```
+Then run **Setup Flow** below.
 
-Saved values pre-fill steps 2–5. User can still override any of them during the interaction.
+**If file exists** — read config, display summary, and confirm:
+```
+当前配置 (podcast)：
+  输出方式：{inline / download / both}
+  语言偏好：{zh / en / 未设置}
+  默认模式：{quick / deep / debate / 未设置}
+  默认生成方式：{one-step / two-step / 未设置}
+  默认主播：{speakerName(s) / 未设置}
+```
+Ask: "使用已保存的配置？" → **确认，直接继续** / **重新配置**
+
+### Setup Flow (first run or reconfigure)
+
+Ask these questions in order, then save all answers to config at once:
+
+1. **outputMode**: Follow `shared/output-mode.md` § Setup Flow Question.
+
+2. **Language** (optional): "默认语言？"
+   - "中文 (zh)"
+   - "English (en)"
+   - "每次手动选择" → keep `null`
+
+3. **Mode** (optional): "默认播客模式？"
+   - "Quick — 简短概述"
+   - "Deep — 深度分析"
+   - "Debate — 辩论对话"
+   - "每次手动选择" → keep `null`
+
+4. **Method** (optional): "默认生成方式？"
+   - "一步生成（推荐）" → `defaultMethod: "one-step"`
+   - "两步生成（先预览文本）" → `defaultMethod: "two-step"`
+   - "每次手动选择" → keep `null`
+
+After collecting answers, save immediately:
+```bash
+# Follow shared/output-mode.md § Save to Config
+NEW_CONFIG=$(echo "$CONFIG" | jq --arg m "$OUTPUT_MODE" '. + {"outputMode": $m}')
+echo "$NEW_CONFIG" > "$CONFIG_PATH"
+CONFIG=$(cat "$CONFIG_PATH")
+```
+
+Note: `defaultSpeakers` are saved after generation (see After Successful Generation section).
 
 ## Interaction Flow
 
@@ -105,7 +153,7 @@ Note: Debate mode automatically sets 2 speakers.
 
 Follow `shared/speaker-selection.md` for the full selection flow, including:
 - Default from `config.defaultSpeakers.{language}` (skip step if set)
-- Text table + paginated AskUserQuestion
+- Text table + free-text input
 - Input matching and re-prompt on no match
 
 For 2-speaker mode (dialogue/debate): run selection twice (or until both are chosen).
@@ -121,6 +169,9 @@ Options:
 ```
 
 ### Step 7: Generation Method
+
+If `config.defaultMethod` is set, pre-fill and show in summary — skip this question.
+Otherwise ask:
 
 ```
 Question: "How would you like to generate?"
@@ -154,39 +205,52 @@ Wait for explicit confirmation before calling any API.
 
 1. **Submit (foreground)**: `POST /podcast/episodes` with collected parameters → extract `episodeId`
 2. Tell the user the task is submitted
-3. **Poll (background)**: `GET /podcast/episodes/{episodeId}` every 10s with `run_in_background: true` and `timeout: 600000`
-4. When notified of completion, **download and present result**:
+3. **Poll (background)**: Run the following **exact** bash command with `run_in_background: true` and `timeout: 600000`. Do NOT use python3, awk, or any other JSON parser — use `jq` as shown:
 
-   a. Read `autoDownload` from config (default: `true`)
-   b. If `autoDownload` is `true`:
-      - Create `.listenhub/podcast/YYYY-MM-DD-{episodeId}/`
-      - `curl -sS -o {dir}/{episodeId}.mp3 {audioUrl}`
-      - Write `{episodeId}.md` from `scripts` array (one line per speaker turn: `**{speakerName}**: {content}`)
-      - Write `{episodeId}.json` with raw `scripts` array
+   ```bash
+   EPISODE_ID="<id-from-step-1>"
+   for i in $(seq 1 30); do
+     RESULT=$(curl -sS "https://api.marswave.ai/openapi/v1/podcast/episodes/$EPISODE_ID" \
+       -H "Authorization: Bearer $LISTENHUB_API_KEY" 2>/dev/null)
+     STATUS=$(echo "$RESULT" | tr -d '\000-\037\177' | jq -r '.data.processStatus // "pending"')
+     case "$STATUS" in
+       success|completed) echo "$RESULT"; exit 0 ;;
+       failed|error) echo "FAILED: $RESULT" >&2; exit 1 ;;
+       *) sleep 10 ;;
+     esac
+   done
+   echo "TIMEOUT" >&2; exit 2
+   ```
+4. When notified of completion, **Step 6: Present result**
 
-   c. Present:
+   Read `OUTPUT_MODE` from config. Follow `shared/output-mode.md` for behavior.
 
+   **`inline` or `both`**: Display `audioUrl` as a clickable link.
+
+   Present:
    ```
    播客已生成！
 
-   「{title}」
-
-   在线收听：https://listenhub.ai/app/episode/{episodeId}
-   MP3 直链： {audioUrl}
-
-   已下载到 .listenhub/podcast/{YYYY-MM-DD}-{episodeId}/：
-     {episodeId}.mp3
-     {episodeId}.md
-     {episodeId}.json
+   在线收听：{audioUrl}
+   字幕：{subtitlesUrl}（如有）
+   时长：{audioDuration / 1000}s
+   消耗积分：{credits}
    ```
 
-   (If `autoDownload` is `false`, omit the download section and only show the links.)
+   **`download` or `both`**: Also download the file.
+   ```bash
+   DATE=$(date +%Y-%m-%d)
+   JOB_DIR=".listenhub/podcast/${DATE}-{episodeId}"
+   mkdir -p "$JOB_DIR"
+   curl -sS -o "${JOB_DIR}/{episodeId}.mp3" "{audioUrl}"
+   ```
+   Present the download path in addition to the above summary.
 5. Offer to show transcript or provide download URL on request
 
 ### Two-Step Generation
 
 1. **Step 1 — Submit text (foreground)**: `POST /podcast/episodes/text-content` → extract `episodeId`
-2. **Poll text (background)**: `run_in_background: true`, `timeout: 600000`
+2. **Poll text (background)**: Use the exact `jq`-based polling loop above (substitute endpoint `podcast/episodes/text-content/{episodeId}` if needed), with `run_in_background: true` and `timeout: 600000`
 3. When notified, **save draft to config output dir**:
    - Create `.listenhub/podcast/YYYY-MM-DD-{episodeId}/`
    - Write `{episodeId}-draft.md` (human-readable: `**{speakerName}**: {content}` per line)
@@ -196,7 +260,7 @@ Wait for explicit confirmation before calling any API.
 5. **Step 2 — Submit audio (foreground, after approval)**:
    - No changes: `POST /podcast/episodes/{episodeId}/audio` with `{}`
    - With edits: `POST /podcast/episodes/{episodeId}/audio` with modified `{scripts: [...]}`
-6. **Poll audio (background)**: `run_in_background: true`, `timeout: 600000`
+6. **Poll audio (background)**: Same exact `jq`-based loop, `run_in_background: true`, `timeout: 600000`
 7. When notified, **download audio to same folder**:
    - `curl -sS -o .listenhub/podcast/{dir}/{episodeId}.mp3 {audioUrl}`
    - Present final result (same format as one-step, folder now has draft + final files)
@@ -209,8 +273,9 @@ Update config with the choices made this session:
 NEW_CONFIG=$(echo "$CONFIG" | jq \
   --arg lang "{language}" \
   --arg mode "{mode}" \
+  --arg method "{one-step/two-step}" \
   --argjson speakers '{"{language}": ["{speakerId}"]}' \
-  '. + {"language": $lang, "defaultMode": $mode, "defaultSpeakers": ($speakers + .defaultSpeakers)}')
+  '. + {"language": $lang, "defaultMode": $mode, "defaultMethod": $method, "defaultSpeakers": ($speakers + .defaultSpeakers)}')
 echo "$NEW_CONFIG" > "$CONFIG_PATH"
 ```
 
