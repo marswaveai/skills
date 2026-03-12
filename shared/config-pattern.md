@@ -10,49 +10,78 @@ Each skill stores config at:
 .listenhub/{skill}/config.json
 ```
 
-## Lookup Order
+## Step 0: Config Setup
 
-Check in this order, stop at first match:
+Run before any interaction in every skill. Three possible states:
 
-1. `{CWD}/.listenhub/{skill}/config.json` — project-level
-2. `~/.listenhub/{skill}/config.json` — global
+### State A — File Doesn't Exist (first run)
 
-## First-Run Prompt
-
-If neither file exists, use `AskUserQuestion` — never assume a default:
-
+Use `AskUserQuestion`:
 ```
 Question: "ListenHub 配置文件存在哪里？"
 Options:
-  - "当前目录" — 创建 {CWD}/.listenhub/{skill}/config.json，仅此项目使用
-  - "全局"     — 创建 ~/.listenhub/{skill}/config.json，所有项目共用
+  - "当前目录" — {CWD}/.listenhub/{skill}/config.json（仅此项目）
+  - "全局" — ~/.listenhub/{skill}/config.json（所有项目共用）
 ```
 
-After the user answers, create the directory and write the initial config with defaults.
-This prompt fires **once per skill per location** — never again once the file exists.
+Then create the directory and write the skill's initial defaults **immediately**:
 
-## Reading Config
+```bash
+# 当前目录:
+mkdir -p ".listenhub/{skill}"
+echo '{...skill initial defaults...}' > ".listenhub/{skill}/config.json"
+CONFIG_PATH=".listenhub/{skill}/config.json"
 
+# 全局:
+mkdir -p "$HOME/.listenhub/{skill}"
+echo '{...skill initial defaults...}' > "$HOME/.listenhub/{skill}/config.json"
+CONFIG_PATH="$HOME/.listenhub/{skill}/config.json"
+```
+
+Then run the skill's **Setup Flow** to collect preferences and save them.
+
+### State B — File Exists
+
+Read the config:
 ```bash
 CONFIG_PATH=".listenhub/{skill}/config.json"
-# Fall back to global if not found locally
 [ ! -f "$CONFIG_PATH" ] && CONFIG_PATH="$HOME/.listenhub/{skill}/config.json"
-CONFIG=$(cat "$CONFIG_PATH" 2>/dev/null || echo "{}")
+CONFIG=$(cat "$CONFIG_PATH")
 ```
 
-Use `jq` to read individual fields:
+Display the current settings in a readable summary (skill-specific format), then ask:
+
+```
+Question: "使用已保存的配置？"
+Options:
+  - "确认，直接继续" — use saved config as-is, skip Setup Flow
+  - "重新配置" — run Setup Flow again and overwrite saved values
+```
+
+## Setup Flow
+
+Each skill defines its own Setup Flow — questions to collect preferences on first run or reconfigure. After answers are collected, **save immediately** using the merge pattern:
 
 ```bash
+NEW_CONFIG=$(echo "$CONFIG" | jq '. + {"key": "value"}')
+echo "$NEW_CONFIG" > "$CONFIG_PATH"
+```
+
+Never overwrite keys you didn't change — always use `jq '. + {...}'` merge.
+
+## Reading Config Fields
+
+```bash
+CONFIG=$(cat "$CONFIG_PATH" 2>/dev/null || echo "{}")
 AUTO_DOWNLOAD=$(echo "$CONFIG" | jq -r '.autoDownload // true')
 LANGUAGE=$(echo "$CONFIG" | jq -r '.language // empty')
 ```
 
 ## Writing Config
 
-Always merge — never overwrite keys you didn't change:
+Merge pattern for updating individual fields after a session:
 
 ```bash
-# Merge a single key into existing config
 NEW_CONFIG=$(echo "$CONFIG" | jq '. + {"language": "zh", "defaultMode": "deep"}')
 echo "$NEW_CONFIG" > "$CONFIG_PATH"
 ```
@@ -74,13 +103,10 @@ curl -sS -o "${JOB_DIR}/{jobId}.md"  "{transcriptUrl}"  # if applicable
 File naming: `{jobId}.{ext}` inside `YYYY-MM-DD-{jobId}/`.
 Draft files (two-step mode): `{jobId}-draft.md`, `{jobId}-draft.json`.
 
-## autoDownload Flag
+## Output Mode
 
-Check before downloading:
+Read `outputMode` from config, then follow `shared/output-mode.md` for behavior.
 
 ```bash
-AUTO_DOWNLOAD=$(echo "$CONFIG" | jq -r '.autoDownload // true')
-if [ "$AUTO_DOWNLOAD" = "true" ]; then
-  # download artifacts
-fi
+OUTPUT_MODE=$(echo "$CONFIG" | jq -r '.outputMode // "inline"')
 ```
