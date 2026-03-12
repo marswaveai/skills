@@ -25,7 +25,7 @@ If neither file exists, use `AskUserQuestion` — never assume a default:
 Question: "ListenHub 配置文件存在哪里？"
 Options:
   - "当前目录" — 创建 {CWD}/.listenhub/{skill}/config.json，仅此项目使用
-  - "全局"     — 创建 ~/.listenhub/podcast/config.json，所有项目共用
+  - "全局"     — 创建 ~/.listenhub/{skill}/config.json，所有项目共用
 ```
 
 After the user answers, create the directory and write the initial config with defaults.
