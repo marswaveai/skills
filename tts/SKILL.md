@@ -39,11 +39,13 @@ Convert text into natural-sounding speech audio. Two paths:
 - Follow `shared/common-patterns.md` for errors and interaction patterns
 - Never hardcode speaker IDs — always fetch from the speakers API
 - Always read config following `shared/config-pattern.md` before any interaction
-- Always follow `shared/speaker-selection.md` for speaker selection (text table + pagination)
+- Always follow `shared/speaker-selection.md` for speaker selection (text table + free-text input)
 - Never save files to `~/Downloads/` or `/tmp/` as primary output — use `.listenhub/tts/`
 
 <HARD-GATE>
 Use the AskUserQuestion tool for every multiple-choice step — do NOT print options as plain text. Ask one question at a time. Wait for the user's answer before proceeding to the next step. After all parameters are collected, summarize the choices and ask the user to confirm. Do NOT call any generation API until the user has explicitly confirmed.
+
+Respond in the user's language: Chinese input → Chinese output, English input → English output.
 </HARD-GATE>
 
 ## Mode Detection
@@ -61,24 +63,51 @@ Determine the mode from the user's input **automatically** before asking any que
 
 ## Interaction Flow
 
-### Step 0: Read config
+### Step 0: Config Setup
 
-Before doing anything, load config following `shared/config-pattern.md`:
+Follow `shared/config-pattern.md` Step 0.
 
-1. Look for `{CWD}/.listenhub/tts/config.json`, then `~/.listenhub/tts/config.json`
-2. If neither exists, use `AskUserQuestion` to ask global vs current directory, then create it
+**If file doesn't exist** — ask location, then create immediately:
+```bash
+mkdir -p ".listenhub/tts"
+echo '{"outputDir":".listenhub","outputMode":"inline","language":null,"defaultSpeakers":{}}' > ".listenhub/tts/config.json"
+CONFIG_PATH=".listenhub/tts/config.json"
+# (or $HOME/.listenhub/tts/config.json for global)
+```
+Then run **Setup Flow** below.
 
-Initial default config for tts:
-```json
-{
-  "outputDir": ".listenhub",
-  "autoDownload": true,
-  "language": null,
-  "defaultSpeakers": {}
-}
+**If file exists** — read config, display summary, and confirm:
+```
+当前配置 (tts)：
+  输出方式：{inline / download / both}
+  语言偏好：{zh / en / 未设置}
+  默认主播：{speakerName / 未设置}
+```
+Ask: "使用已保存的配置？" → **确认，直接继续** / **重新配置**
+
+### Setup Flow (first run or reconfigure)
+
+Ask these questions in order, then save all answers to config at once:
+
+1. **outputMode**: Follow `shared/output-mode.md` § Setup Flow Question.
+
+2. **Language** (optional): "默认语言？"
+   - "中文 (zh)"
+   - "English (en)"
+   - "每次手动选择" → keep `null`
+
+After collecting answers, save immediately:
+```bash
+# Save outputMode; only update language if user picked one
+# Follow shared/output-mode.md § Save to Config
+NEW_CONFIG=$(echo "$CONFIG" | jq --arg m "$OUTPUT_MODE" '. + {"outputMode": $m}')
+# If language was chosen (not "每次手动选择"):
+NEW_CONFIG=$(echo "$NEW_CONFIG" | jq --arg lang "zh" '. + {"language": $lang}')
+echo "$NEW_CONFIG" > "$CONFIG_PATH"
+CONFIG=$(cat "$CONFIG_PATH")
 ```
 
-Note saved values for `language`, `defaultSpeakers`, `autoDownload`.
+Note: `defaultSpeakers` are saved after speaker selection in Step 3 — not here.
 
 ### Quick Mode — `POST /v1/tts`
 
@@ -91,7 +120,7 @@ Get the text to convert. If the user hasn't provided it, ask:
 **Step 2: Determine voice**
 
 - If `config.defaultSpeakers.{language}[0]` is set → use it silently (skip to Step 4)
-- Otherwise: `GET /speakers/list?language={detected-language}`, then follow `shared/speaker-selection.md` (text table + paginated AskUserQuestion)
+- Otherwise: `GET /speakers/list?language={detected-language}`, then follow `shared/speaker-selection.md` (text table + free-text input)
 
 **Step 3: Save preference**
 
@@ -123,14 +152,40 @@ curl -sS -X POST "https://api.marswave.ai/openapi/v1/tts" \
   --output /tmp/tts-output.mp3
 ```
 
-**Step 6: Download and present result**
+**Step 6: Present result**
 
-If `autoDownload` is `true`:
-- The TTS endpoint returns audio directly (not async) — save the output during the curl call
-- Use a timestamped jobId: `$(date +%s)`
-- Create `.listenhub/tts/YYYY-MM-DD-{jobId}/`
-- Save as `{jobId}.mp3` via `curl ... --output {dir}/{jobId}.mp3`
+Read `OUTPUT_MODE` from config. Follow `shared/output-mode.md` for behavior.
 
+Use a timestamped jobId: `$(date +%s)`
+
+**`inline` or `both`** (TTS quick returns a sync audio stream — no `audioUrl`):
+```bash
+JOB_ID=$(date +%s)
+curl -sS -X POST "https://api.marswave.ai/openapi/v1/tts" \
+  -H "Authorization: Bearer $LISTENHUB_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"input": "...", "voice": "..."}' \
+  --output /tmp/tts-${JOB_ID}.mp3
+```
+Then use the Read tool on `/tmp/tts-{jobId}.mp3`.
+
+Present:
+```
+Audio generated!
+```
+
+**`download` or `both`**:
+```bash
+JOB_ID=$(date +%s)
+DATE=$(date +%Y-%m-%d)
+JOB_DIR=".listenhub/tts/${DATE}-${JOB_ID}"
+mkdir -p "$JOB_DIR"
+curl -sS -X POST "https://api.marswave.ai/openapi/v1/tts" \
+  -H "Authorization: Bearer $LISTENHUB_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"input": "...", "voice": "..."}' \
+  --output "${JOB_DIR}/${JOB_ID}.mp3"
+```
 Present:
 ```
 Audio generated!
@@ -138,8 +193,6 @@ Audio generated!
 已下载到 .listenhub/tts/{YYYY-MM-DD}-{jobId}/：
   {jobId}.mp3
 ```
-
-If `autoDownload` is `false`, save to `/tmp/tts-{jobId}.mp3` and show that path.
 
 ---
 
@@ -212,11 +265,11 @@ curl -sS -X POST "https://api.marswave.ai/openapi/v1/speech" \
 rm /tmp/lh-speech-request.json
 ```
 
-**Step 6: Download and present result**
+**Step 6: Present result**
 
-If `autoDownload` is `true`:
-- Create `.listenhub/tts/YYYY-MM-DD-{jobId}/`
-- `curl -sS -o {dir}/{jobId}.mp3 {audioUrl}`
+Read `OUTPUT_MODE` from config. Follow `shared/output-mode.md` for behavior.
+
+**`inline` or `both`**: Display the `audioUrl` and `subtitlesUrl` as clickable links.
 
 Present:
 ```
@@ -226,10 +279,16 @@ Audio generated!
 字幕：{subtitlesUrl}
 时长：{audioDuration / 1000}s
 消耗积分：{credits}
-
-已下载到 .listenhub/tts/{YYYY-MM-DD}-{jobId}/：
-  {jobId}.mp3
 ```
+
+**`download` or `both`**: Also download the file.
+```bash
+DATE=$(date +%Y-%m-%d)
+JOB_DIR=".listenhub/tts/${DATE}-{jobId}"
+mkdir -p "$JOB_DIR"
+curl -sS -o "${JOB_DIR}/{jobId}.mp3" "{audioUrl}"
+```
+Present the download path in addition to the above summary.
 
 ---
 
