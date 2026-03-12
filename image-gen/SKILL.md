@@ -1,15 +1,15 @@
 ---
 name: image-gen
+description: |
+  Generate AI images from text prompts. Triggers on: "生成图片", "画一张",
+  "AI图", "generate image", "配图", "create picture", "draw", "visualize",
+  "generate an image".
 metadata:
   openclaw:
     emoji: "🖼️"
     requires:
       env: ["LISTENHUB_API_KEY"]
     primaryEnv: "LISTENHUB_API_KEY"
-description: |
-  Generate AI images from text prompts. Triggers on: "生成图片", "画一张",
-  "AI图", "generate image", "配图", "create picture", "draw", "visualize",
-  "generate an image".
 ---
 
 ## When to Use
@@ -43,19 +43,36 @@ Generate AI images using the Labnana API. Supports text prompts with optional re
 Use the AskUserQuestion tool for every multiple-choice step — do NOT print options as plain text. Ask one question at a time. Wait for the user's answer before proceeding to the next step. After all parameters are collected, summarize the choices and ask the user to confirm. Do NOT call the image generation API until the user has explicitly confirmed.
 </HARD-GATE>
 
-## Step 0: Read Config
+## Step 0: Config Setup
 
-Load config following `shared/config-pattern.md`:
+Follow `shared/config-pattern.md` Step 0.
 
-1. Look for `{CWD}/.listenhub/image-gen/config.json`, then `~/.listenhub/image-gen/config.json`
-2. If neither exists, use `AskUserQuestion` to ask global vs current directory, then create it
+**If file doesn't exist** — ask location, then create immediately:
+```bash
+mkdir -p ".listenhub/image-gen"
+echo '{"outputDir":".listenhub","outputMode":"inline"}' > ".listenhub/image-gen/config.json"
+CONFIG_PATH=".listenhub/image-gen/config.json"
+# (or $HOME/.listenhub/image-gen/config.json for global)
+```
+Then run **Setup Flow** below.
 
-Initial default config for image-gen:
-```json
-{
-  "outputDir": ".listenhub",
-  "autoDownload": true
-}
+**If file exists** — read config, display summary, and confirm:
+```
+当前配置 (image-gen)：
+  输出方式：{inline / download / both}
+```
+Ask: "使用已保存的配置？" → **确认，直接继续** / **重新配置**
+
+### Setup Flow (first run or reconfigure)
+
+1. **outputMode**: Follow `shared/output-mode.md` § Setup Flow Question.
+
+Save immediately:
+```bash
+# Follow shared/output-mode.md § Save to Config
+NEW_CONFIG=$(echo "$CONFIG" | jq --arg m "$OUTPUT_MODE" '. + {"outputMode": $m}')
+echo "$NEW_CONFIG" > "$CONFIG_PATH"
+CONFIG=$(cat "$CONFIG_PATH")
 ```
 
 ## Interaction Flow
@@ -122,25 +139,40 @@ Wait for explicit confirmation before calling the API.
 1. **Build request**: Construct JSON with provider, prompt, imageConfig, and optional referenceImages
 2. **Submit**: `POST https://api.labnana.com/openapi/v1/images/generation` with timeout of 600s
 3. **Extract image**: Parse base64 data from response
-4. **Save**: Generate a timestamp-based jobId (`$(date +%s)`), then:
-   - Create `.listenhub/image-gen/YYYY-MM-DD-{jobId}/`
-   - Decode base64 and save as `{jobId}.jpg`
+4. **Decode and present result**
 
-   ```bash
-   JOB_ID=$(date +%s)
-   DATE=$(date +%Y-%m-%d)
-   JOB_DIR=".listenhub/image-gen/${DATE}-${JOB_ID}"
-   mkdir -p "$JOB_DIR"
-   echo "$BASE64_DATA" | base64 -D > "${JOB_DIR}/${JOB_ID}.jpg"
-   ```
+Read `OUTPUT_MODE` from config. Follow `shared/output-mode.md` for behavior.
 
-5. **Present result**:
-   ```
-   图片已生成！
+**`inline` or `both`**: Decode base64 to a temp file, then use the Read tool.
 
-   已保存到 .listenhub/image-gen/{YYYY-MM-DD}-{jobId}/：
-     {jobId}.jpg
-   ```
+```bash
+JOB_ID=$(date +%s)
+echo "$BASE64_DATA" | base64 -D > /tmp/image-gen-${JOB_ID}.jpg
+```
+Then use the Read tool on `/tmp/image-gen-{jobId}.jpg`. The image displays inline in the conversation.
+
+Present:
+```
+图片已生成！
+```
+
+**`download` or `both`**: Save to the artifact directory.
+
+```bash
+JOB_ID=$(date +%s)
+DATE=$(date +%Y-%m-%d)
+JOB_DIR=".listenhub/image-gen/${DATE}-${JOB_ID}"
+mkdir -p "$JOB_DIR"
+echo "$BASE64_DATA" | base64 -D > "${JOB_DIR}/${JOB_ID}.jpg"
+```
+
+Present:
+```
+图片已生成！
+
+已保存到 .listenhub/image-gen/{YYYY-MM-DD}-{jobId}/：
+  {jobId}.jpg
+```
 
 **Base64 decoding** (cross-platform):
 
@@ -214,4 +246,4 @@ mkdir -p "$JOB_DIR"
 echo "$BASE64_DATA" | base64 -D > "${JOB_DIR}/${JOB_ID}.jpg"
 ```
 
-Present `.listenhub/image-gen/2026-03-12-{jobId}/{jobId}.jpg` to the user.
+Decode the base64 data per `outputMode` (see `shared/output-mode.md`).
