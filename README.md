@@ -46,9 +46,10 @@ Restart your agent (Claude Code, Cursor, etc.) after updating.
 |-------|---------|-------------|
 | `/podcast` | "make a podcast", "播客" | Generate podcast episodes (solo, dialogue, debate) |
 | `/explainer` | "explainer video", "解说视频" | Narrated explainer videos with AI visuals |
-| `/speech` | "read aloud", "TTS", "朗读" | Text-to-speech and voice narration |
+| `/tts` | "read aloud", "TTS", "朗读" | Text-to-speech and voice narration |
 | `/image-gen` | "generate image", "画一张" | AI image generation from text prompts |
 | `/content-parser` | "parse this URL", "解析链接" | Extract content from URLs |
+| `/asr` | "transcribe", "语音转文字", "ASR" | Transcribe audio files to text |
 
 ## Supported Inputs
 
@@ -57,6 +58,7 @@ Restart your agent (Claude Code, Cursor, etc.) after updating.
 - Article URLs
 - Plain text
 - Image prompts
+- Audio files
 
 ## Setup
 
@@ -70,9 +72,10 @@ Keys auto-configure on first use.
 ├── shared/              # API reference, auth, common patterns
 ├── podcast/             # Podcast generation
 ├── explainer/           # Explainer videos
-├── speech/              # TTS and voice narration
+├── tts/                 # TTS and voice narration
 ├── image-gen/           # AI image generation
 ├── content-parser/      # URL content extraction
+├── asr/                 # Audio transcription
 └── listenhub/           # Deprecated (see DEPRECATED.md)
 ```
 

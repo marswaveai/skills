@@ -46,9 +46,10 @@ git pull origin main
 |------|--------|------|
 | `/podcast` | "做播客"、"podcast" | 生成播客单集（独白、对话、辩论） |
 | `/explainer` | "解说视频"、"explainer video" | 带 AI 配图的解说视频 |
-| `/speech` | "朗读"、"TTS"、"语音合成" | 文字转语音、配音 |
+| `/tts` | "朗读"、"TTS"、"语音合成" | 文字转语音、配音 |
 | `/image-gen` | "生成图片"、"画一张" | AI 图片生成 |
 | `/content-parser` | "解析链接"、"提取内容" | URL 内容提取 |
+| `/asr` | "转录"、"语音转文字"、"ASR" | 音频文件转文字 |
 
 ## 支持的输入
 
@@ -57,6 +58,7 @@ git pull origin main
 - 文章链接
 - 纯文本
 - 图片描述
+- 音频文件
 
 ## 配置
 
@@ -70,9 +72,10 @@ git pull origin main
 ├── shared/              # API 参考、认证、通用模式
 ├── podcast/             # 播客生成
 ├── explainer/           # 解说视频
-├── speech/              # 文字转语音
+├── tts/                 # 文字转语音
 ├── image-gen/           # AI 图片生成
 ├── content-parser/      # URL 内容提取
+├── asr/                 # 音频转文字
 └── listenhub/           # 已弃用（见 DEPRECATED.md）
 ```
 
