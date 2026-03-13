@@ -20,6 +20,3 @@ Thumbs.db
 # Temporary files
 *.tmp
 *.temp
-
-# Claude Code configuration
-CLAUDE.md

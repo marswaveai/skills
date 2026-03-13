@@ -1,0 +1,83 @@
+# Output Mode
+
+Reusable pattern for all skills that produce downloadable artifacts (audio, images).
+
+## Config Field
+
+Each skill stores `outputMode` in its `config.json`:
+
+```json
+{ "outputMode": "inline" }
+```
+
+Valid values: `"inline"` (default) | `"download"` | `"both"`
+
+## Migration from `autoDownload`
+
+When reading a config that has `autoDownload` but no `outputMode`, migrate silently:
+
+```bash
+CONFIG=$(cat "$CONFIG_PATH")
+HAS_OUTPUT_MODE=$(echo "$CONFIG" | jq -r 'has("outputMode")')
+if [ "$HAS_OUTPUT_MODE" = "false" ]; then
+  OLD_DL=$(echo "$CONFIG" | jq -r '.autoDownload // true')
+  if [ "$OLD_DL" = "true" ]; then NEW_MODE="download"; else NEW_MODE="inline"; fi
+  CONFIG=$(echo "$CONFIG" | jq --arg m "$NEW_MODE" 'del(.autoDownload) + {"outputMode": $m}')
+  echo "$CONFIG" > "$CONFIG_PATH"
+fi
+OUTPUT_MODE=$(echo "$CONFIG" | jq -r '.outputMode // "inline"')
+```
+
+## Setup Flow Question
+
+Replace the "自动下载？" question with:
+
+```
+Question: "输出方式？"
+Options:
+  - "对话中展示（推荐）" — outputMode: "inline"
+  - "下载到本地目录"     — outputMode: "download"
+  - "两者都要"           — outputMode: "both"
+```
+
+Config summary display: `输出方式：inline / download / both`
+
+## Save to Config
+
+```bash
+NEW_CONFIG=$(echo "$CONFIG" | jq --arg m "$OUTPUT_MODE" '. + {"outputMode": $m}')
+echo "$NEW_CONFIG" > "$CONFIG_PATH"
+CONFIG=$(cat "$CONFIG_PATH")
+```
+
+## Output Behavior Per Mode
+
+### `inline` (default)
+
+Show the result directly in the conversation. Do NOT save to `.listenhub/`.
+
+- **Sync audio (TTS quick)**: Save to `/tmp/tts-{jobId}.mp3` during the curl call, then use the Read tool on that path. Clients that support audio show it inline; Claude Code terminal shows the file path.
+- **Async audio (TTS script, podcast)**: Display the `audioUrl` as a clickable link. No download.
+- **Async video (explainer)**: Display video URL + audio URL as clickable links. No download.
+- **Image (image-gen)**: Save to `/tmp/image-gen-{jobId}.jpg` after base64 decode, then use the Read tool on that path. Image displays inline in all clients.
+
+### `download`
+
+Save to `.listenhub/{skill}/YYYY-MM-DD-{jobId}/` and show the local file path. This is the previous `autoDownload: true` behavior.
+
+```bash
+DATE=$(date +%Y-%m-%d)
+JOB_DIR=".listenhub/{skill}/${DATE}-{jobId}"
+mkdir -p "$JOB_DIR"
+curl -sS -o "${JOB_DIR}/{jobId}.mp3" "{audioUrl}"
+```
+
+Present:
+```
+已下载到 .listenhub/{skill}/{YYYY-MM-DD}-{jobId}/：
+  {jobId}.mp3
+```
+
+### `both`
+
+Execute `download` logic **and then** execute `inline` display logic for the same artifact.
