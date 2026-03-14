@@ -4,7 +4,7 @@ metadata:
   openclaw:
     emoji: "📞"
     requires:
-      env: ["COLI_LISTENHUB_API_KEY"]
+      env: ["COLI_LISTENHUB_API_KEY", "DISCORD_BOT_TOKEN"]
       tools: ["coli", "ffmpeg"]
     primaryEnv: "COLI_LISTENHUB_API_KEY"
 description: |
@@ -40,26 +40,42 @@ Launch a Discord voice bot that lets you have a real-time voice conversation wit
 
 ## Interaction Flow
 
-### Step -1: API Key Check
+### Step -1: Environment Variables Check
 
-Check `COLI_LISTENHUB_API_KEY` (this is coli's own env var for ListenHub cloud TTS, separate from `LISTENHUB_API_KEY` used by other skills):
+Two environment variables are required. Check both:
 
 ```bash
-[ -z "$COLI_LISTENHUB_API_KEY" ] && echo "MISSING" || echo "OK"
+echo "COLI_LISTENHUB_API_KEY: $([ -z "$COLI_LISTENHUB_API_KEY" ] && echo MISSING || echo OK)"
+echo "DISCORD_BOT_TOKEN: $([ -z "$DISCORD_BOT_TOKEN" ] && echo MISSING || echo OK)"
 ```
 
-If MISSING, stop and tell the user:
+**If `COLI_LISTENHUB_API_KEY` is MISSING:**
+
+Tell the user:
 
 > You need a ListenHub API key for voice synthesis.
 > Get one at: https://listenhub.ai/zh/settings/api-keys (中文)
 > or: https://listenhub.ai/en/settings/api-keys (English)
->
-> Then set it:
-> ```
-> export COLI_LISTENHUB_API_KEY="lh_sk_..."
-> ```
 
-Do NOT proceed until the key is set.
+Ask user for the key value (free text). Then persist it:
+
+```bash
+echo 'export COLI_LISTENHUB_API_KEY="<user_value>"' >> ~/.zshrc
+export COLI_LISTENHUB_API_KEY="<user_value>"
+```
+
+(Use `~/.bashrc` if user's shell is bash. Check with `echo $SHELL`.)
+
+**If `DISCORD_BOT_TOKEN` is MISSING:**
+
+Guide user to create a Discord bot (see Step 1 below for full instructions), then ask for the token. Persist it:
+
+```bash
+echo 'export DISCORD_BOT_TOKEN="<user_value>"' >> ~/.zshrc
+export DISCORD_BOT_TOKEN="<user_value>"
+```
+
+Do NOT proceed until both are set.
 
 ### Step 0: Environment & Dependencies
 
@@ -116,9 +132,9 @@ If no config or user wants to reconfigure, proceed to Step 1.
 
 ### Step 1: Discord Bot Configuration
 
-**If first time (no `discord.token` in config):**
+**If first time (no `discord.guildId` in config):**
 
-Tell the user:
+If `DISCORD_BOT_TOKEN` was just set in Step -1, the user already created the bot. Otherwise, guide them:
 
 > To create a Discord bot:
 > 1. Go to https://discord.com/developers/applications
@@ -130,11 +146,10 @@ Tell the user:
 >    - Bot Permissions: `Connect`, `Speak`
 > 6. Copy the generated URL and open it to invite the bot to your server
 
-Then ask for:
+Then ask for (token is already in env var, only need these two):
 
-1. **Discord Bot Token** (free text input)
-2. **Guild (server) ID** (free text — tell user: right-click server name → "Copy Server ID", needs Developer Mode on in Discord settings)
-3. **Voice Channel ID** (free text — tell user: right-click voice channel → "Copy Channel ID")
+1. **Guild (server) ID** (free text — tell user: right-click server name → "Copy Server ID", needs Developer Mode on in Discord settings)
+2. **Voice Channel ID** (free text — tell user: right-click voice channel → "Copy Channel ID")
 
 Save to config.
 
@@ -178,7 +193,7 @@ Wait for user confirmation.
 
 ```bash
 cd {skill_scripts_dir} && node discord-bot.js \
-  --token "$DISCORD_TOKEN" \
+  --token "$DISCORD_BOT_TOKEN" \
   --channelId "$CHANNEL_ID" \
   --guildId "$GUILD_ID" \
   --language "$LANGUAGE" \
@@ -186,6 +201,8 @@ cd {skill_scripts_dir} && node discord-bot.js \
   --apiKey "$COLI_LISTENHUB_API_KEY" \
   --ttsTimeout "$TTS_TIMEOUT"
 ```
+
+Where `$DISCORD_BOT_TOKEN` and `$COLI_LISTENHUB_API_KEY` come from environment variables (set in Step -1), and `$CHANNEL_ID`, `$GUILD_ID`, etc. come from config.json.
 
 Run this with `run_in_background: true` and capture the task ID.
 
