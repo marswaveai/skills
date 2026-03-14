@@ -69,6 +69,7 @@ Each message is a single JSON line (`\n`-delimited).
 | type | Fields | Description |
 |---|---|---|
 | `ready` | `channel`, `guild` | Bot joined voice channel |
+| `waiting` | `channel` | No user in channel, waiting for someone to join |
 | `listening` | | Resumed listening (ASR active) |
 | `partial` | `text` | Interim ASR result (display only) |
 | `final` | `text`, `lang`, `emotion` | Complete utterance, requires reply. `lang`/`emotion` are SenseVoice-specific, may be absent with other models. Empty `text` = discarded silently, not sent. |
@@ -89,7 +90,7 @@ Each message is a single JSON line (`\n`-delimited).
 ### Step 0: Environment Check
 
 - `LISTENHUB_API_KEY` exists
-- coli installed globally (`npm list -g @marswave/coli`)
+- coli: check global install (`npm list -g @marswave/coli`), compare with latest version (`npm view @marswave/coli version`), auto-update if outdated, auto-install if missing
 - Node.js ≥ 18
 - ffmpeg installed (required for TTS audio decoding)
 - Local dependencies in `~/.listenhub/voice-chat/node_modules/` (auto-install if missing)
@@ -116,7 +117,9 @@ Each message is a single JSON line (`\n`-delimited).
 - Summary of all configuration
 - User confirms
 - Start `discord-bot.js` as background process
-- Display: "Bot online, joined #channel"
+- Bot logs in and checks: is there a user in the target voice channel?
+  - **Yes:** Join and start listening, display "Bot online, joined #channel"
+  - **No:** Display "Waiting for you to join #channel...", poll until a user joins, then start
 
 ### Step 4: Conversation Loop
 
