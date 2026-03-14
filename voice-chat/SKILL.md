@@ -90,24 +90,25 @@ node -v
 
 Must be ≥ 18.
 
-**Install local dependencies (always at `~/.listenhub/voice-chat/`):**
+**Install local dependencies:**
 
-Resolve the skill directory path first, then copy package.json and install:
+Check if `node_modules/` exists in the skill's `scripts/` directory:
 
 ```bash
-VOICE_CHAT_DIR="$HOME/.listenhub/voice-chat"
-if [ ! -d "$VOICE_CHAT_DIR/node_modules" ]; then
-  mkdir -p "$VOICE_CHAT_DIR"
-fi
+ls {skill_scripts_dir}/node_modules/.package-lock.json 2>/dev/null && echo "OK" || echo "MISSING"
 ```
 
-Then copy `voice-chat/scripts/package.json` to `$VOICE_CHAT_DIR/package.json` (use the resolved skill path, not `$(dirname "$0")`), and run `cd "$VOICE_CHAT_DIR" && npm install && cd -`.
+If MISSING, install:
+
+```bash
+cd {skill_scripts_dir} && npm install && cd -
+```
+
+Where `{skill_scripts_dir}` is the resolved path to `voice-chat/scripts/`.
 
 ### Step 0.5: Config Setup
 
 Follow `shared/config-pattern.md` for config location. Ask user: store config locally (`.listenhub/voice-chat/config.json`) or globally (`~/.listenhub/voice-chat/config.json`)?
-
-Note: node_modules always live at `~/.listenhub/voice-chat/` regardless of config location.
 
 If config exists, display summary and ask: reuse or reconfigure?
 
@@ -173,10 +174,10 @@ Display summary:
 
 Wait for user confirmation.
 
-**Launch the bot** (use resolved skill path for the script):
+**Launch the bot** from the skill's scripts directory:
 
 ```bash
-NODE_PATH="$HOME/.listenhub/voice-chat/node_modules" node "{resolved_skill_path}/scripts/discord-bot.js" \
+cd {skill_scripts_dir} && node discord-bot.js \
   --token "$DISCORD_TOKEN" \
   --channelId "$CHANNEL_ID" \
   --guildId "$GUILD_ID" \
