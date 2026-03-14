@@ -89,7 +89,7 @@ Each message is a single JSON line (`\n`-delimited).
 
 ### Step 0: Environment Check
 
-- `COLI_LISTENHUB_API_KEY` exists (used by coli for cloud TTS)
+- `COLI_LISTENHUB_API_KEY` exists (used by coli for cloud TTS). If missing, guide user to obtain one at `https://listenhub.ai/zh/settings/api-keys` (or `en` based on user language)
 - coli: check global install (`npm list -g @marswave/coli`), compare with latest version (`npm view @marswave/coli version`), auto-update if outdated, auto-install if missing
 - Node.js ≥ 18
 - ffmpeg installed (required for TTS audio decoding)
