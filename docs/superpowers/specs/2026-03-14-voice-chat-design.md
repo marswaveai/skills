@@ -5,7 +5,7 @@
 
 ## Overview
 
-A Claude Code skill (`/voice-chat`) that lets developers launch a Discord voice bot in one command. Users speak in a Discord voice channel, coli handles ASR, Claude Code generates replies, and ListenHub TTS speaks them back.
+A Claude Code skill (`/voice-chat`) that lets developers launch a Discord voice bot in one command. Users speak in a Discord voice channel, coli handles ASR and TTS, Claude Code generates replies.
 
 **Scope:** Development/demo tool. Bot runs while Claude Code session is open.
 
@@ -37,8 +37,8 @@ Three components, clear separation of concerns:
         │                          │ ◀────────────────────────────── │
         │                          │  (JSON line, child process)     │
         │                          │                                │
-        │                          │ ListenHub TTS → audio           │
-        │                          │ (fallback: local say)           │
+        │                          │ coli cloud TTS → audio            │
+        │                          │ (fallback: coli local TTS)        │
         │                          │                                │
         │ AI voice reply           │                                │
         │ ◀─────────────────────── │                                │
@@ -89,7 +89,7 @@ Each message is a single JSON line (`\n`-delimited).
 
 ### Step 0: Environment Check
 
-- `LISTENHUB_API_KEY` exists
+- `COLI_LISTENHUB_API_KEY` exists (used by coli for cloud TTS)
 - coli: check global install (`npm list -g @marswave/coli`), compare with latest version (`npm view @marswave/coli version`), auto-update if outdated, auto-install if missing
 - Node.js ≥ 18
 - ffmpeg installed (required for TTS audio decoding)
@@ -109,7 +109,7 @@ Each message is a single JSON line (`\n`-delimited).
 ### Step 2: TTS Configuration
 
 - Select language (zh / en)
-- Select voice (from ListenHub speakers API)
+- Select voice (from coli `listSpeakers({ apiKey, language })`)
 - Configure fallback timeout (default: 5 seconds, connection timeout)
 
 ### Step 3: Confirm and Launch
@@ -172,8 +172,8 @@ as segment boundaries naturally.
 Receive {"type":"reply","text":"..."}
   → stdout: {"type":"tts_start"}
   → Pause ASR (half-duplex)
-  → Call ListenHub TTS API → MP3 response
-  → Timeout (5s connection)? Fallback to coli local TTS (macOS say)
+  → Call coli runCloudTts(text, { voice, apiKey }) → MP3 response
+  → Timeout (5s connection)? Fallback to coli runTts (macOS say)
   → Decode MP3 → PCM via ffmpeg/prism-media
   → Play via @discordjs/voice AudioPlayer (auto Opus encode)
   → Resume ASR
