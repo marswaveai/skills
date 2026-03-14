@@ -296,16 +296,8 @@ async function main() {
       selfDeaf: false,
     });
 
-    connection.on('stateChange', (oldState, newState) => {
-      emit({ type: 'error', message: `Voice connection: ${oldState.status} → ${newState.status}` });
-    });
-
     connection.on('error', (err) => {
       emit({ type: 'error', message: `Voice connection error: ${err.message}` });
-    });
-
-    connection.on('debug', (msg) => {
-      emit({ type: 'error', message: `Voice debug: ${msg}` });
     });
 
     try {
