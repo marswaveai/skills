@@ -252,7 +252,11 @@ async function main() {
   await ensureVadModel();
 
   const client = new Client({
-    intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildVoiceStates],
+    intents: [
+      GatewayIntentBits.Guilds,
+      GatewayIntentBits.GuildVoiceStates,
+      GatewayIntentBits.GuildMessages,
+    ],
   });
 
   client.once('ready', async () => {
@@ -292,7 +296,24 @@ async function main() {
       selfDeaf: false,
     });
 
-    await entersState(connection, VoiceConnectionStatus.Ready, 10_000);
+    connection.on('stateChange', (oldState, newState) => {
+      emit({ type: 'error', message: `Voice connection: ${oldState.status} → ${newState.status}` });
+    });
+
+    connection.on('error', (err) => {
+      emit({ type: 'error', message: `Voice connection error: ${err.message}` });
+    });
+
+    connection.on('debug', (msg) => {
+      emit({ type: 'error', message: `Voice debug: ${msg}` });
+    });
+
+    try {
+      await entersState(connection, VoiceConnectionStatus.Ready, 30_000);
+    } catch (err) {
+      emit({ type: 'error', message: `Failed to join voice channel: ${err.message}` });
+      process.exit(1);
+    }
 
     player = createAudioPlayer();
     connection.subscribe(player);
