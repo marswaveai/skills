@@ -10,7 +10,8 @@ import {
   AudioPlayerStatus,
   StreamType,
 } from '@discordjs/voice';
-import { OpusEncoder } from '@discordjs/opus';
+import pkg from '@discordjs/opus';
+const { OpusEncoder } = pkg;
 import { streamAsr, ensureModels, ensureVadModel, runCloudTts, runTts } from '@marswave/coli';
 import { createReadStream } from 'node:fs';
 import { unlink } from 'node:fs/promises';
