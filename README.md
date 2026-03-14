@@ -50,6 +50,7 @@ Restart your agent (Claude Code, Cursor, etc.) after updating.
 | `/image-gen` | "generate image", "画一张" | AI image generation from text prompts |
 | `/content-parser` | "parse this URL", "解析链接" | Extract content from URLs |
 | `/asr` | "transcribe", "语音转文字", "ASR" | Transcribe audio files to text |
+| `/voice-chat` | "voice chat", "语音聊天", "Discord 通话" | Real-time voice conversation with Claude via Discord |
 
 ## Supported Inputs
 

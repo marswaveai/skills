@@ -50,6 +50,7 @@ git pull origin main
 | `/image-gen` | "生成图片"、"画一张" | AI 图片生成 |
 | `/content-parser` | "解析链接"、"提取内容" | URL 内容提取 |
 | `/asr` | "转录"、"语音转文字"、"ASR" | 音频文件转文字 |
+| `/voice-chat` | "语音聊天"、"Discord 通话"、"voice chat" | 通过 Discord 语音频道与 Claude 实时对话 |
 
 ## 支持的输入
 
