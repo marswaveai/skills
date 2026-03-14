@@ -69,11 +69,11 @@ Each message is a single JSON line (`\n`-delimited).
 | type | Fields | Description |
 |---|---|---|
 | `ready` | `channel`, `guild` | Bot joined voice channel |
-| `listening` | | Resumed listening after TTS |
+| `listening` | | Resumed listening (ASR active) |
 | `partial` | `text` | Interim ASR result (display only) |
-| `final` | `text`, `lang`, `emotion` | Complete utterance, requires reply |
-| `tts_start` | | Started playing TTS audio |
-| `tts_done` | | Finished playing TTS audio |
+| `final` | `text`, `lang`, `emotion` | Complete utterance, requires reply. `lang`/`emotion` are SenseVoice-specific, may be absent with other models. Empty `text` = discarded silently, not sent. |
+| `tts_start` | | Started TTS playback (ASR paused) |
+| `tts_done` | | Finished TTS playback |
 | `error` | `message` | Non-fatal error (e.g. TTS fallback) |
 | `disconnected` | `reason` | Bot disconnected (`user_left`, `kicked`, `error`) |
 
@@ -89,14 +89,19 @@ Each message is a single JSON line (`\n`-delimited).
 ### Step 0: Environment Check
 
 - `LISTENHUB_API_KEY` exists
-- coli installed (`npm list -g @marswave/coli`)
+- coli installed globally (`npm list -g @marswave/coli`)
 - Node.js ≥ 18
-- Auto-install missing dependencies
+- ffmpeg installed (required for TTS audio decoding)
+- Local dependencies in `~/.listenhub/voice-chat/node_modules/` (auto-install if missing)
 
 ### Step 1: Discord Bot Configuration
 
 - Guide user to create Discord bot at Developer Portal (if first time)
+  - Required intents: `GuildVoiceStates`, `Guilds`
+  - OAuth2 scope: `bot`
+  - Bot permissions: `Connect`, `Speak`
 - Collect Discord Bot Token
+- Collect Guild (server) ID
 - Collect voice channel ID or name
 - Save to `~/.listenhub/voice-chat/config.json`
 
@@ -104,7 +109,7 @@ Each message is a single JSON line (`\n`-delimited).
 
 - Select language (zh / en)
 - Select voice (from ListenHub speakers API)
-- Configure fallback timeout (default: 3 seconds)
+- Configure fallback timeout (default: 5 seconds, connection timeout)
 
 ### Step 3: Confirm and Launch
 
@@ -139,22 +144,37 @@ Read CLI args: token, channelId, language, speakerId, ttsTimeout
 
 ### Audio Receive Loop
 
+v1 listens to a single user: the first to speak, or a configured user ID.
+Other users in the channel are ignored.
+
 ```
-Listen to user audio (discord.js/voice receiver)
-  → Decode Opus to PCM
-  → Wrap as AsyncIterable<Float32Array>
-  → Feed to coli streamAsr({ vad: true })
-  → partial → stdout: {"type":"partial",...}
-  → final   → stdout: {"type":"final",...}
+Subscribe to user audio (receiver.subscribe(userId))
+  → Receive discrete Opus packets (silence gaps = no packets)
+  → Decode each packet to PCM via @discordjs/opus
+  → Buffer and convert int16 PCM → Float32Array chunks
+  → Yield as AsyncIterable<Float32Array>
+  → Feed to coli streamAsr({ vad: true, model: "sensevoice" })
+  → partial result → stdout: {"type":"partial",...}
+  → final result (empty text = discard silently)
+  → final result (has text) → stdout: {"type":"final",...}
 ```
+
+Note: Discord stops sending packets during silence. The AsyncIterable
+wrapper must handle gaps gracefully — coli's VAD will treat silence
+as segment boundaries naturally.
 
 ### stdin Reply Handler
 
 ```
 Receive {"type":"reply","text":"..."}
-  → Call ListenHub TTS API
-  → Timeout (3s)? Fallback to coli local TTS (macOS say)
-  → Play audio to Discord voice channel
+  → stdout: {"type":"tts_start"}
+  → Pause ASR (half-duplex)
+  → Call ListenHub TTS API → MP3 response
+  → Timeout (5s connection)? Fallback to coli local TTS (macOS say)
+  → Decode MP3 → PCM via ffmpeg/prism-media
+  → Play via @discordjs/voice AudioPlayer (auto Opus encode)
+  → Resume ASR
+  → stdout: {"type":"listening"}
   → stdout: {"type":"tts_done"}
 
 Receive {"type":"stop"}
@@ -188,6 +208,16 @@ Dependencies install to a persistent location, not per-session:
 - `@discordjs/opus` — Opus codec
 - `@marswave/coli` — ASR + TTS
 - `sodium-native` — Discord.js encryption dependency
+- `prism-media` — MP3 → PCM decoding for TTS playback
+
+### Prerequisites (system-level)
+
+- `ffmpeg` — Required by prism-media for audio decoding
+- `@marswave/coli` — Installed globally (`npm i -g @marswave/coli`)
+
+### Platform
+
+- **v1: macOS only.** TTS fallback uses macOS `say` command. Linux support is a future consideration.
 
 ## Skill File Structure
 
@@ -215,7 +245,7 @@ voice-chat/
     "language": "zh",
     "speakerId": "...",
     "speakerName": "...",
-    "fallbackTimeout": 3000
+    "fallbackTimeout": 5000
   },
   "asr": {
     "vad": true,
@@ -223,6 +253,10 @@ voice-chat/
   }
 }
 ```
+
+## Conversation Context
+
+Claude Code naturally maintains conversation context within the session. Each `final` ASR message is part of the ongoing conversation — Claude sees all previous exchanges and replies accordingly. No explicit context management is needed; the skill just forwards user speech as text messages in the existing session.
 
 ## Future Considerations (Not in v1)
 
