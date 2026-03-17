@@ -30,7 +30,7 @@ OUTPUT_MODE=$(echo "$CONFIG" | jq -r '.outputMode // "inline"')
 
 ## Setup Flow Question
 
-Replace the "自动下载？" question with:
+Only asked during user-initiated reconfigure (not on first run — first run uses `"inline"` as default):
 
 ```
 Question: "输出方式？"

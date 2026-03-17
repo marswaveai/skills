@@ -49,31 +49,38 @@ Follow `shared/config-pattern.md` § API Key Check. If the key is missing, stop 
 
 ## Step 0: Config Setup
 
-Follow `shared/config-pattern.md` Step 0.
+Follow `shared/config-pattern.md` Step 0 (Zero-Question Boot).
 
-**If file doesn't exist** — ask location, then create immediately:
+**If file doesn't exist** — silently create with defaults and proceed:
 ```bash
 mkdir -p ".listenhub/image-gen"
 echo '{"outputDir":".listenhub","outputMode":"inline"}' > ".listenhub/image-gen/config.json"
 CONFIG_PATH=".listenhub/image-gen/config.json"
-# (or $HOME/.listenhub/image-gen/config.json for global)
+CONFIG=$(cat "$CONFIG_PATH")
 ```
-Then run **Setup Flow** below.
+**Do NOT ask any setup questions.** Proceed directly to the Interaction Flow.
 
-**If file exists** — read config, display summary, and confirm:
+**If file exists** — read config silently and proceed:
+```bash
+CONFIG_PATH=".listenhub/image-gen/config.json"
+[ ! -f "$CONFIG_PATH" ] && CONFIG_PATH="$HOME/.listenhub/image-gen/config.json"
+CONFIG=$(cat "$CONFIG_PATH")
+```
+
+### Setup Flow (user-initiated reconfigure only)
+
+Only run when the user explicitly asks to reconfigure. Display current settings:
 ```
 当前配置 (image-gen)：
   输出方式：{inline / download / both}
 ```
-Ask: "使用已保存的配置？" → **确认，直接继续** / **重新配置**
 
-### Setup Flow (first run or reconfigure)
+Then ask:
 
 1. **outputMode**: Follow `shared/output-mode.md` § Setup Flow Question.
 
 Save immediately:
 ```bash
-# Follow shared/output-mode.md § Save to Config
 NEW_CONFIG=$(echo "$CONFIG" | jq --arg m "$OUTPUT_MODE" '. + {"outputMode": $m}')
 echo "$NEW_CONFIG" > "$CONFIG_PATH"
 CONFIG=$(cat "$CONFIG_PATH")

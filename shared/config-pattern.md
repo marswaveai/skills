@@ -31,57 +31,48 @@ Each skill stores config at:
 .listenhub/{skill}/config.json
 ```
 
-## Step 0: Config Setup
+## Step 0: Config Setup (Zero-Question Boot)
 
-Run before any interaction in every skill. Three possible states:
+Run before any interaction in every skill. The goal is **zero questions on first run** — create config silently with sensible defaults and proceed directly to the task.
 
 ### State A — File Doesn't Exist (first run)
 
-Use `AskUserQuestion`:
-```
-Question: "ListenHub 配置文件存在哪里？"
-Options:
-  - "当前目录" — {CWD}/.listenhub/{skill}/config.json（仅此项目）
-  - "全局" — ~/.listenhub/{skill}/config.json（所有项目共用）
-```
-
-Then create the directory and write the skill's initial defaults **immediately**:
+**Do NOT ask any questions.** Silently create the config in the current directory with the skill's default values:
 
 ```bash
-# 当前目录:
 mkdir -p ".listenhub/{skill}"
 echo '{...skill initial defaults...}' > ".listenhub/{skill}/config.json"
 CONFIG_PATH=".listenhub/{skill}/config.json"
-
-# 全局:
-mkdir -p "$HOME/.listenhub/{skill}"
-echo '{...skill initial defaults...}' > "$HOME/.listenhub/{skill}/config.json"
-CONFIG_PATH="$HOME/.listenhub/{skill}/config.json"
+CONFIG=$(cat "$CONFIG_PATH")
 ```
 
-Then run the skill's **Setup Flow** to collect preferences and save them.
+Then proceed directly to the skill's **Interaction Flow** (skip Setup Flow entirely).
 
 ### State B — File Exists
 
-Read the config:
+Read the config silently and proceed:
+
 ```bash
 CONFIG_PATH=".listenhub/{skill}/config.json"
 [ ! -f "$CONFIG_PATH" ] && CONFIG_PATH="$HOME/.listenhub/{skill}/config.json"
 CONFIG=$(cat "$CONFIG_PATH")
 ```
 
-Display the current settings in a readable summary (skill-specific format), then ask:
+**Do NOT display config summary or ask for confirmation.** Proceed directly to the skill's Interaction Flow.
 
-```
-Question: "使用已保存的配置？"
-Options:
-  - "确认，直接继续" — use saved config as-is, skip Setup Flow
-  - "重新配置" — run Setup Flow again and overwrite saved values
-```
+### Reconfigure (user-initiated only)
+
+If the user explicitly asks to reconfigure (e.g., "reconfigure", "change settings", "重新配置"), then:
+
+1. Display the current settings in a readable summary (skill-specific format)
+2. Run the skill's **Setup Flow** to collect new preferences
+3. Save updated values
+
+This is the **only** time Setup Flow questions are asked.
 
 ## Setup Flow
 
-Each skill defines its own Setup Flow — questions to collect preferences on first run or reconfigure. After answers are collected, **save immediately** using the merge pattern:
+Each skill defines its own Setup Flow — questions to collect preferences when the user explicitly requests reconfiguration. After answers are collected, **save immediately** using the merge pattern:
 
 ```bash
 NEW_CONFIG=$(echo "$CONFIG" | jq '. + {"key": "value"}')

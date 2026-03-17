@@ -52,30 +52,36 @@ Follow `shared/config-pattern.md` § API Key Check. If the key is missing, stop 
 
 ## Step 0: Config Setup
 
-Follow `shared/config-pattern.md` Step 0.
+Follow `shared/config-pattern.md` Step 0 (Zero-Question Boot).
 
-**If file doesn't exist** — ask location, then create immediately:
+**If file doesn't exist** — silently create with defaults and proceed:
 ```bash
 mkdir -p ".listenhub/explainer"
 echo '{"outputDir":".listenhub","outputMode":"inline","language":null,"defaultStyle":null,"defaultSpeakers":{}}' > ".listenhub/explainer/config.json"
 CONFIG_PATH=".listenhub/explainer/config.json"
-# (or $HOME/.listenhub/explainer/config.json for global)
+CONFIG=$(cat "$CONFIG_PATH")
 ```
-Then run **Setup Flow** below.
+**Do NOT ask any setup questions.** Proceed directly to the Interaction Flow.
 
-**If file exists** — read config, display summary, and confirm:
+**If file exists** — read config silently and proceed:
+```bash
+CONFIG_PATH=".listenhub/explainer/config.json"
+[ ! -f "$CONFIG_PATH" ] && CONFIG_PATH="$HOME/.listenhub/explainer/config.json"
+CONFIG=$(cat "$CONFIG_PATH")
+```
+
+### Setup Flow (user-initiated reconfigure only)
+
+Only run when the user explicitly asks to reconfigure. Display current settings:
 ```
 当前配置 (explainer)：
   输出方式：{inline / download / both}
   语言偏好：{zh / en / 未设置}
   默认风格：{info / story / 未设置}
-  默认主播：{speakerName / 未设置}
+  默认主播：{speakerName / 使用内置默认}
 ```
-Ask: "使用已保存的配置？" → **确认，直接继续** / **重新配置**
 
-### Setup Flow (first run or reconfigure)
-
-Ask these questions in order, then save all answers to config at once:
+Then ask:
 
 1. **outputMode**: Follow `shared/output-mode.md` § Setup Flow Question.
 
@@ -91,13 +97,10 @@ Ask these questions in order, then save all answers to config at once:
 
 After collecting answers, save immediately:
 ```bash
-# Follow shared/output-mode.md § Save to Config
 NEW_CONFIG=$(echo "$CONFIG" | jq --arg m "$OUTPUT_MODE" '. + {"outputMode": $m}')
 echo "$NEW_CONFIG" > "$CONFIG_PATH"
 CONFIG=$(cat "$CONFIG_PATH")
 ```
-
-Note: `defaultSpeakers` are saved after generation (see After Successful Generation section).
 
 ## Interaction Flow
 
@@ -135,10 +138,11 @@ Options:
 
 ### Step 4: Speaker Selection
 
-Follow `shared/speaker-selection.md` for the full selection flow, including:
-- Default from `config.defaultSpeakers.{language}` (skip step if set)
-- Text table + free-text input
-- Input matching and re-prompt on no match
+Follow `shared/speaker-selection.md`:
+- If `config.defaultSpeakers.{language}` is set → use saved speaker silently
+- If not set → use **built-in default** from `shared/speaker-selection.md` for the language
+- Show the speaker in the confirmation summary (Step 6) — user can change from there if desired
+- Only show the full speaker list if the user explicitly asks to change voice
 
 Only 1 speaker is supported for explainer videos.
 

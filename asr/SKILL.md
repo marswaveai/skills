@@ -67,29 +67,32 @@ If `coli` is missing, stop here and do not proceed.
 
 ### Step 0: Config Setup
 
-Follow `shared/config-pattern.md` Step 0.
+Follow `shared/config-pattern.md` Step 0 (Zero-Question Boot).
 
-Initial defaults:
+**If file doesn't exist** — silently create with defaults and proceed:
 ```bash
-# 当前目录:
 mkdir -p ".listenhub/asr"
 echo '{"model":"sensevoice","polish":true}' > ".listenhub/asr/config.json"
 CONFIG_PATH=".listenhub/asr/config.json"
+CONFIG=$(cat "$CONFIG_PATH")
+```
+**Do NOT ask any setup questions.** Proceed directly to the Interaction Flow with sensible defaults (sensevoice model, polish enabled).
 
-# 全局:
-mkdir -p "$HOME/.listenhub/asr"
-echo '{"model":"sensevoice","polish":true}' > "$HOME/.listenhub/asr/config.json"
-CONFIG_PATH="$HOME/.listenhub/asr/config.json"
+**If file exists** — read config silently and proceed:
+```bash
+CONFIG_PATH=".listenhub/asr/config.json"
+[ ! -f "$CONFIG_PATH" ] && CONFIG_PATH="$HOME/.listenhub/asr/config.json"
+CONFIG=$(cat "$CONFIG_PATH")
 ```
 
-Config summary display:
+### Setup Flow (user-initiated reconfigure only)
+
+Only run when the user explicitly asks to reconfigure. Display current settings:
 ```
 当前配置 (asr)：
   模型：sensevoice / whisper-tiny.en
   润色：开启 / 关闭
 ```
-
-### Setup Flow (first run or reconfigure)
 
 Ask in order:
 
