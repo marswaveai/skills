@@ -23,6 +23,7 @@ Low-latency single-voice TTS. Returns a **streaming binary MP3** — not JSON.
 curl -sS -X POST "https://api.marswave.ai/openapi/v1/tts" \
   -H "Authorization: Bearer $LISTENHUB_API_KEY" \
   -H "Content-Type: application/json" \
+  -H "X-Source: skills" \
   -d '{
     "input": "Hello, welcome to ListenHub.",
     "voice": "EN-Man-General-01"
@@ -57,6 +58,7 @@ Multi-speaker script-to-audio. Each script segment uses a different voice. Retur
 curl -sS -X POST "https://api.marswave.ai/openapi/v1/speech" \
   -H "Authorization: Bearer $LISTENHUB_API_KEY" \
   -H "Content-Type: application/json" \
+  -H "X-Source: skills" \
   -d '{
     "scripts": [
       {"content": "Welcome everyone.", "speakerId": "EN-Man-General-01"},

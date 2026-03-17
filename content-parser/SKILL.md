@@ -146,7 +146,8 @@ Wait for explicit confirmation before calling the API.
    TASK_ID="<id-from-step-3>"
    for i in $(seq 1 60); do
      RESULT=$(curl -sS "https://api.marswave.ai/openapi/v1/content/extract/$TASK_ID" \
-       -H "Authorization: Bearer $LISTENHUB_API_KEY" 2>/dev/null)
+       -H "Authorization: Bearer $LISTENHUB_API_KEY" \
+       -H "X-Source: skills" 2>/dev/null)
      STATUS=$(echo "$RESULT" | tr -d '\000-\037\177' | jq -r '.data.status // "processing"')
      case "$STATUS" in
        completed) echo "$RESULT"; exit 0 ;;
@@ -207,6 +208,7 @@ Wait for explicit confirmation before calling the API.
 curl -sS -X POST "https://api.marswave.ai/openapi/v1/content/extract" \
   -H "Authorization: Bearer $LISTENHUB_API_KEY" \
   -H "Content-Type: application/json" \
+  -H "X-Source: skills" \
   -d '{
     "source": {
       "type": "url",
@@ -219,7 +221,8 @@ curl -sS -X POST "https://api.marswave.ai/openapi/v1/content/extract" \
 
 ```bash
 curl -sS "https://api.marswave.ai/openapi/v1/content/extract/69a7dac700cf95938f86d9bb" \
-  -H "Authorization: Bearer $LISTENHUB_API_KEY"
+  -H "Authorization: Bearer $LISTENHUB_API_KEY" \
+  -H "X-Source: skills"
 ```
 
 5. Present extracted content preview and offer next actions.
@@ -237,6 +240,7 @@ curl -sS "https://api.marswave.ai/openapi/v1/content/extract/69a7dac700cf95938f8
 curl -sS -X POST "https://api.marswave.ai/openapi/v1/content/extract" \
   -H "Authorization: Bearer $LISTENHUB_API_KEY" \
   -H "Content-Type: application/json" \
+  -H "X-Source: skills" \
   -d '{
     "source": {
       "type": "url",

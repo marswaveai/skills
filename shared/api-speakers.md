@@ -18,7 +18,8 @@ Get available voice speakers, optionally filtered by language.
 
 ```bash
 curl -sS "https://api.marswave.ai/openapi/v1/speakers/list?language=en" \
-  -H "Authorization: Bearer $LISTENHUB_API_KEY"
+  -H "Authorization: Bearer $LISTENHUB_API_KEY" \
+  -H "X-Source: skills"
 ```
 
 **Response:**

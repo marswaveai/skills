@@ -25,6 +25,7 @@ Create a content extraction task for a URL. Returns a `taskId` for polling.
 curl -sS -X POST "https://api.marswave.ai/openapi/v1/content/extract" \
   -H "Authorization: Bearer $LISTENHUB_API_KEY" \
   -H "Content-Type: application/json" \
+  -H "X-Source: skills" \
   -d '{
     "source": {
       "type": "url",
@@ -39,6 +40,7 @@ curl -sS -X POST "https://api.marswave.ai/openapi/v1/content/extract" \
 curl -sS -X POST "https://api.marswave.ai/openapi/v1/content/extract" \
   -H "Authorization: Bearer $LISTENHUB_API_KEY" \
   -H "Content-Type: application/json" \
+  -H "X-Source: skills" \
   -d '{
     "source": {
       "type": "url",
@@ -87,7 +89,8 @@ Get extraction task status and results.
 
 ```bash
 curl -sS "https://api.marswave.ai/openapi/v1/content/extract/69a7dac700cf95938f86d9bb" \
-  -H "Authorization: Bearer $LISTENHUB_API_KEY"
+  -H "Authorization: Bearer $LISTENHUB_API_KEY" \
+  -H "X-Source: skills"
 ```
 
 **Response (processing):**

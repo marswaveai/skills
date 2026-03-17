@@ -151,6 +151,7 @@ Proceed?
 curl -sS -X POST "https://api.marswave.ai/openapi/v1/tts" \
   -H "Authorization: Bearer $LISTENHUB_API_KEY" \
   -H "Content-Type: application/json" \
+  -H "X-Source: skills" \
   -d '{"input": "...", "voice": "..."}' \
   --output /tmp/tts-output.mp3
 ```
@@ -167,6 +168,7 @@ JOB_ID=$(date +%s)
 curl -sS -X POST "https://api.marswave.ai/openapi/v1/tts" \
   -H "Authorization: Bearer $LISTENHUB_API_KEY" \
   -H "Content-Type: application/json" \
+  -H "X-Source: skills" \
   -d '{"input": "...", "voice": "..."}' \
   --output /tmp/tts-${JOB_ID}.mp3
 ```
@@ -186,6 +188,7 @@ mkdir -p "$JOB_DIR"
 curl -sS -X POST "https://api.marswave.ai/openapi/v1/tts" \
   -H "Authorization: Bearer $LISTENHUB_API_KEY" \
   -H "Content-Type: application/json" \
+  -H "X-Source: skills" \
   -d '{"input": "...", "voice": "..."}' \
   --output "${JOB_DIR}/${JOB_ID}.mp3"
 ```
@@ -263,6 +266,7 @@ ENDJSON
 curl -sS -X POST "https://api.marswave.ai/openapi/v1/speech" \
   -H "Authorization: Bearer $LISTENHUB_API_KEY" \
   -H "Content-Type: application/json" \
+  -H "X-Source: skills" \
   -d @/tmp/lh-speech-request.json
 
 rm /tmp/lh-speech-request.json

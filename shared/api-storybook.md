@@ -35,6 +35,7 @@ Create a storybook episode. Returns an `episodeId` immediately; generation runs 
 curl -sS -X POST "https://api.marswave.ai/openapi/v1/storybook/episodes" \
   -H "Authorization: Bearer $LISTENHUB_API_KEY" \
   -H "Content-Type: application/json" \
+  -H "X-Source: skills" \
   -d '{
     "sources": [{"type": "text", "content": "The history of the Roman Empire"}],
     "speakers": [{"speakerId": "cozy-man-english"}],
@@ -71,7 +72,8 @@ Get storybook episode status and result.
 
 ```bash
 curl -sS "https://api.marswave.ai/openapi/v1/storybook/episodes/688c9a27348f001e707ba331" \
-  -H "Authorization: Bearer $LISTENHUB_API_KEY"
+  -H "Authorization: Bearer $LISTENHUB_API_KEY" \
+  -H "X-Source: skills"
 ```
 
 **Response:**
@@ -142,7 +144,8 @@ Trigger video generation for a completed storybook episode. Video combines the p
 
 ```bash
 curl -sS -X POST "https://api.marswave.ai/openapi/v1/storybook/episodes/688c9a27348f001e707ba331/video" \
-  -H "Authorization: Bearer $LISTENHUB_API_KEY"
+  -H "Authorization: Bearer $LISTENHUB_API_KEY" \
+  -H "X-Source: skills"
 ```
 
 **Response:**
