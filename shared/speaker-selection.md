@@ -28,7 +28,7 @@ Always call the speakers API before presenting options (when user requests to ch
 GET /speakers/list?language={language}
 ```
 
-Never hardcode speaker IDs in API calls — use the defaults above only as fallback when no user preference exists.
+Do not invent speaker IDs in API calls — use saved speakers or the built-in defaults above, and fetch the speakers API list when presenting options.
 
 ## Speaker Properties
 

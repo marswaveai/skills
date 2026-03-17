@@ -35,7 +35,7 @@ Generate podcast episodes with 1-2 AI speakers discussing a topic. Supports quic
 - No shell scripts. Construct curl commands from the API reference files listed in Resources
 - Always read `shared/authentication.md` for API key and headers
 - Follow `shared/common-patterns.md` for polling, errors, and interaction patterns
-- Never hardcode speaker IDs — always fetch from the speakers API
+- Use saved speaker preferences or the built-in defaults from `shared/speaker-selection.md`; only fetch from the speakers API when the user explicitly wants to change voices
 - Never fabricate API endpoints or parameters
 - Always read config following `shared/config-pattern.md` before any interaction
 - Always follow `shared/speaker-selection.md` for speaker selection (text table + free-text input)
@@ -105,7 +105,17 @@ Then ask these questions in order and save:
 After collecting answers, save immediately:
 ```bash
 # Follow shared/output-mode.md § Save to Config
-NEW_CONFIG=$(echo "$CONFIG" | jq --arg m "$OUTPUT_MODE" '. + {"outputMode": $m}')
+NEW_CONFIG=$(echo "$CONFIG" | jq \
+  --arg m "$OUTPUT_MODE" \
+  --arg lang "$LANGUAGE" \
+  --arg mode "$MODE" \
+  --arg method "$METHOD" \
+  '. + {
+    "outputMode": $m,
+    "language": (if ($lang == "" or $lang == "null") then null else $lang end),
+    "defaultMode": (if ($mode == "" or $mode == "null") then null else $mode end),
+    "defaultMethod": (if ($method == "" or $method == "null") then null else $method end)
+  }')
 echo "$NEW_CONFIG" > "$CONFIG_PATH"
 CONFIG=$(cat "$CONFIG_PATH")
 ```
