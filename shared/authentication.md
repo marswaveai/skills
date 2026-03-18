@@ -25,7 +25,7 @@ source ~/.zshrc
 | Service | Base URL |
 |---------|----------|
 | ListenHub API | `https://api.marswave.ai/openapi/v1` |
-| Image Generation (Labnana) | `https://api.labnana.com/openapi/v1` |
+| Image Generation | `https://api.marswave.ai/openapi/v1` |
 | Staging (ListenHub) | `https://staging-api.marswave.ai/openapi/v1` |
 
 ## Required Headers

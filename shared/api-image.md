@@ -1,6 +1,6 @@
-# ListenHub API — Image Generation (Labnana)
+# ListenHub API — Image Generation
 
-**Base URL**: `https://api.labnana.com/openapi/v1`
+**Base URL**: `https://api.marswave.ai/openapi/v1`
 **Authentication**: Bearer `$LISTENHUB_API_KEY` (same key, different host)
 
 ## POST /images/generation
@@ -83,7 +83,7 @@ BASE64_REF=$(base64 -w 0 /path/to/image.png)
 **curl (text-only):**
 
 ```bash
-RESPONSE=$(curl -sS -X POST "https://api.labnana.com/openapi/v1/images/generation" \
+RESPONSE=$(curl -sS -X POST "https://api.marswave.ai/openapi/v1/images/generation" \
   -H "Authorization: Bearer $LISTENHUB_API_KEY" \
   -H "Content-Type: application/json" \
   --max-time 600 \
@@ -100,7 +100,7 @@ RESPONSE=$(curl -sS -X POST "https://api.labnana.com/openapi/v1/images/generatio
 ```bash
 BASE64_REF=$(base64 -i /path/to/reference.png)
 
-RESPONSE=$(curl -sS -X POST "https://api.labnana.com/openapi/v1/images/generation" \
+RESPONSE=$(curl -sS -X POST "https://api.marswave.ai/openapi/v1/images/generation" \
   -H "Authorization: Bearer $LISTENHUB_API_KEY" \
   -H "Content-Type: application/json" \
   --max-time 600 \

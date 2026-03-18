@@ -35,7 +35,7 @@ Generate AI images using the Labnana API. Supports text prompts with optional re
 - No shell scripts. Construct curl commands from the API reference files listed in Resources
 - Always read `shared/authentication.md` for API key and headers
 - Follow `shared/common-patterns.md` for error handling
-- Image generation uses a **different base URL**: `https://api.labnana.com/openapi/v1`
+- Image generation uses a **different base URL**: `https://api.marswave.ai/openapi/v1`
 - Always read config following `shared/config-pattern.md` before any interaction
 - Output saved to `.listenhub/image-gen/YYYY-MM-DD-{jobId}/` — never `~/Downloads/`
 
@@ -174,7 +174,7 @@ Wait for explicit confirmation before calling the API.
 
 1. **Build request**: Construct JSON with provider, model, prompt, imageConfig, and optional referenceImages (URL-based via `fileData` or base64 via `inlineData`)
 2. **Encode local files** (if base64 mode): For each local file path, encode to base64 and build `inlineData` objects
-3. **Submit**: `POST https://api.labnana.com/openapi/v1/images/generation` with timeout of 600s
+3. **Submit**: `POST https://api.marswave.ai/openapi/v1/images/generation` with timeout of 600s
 4. **Extract image**: Parse base64 data from response
 5. **Decode and present result**
 
@@ -266,7 +266,7 @@ echo "$BASE64_DATA" | base64 --decode > output.jpg
 5. No references
 
 ```bash
-RESPONSE=$(curl -sS -X POST "https://api.labnana.com/openapi/v1/images/generation" \
+RESPONSE=$(curl -sS -X POST "https://api.marswave.ai/openapi/v1/images/generation" \
   -H "Authorization: Bearer $LISTENHUB_API_KEY" \
   -H "Content-Type: application/json" \
   --max-time 600 \
@@ -302,7 +302,7 @@ Decode the base64 data per `outputMode` (see `shared/output-mode.md`).
 # Encode local reference image
 BASE64_REF=$(base64 -i /path/to/style-reference.png)
 
-RESPONSE=$(curl -sS -X POST "https://api.labnana.com/openapi/v1/images/generation" \
+RESPONSE=$(curl -sS -X POST "https://api.marswave.ai/openapi/v1/images/generation" \
   -H "Authorization: Bearer $LISTENHUB_API_KEY" \
   -H "Content-Type: application/json" \
   --max-time 600 \
