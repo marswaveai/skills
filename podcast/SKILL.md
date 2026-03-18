@@ -57,7 +57,7 @@ Follow `shared/config-pattern.md` Step 0 (Zero-Question Boot).
 **If file doesn't exist** — silently create with defaults and proceed:
 ```bash
 mkdir -p ".listenhub/podcast"
-echo '{"outputMode":"inline","language":null,"defaultMode":null,"defaultMethod":"one-step","defaultSpeakers":{}}' > ".listenhub/podcast/config.json"
+echo '{"outputMode":"inline","language":null,"defaultMode":"quick","defaultMethod":"one-step","defaultSpeakers":{}}' > ".listenhub/podcast/config.json"
 CONFIG_PATH=".listenhub/podcast/config.json"
 CONFIG=$(cat "$CONFIG_PATH")
 ```
@@ -123,83 +123,61 @@ CONFIG=$(cat "$CONFIG_PATH")
 
 ## Interaction Flow
 
-### Step 1: Topic / Content Source
+### Step 1: Topic + Reference Materials
 
-Free text input. Ask the user:
+Ask topic and optional reference materials **together in a single question** using AskUserQuestion with two sub-questions, or a single free-text prompt:
 
-> What topic or content would you like to turn into a podcast?
+> What topic would you like to turn into a podcast? If you have reference materials (URLs or text), include them here too.
 
-Accept: topic description, URL, or pasted text.
+Accept: topic description, URL(s), pasted text, or any combination.
+
+Examples of valid input:
+- "AI developments in 2026"
+- "https://example.com/article — discuss this"
+- "The pros and cons of remote work. Reference: https://study.com/remote-work-2026"
 
 ### Step 2: Mode
 
-If `config.defaultMode` is set, pre-fill and show in summary — skip this question.
-Otherwise ask:
+**Default: "quick"** — skip this question unless:
+- `config.defaultMode` is set to something else → use that value silently
+- User explicitly mentioned a mode keyword in Step 1 (e.g. "deep dive", "debate", "in depth") → infer mode from intent
 
-```
-Question: "What podcast generation mode?"
-Options:
-  - "Quick" — Short, concise overview (~5 min)
-  - "Deep" — Thorough analysis with more detail (~10-15 min)
-  - "Debate" — Two speakers with opposing views (requires 2 speakers)
-```
+Only ask this question if the user's intent is ambiguous AND no default is configured. In most cases, just use "quick".
 
 ### Step 3: Language
 
-If `config.language` is set, pre-fill and show in summary — skip this question.
-Otherwise ask:
+**Default: match the user's interaction language.** Detect from the language the user used in Step 1:
+- If the user wrote in Chinese → `zh`
+- If the user wrote in English → `en`
+- If `config.language` is set → use that value
 
-```
-Question: "What language?"
-Options:
-  - "Chinese (zh)" — Content in Mandarin Chinese
-  - "English (en)" — Content in English
-```
+**Never ask this question.** Always infer silently. Show in the confirmation summary so the user can override if needed.
 
 ### Step 4: Speaker Count
 
-```
-Question: "How many speakers?"
-Options:
-  - "1 speaker (solo)" — Monologue style
-  - "2 speakers (dialogue)" — Conversation style
-```
+**Default: 2 speakers (dialogue)** — the most common and engaging format.
 
-Note: Debate mode automatically sets 2 speakers.
+Skip this question. Debate mode requires 2 speakers. For quick/deep, default to 2 speakers as well.
+
+Only use 1 speaker if the user explicitly requests a monologue or solo format.
 
 ### Step 5: Speaker Selection
 
 Follow `shared/speaker-selection.md`:
 - If `config.defaultSpeakers.{language}` is set → use saved speakers silently
 - If not set → use **built-in defaults** from `shared/speaker-selection.md` (no question asked)
-- Show the speaker(s) in the confirmation summary (Step 8) — user can change from there if desired
+- Show the speaker(s) in the confirmation summary — user can change from there if desired
 - Only show the full speaker list if the user explicitly asks to change voices
 
 For 2-speaker mode (dialogue/debate): use Primary + Secondary defaults for the language.
 
-### Step 6: Reference Materials (optional)
+### Step 6: Generation Method
 
-```
-Question: "Any reference materials to include?"
-Options:
-  - "Yes, URL(s)" — Provide URLs to analyze
-  - "Yes, text" — Paste reference text
-  - "No references" — Generate from topic alone
-```
+**Default: "one-step"** — skip this question unless:
+- `config.defaultMethod` is set → use that value silently
+- User explicitly asks to review text first → use "two-step"
 
-### Step 7: Generation Method
-
-If `config.defaultMethod` is set, pre-fill and show in summary — skip this question.
-Otherwise ask:
-
-```
-Question: "How would you like to generate?"
-Options:
-  - "One step (recommended)" — Generate text + audio together, faster
-  - "Two steps (review first)" — Generate text, review/edit, then generate audio
-```
-
-### Step 8: Confirm & Generate
+### Step 7: Confirm & Generate
 
 Summarize all choices:
 
@@ -210,13 +188,13 @@ Ready to generate podcast:
   Mode: {mode}
   Language: {language}
   Speakers: {speaker name(s)}
-  References: {yes/no}
+  References: {yes/no + brief description}
   Method: {one-step/two-step}
 
   Proceed?
 ```
 
-Wait for explicit confirmation before calling any API.
+Wait for explicit confirmation before calling any API. The user can adjust any parameter here before confirming.
 
 ## Workflow
 
@@ -324,13 +302,9 @@ echo "$NEW_CONFIG" > "$CONFIG_PATH"
 **User**: "Make a podcast about the latest AI developments"
 
 **Agent workflow**:
-1. Detect: podcast request, topic = "latest AI developments"
-2. Ask mode → user picks "Deep"
-3. Ask language → "English"
-4. Ask speakers → 1 speaker
-5. Fetch speakers list, user picks "cozy-man-english"
-6. No references
-7. One-step generation
+1. Detect: podcast request, topic = "latest AI developments", no references
+2. Infer: mode = "quick" (default), language = "en" (user wrote in English), 2 speakers (default), one-step (default)
+3. Show confirmation summary → user confirms
 
 ```bash
 curl -sS -X POST "https://api.marswave.ai/openapi/v1/podcast/episodes" \
