@@ -167,13 +167,18 @@ Wait for explicit confirmation before calling the API.
    ```
 6. When notified, **download and present result**:
 
-   If `autoDownload` is `true`:
-   - Write `{taskId}-extracted.md` to the **current directory** — full extracted content in markdown
-   - Write `{taskId}-extracted.json` to the **current directory** — full raw API response data
+   If `autoDownload` is `true`, generate a slug from the extracted title (falling back to domain name if no title). Follow `shared/config-pattern.md` § Artifact Naming for slug generation and dedup.
+
+   - Write `{slug}.md` to the **current directory** — full extracted content in markdown
+   - Write `{slug}.json` to the **current directory** — full raw API response data
 
    ```bash
-   echo "$CONTENT_MD" > "${TASK_ID}-extracted.md"
-   echo "$RESULT" > "${TASK_ID}-extracted.json"
+   SLUG="{title-slug}"  # e.g. "topology-wikipedia"
+   # Dedup: check if files exist
+   BASE="$SLUG"; i=2
+   while [ -e "${SLUG}.md" ] || [ -e "${SLUG}.json" ]; do SLUG="${BASE}-${i}"; i=$((i+1)); done
+   echo "$CONTENT_MD" > "${SLUG}.md"
+   echo "$RESULT" > "${SLUG}.json"
    ```
 
    Present:
@@ -186,8 +191,8 @@ Wait for explicit confirmation before calling the API.
    消耗积分：{credits}
 
    已保存到当前目录：
-     {taskId}-extracted.md
-     {taskId}-extracted.json
+     {slug}.md
+     {slug}.json
    ```
 
 7. Show a preview of the extracted content (first ~500 chars)

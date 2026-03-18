@@ -39,7 +39,7 @@ Generate podcast episodes with 1-2 AI speakers discussing a topic. Supports quic
 - Never fabricate API endpoints or parameters
 - Always read config following `shared/config-pattern.md` before any interaction
 - Always follow `shared/speaker-selection.md` for speaker selection (text table + free-text input)
-- Never save files to `~/Downloads/` — use `.listenhub/podcast/` from config
+- Never save files to `~/Downloads/` or `.listenhub/` — save artifacts to the current working directory with friendly topic-based names (see `shared/config-pattern.md` § Artifact Naming)
 
 <HARD-GATE>
 Use the AskUserQuestion tool for every multiple-choice step — do NOT print options as plain text. Ask one question at a time. Wait for the user's answer before proceeding to the next step. After all parameters are collected, summarize the choices and ask the user to confirm. Do NOT call any generation API until the user has explicitly confirmed.
@@ -57,7 +57,7 @@ Follow `shared/config-pattern.md` Step 0 (Zero-Question Boot).
 **If file doesn't exist** — silently create with defaults and proceed:
 ```bash
 mkdir -p ".listenhub/podcast"
-echo '{"outputDir":".listenhub","outputMode":"inline","language":null,"defaultMode":null,"defaultMethod":"one-step","defaultSpeakers":{}}' > ".listenhub/podcast/config.json"
+echo '{"outputMode":"inline","language":null,"defaultMode":null,"defaultMethod":"one-step","defaultSpeakers":{}}' > ".listenhub/podcast/config.json"
 CONFIG_PATH=".listenhub/podcast/config.json"
 CONFIG=$(cat "$CONFIG_PATH")
 ```
@@ -257,32 +257,39 @@ Wait for explicit confirmation before calling any API.
    消耗积分：{credits}
    ```
 
-   **`download` or `both`**: Also download the file.
+   **`download` or `both`**: Also download the file. Generate a topic slug following `shared/config-pattern.md` § Artifact Naming.
    ```bash
-   DATE=$(date +%Y-%m-%d)
-   JOB_DIR=".listenhub/podcast/${DATE}-{episodeId}"
-   mkdir -p "$JOB_DIR"
-   curl -sS -o "${JOB_DIR}/{episodeId}.mp3" "{audioUrl}"
+   SLUG="{topic-slug}"  # e.g. "ai-developments"
+   NAME="${SLUG}-podcast.mp3"
+   # Dedup: if file exists, append -2, -3, etc.
+   BASE="${NAME%.*}"; EXT="${NAME##*.}"; i=2
+   while [ -e "$NAME" ]; do NAME="${BASE}-${i}.${EXT}"; i=$((i+1)); done
+   curl -sS -o "$NAME" "{audioUrl}"
    ```
-   Present the download path in addition to the above summary.
+   Present:
+   ```
+   已保存到当前目录：
+     {NAME}
+   ```
 5. Offer to show transcript or provide download URL on request
 
 ### Two-Step Generation
 
 1. **Step 1 — Submit text (foreground)**: `POST /podcast/episodes/text-content` → extract `episodeId`
 2. **Poll text (background)**: Use the exact `jq`-based polling loop above (substitute endpoint `podcast/episodes/text-content/{episodeId}` if needed), with `run_in_background: true` and `timeout: 600000`
-3. When notified, **save draft to config output dir**:
-   - Create `.listenhub/podcast/YYYY-MM-DD-{episodeId}/`
-   - Write `{episodeId}-draft.md` (human-readable: `**{speakerName}**: {content}` per line)
-   - Write `{episodeId}-draft.json` (raw `scripts` array)
+3. When notified, **save draft to a topic-based folder in cwd**:
+   - Generate a topic slug following `shared/config-pattern.md` § Artifact Naming
+   - Create `{slug}-podcast/` folder (dedup if exists)
+   - Write `draft.md` (human-readable: `**{speakerName}**: {content}` per line)
+   - Write `draft.json` (raw `scripts` array)
    - Present the draft location and content preview
 4. **STOP**: Present the draft and wait for explicit user approval
 5. **Step 2 — Submit audio (foreground, after approval)**:
    - No changes: `POST /podcast/episodes/{episodeId}/audio` with `{}`
    - With edits: `POST /podcast/episodes/{episodeId}/audio` with modified `{scripts: [...]}`
 6. **Poll audio (background)**: Same exact `jq`-based loop, `run_in_background: true`, `timeout: 600000`
-7. When notified, **download audio to same folder**:
-   - `curl -sS -o .listenhub/podcast/{dir}/{episodeId}.mp3 {audioUrl}`
+7. When notified, **download audio to the same folder**:
+   - `curl -sS -o {slug}-podcast/podcast.mp3 {audioUrl}`
    - Present final result (same format as one-step, folder now has draft + final files)
 
 ### After Successful Generation

@@ -40,7 +40,7 @@ Convert text into natural-sounding speech audio. Two paths:
 - Never hardcode speaker IDs in API calls — use built-in defaults from `shared/speaker-selection.md` as fallback only; fetch from the speakers API when the user wants to change voice
 - Always read config following `shared/config-pattern.md` before any interaction
 - Always follow `shared/speaker-selection.md` for speaker selection (text table + free-text input)
-- Never save files to `~/Downloads/` or `/tmp/` as primary output — use `.listenhub/tts/`
+- Never save files to `~/Downloads/` or `/tmp/` as primary output — save artifacts to the current working directory with friendly topic-based names (see `shared/config-pattern.md` § Artifact Naming)
 
 <HARD-GATE>
 Use the AskUserQuestion tool for every multiple-choice step — do NOT print options as plain text. Ask one question at a time. Wait for the user's answer before proceeding to the next step. After all parameters are collected, summarize the choices and ask the user to confirm. Do NOT call any generation API until the user has explicitly confirmed.
@@ -73,7 +73,7 @@ Follow `shared/config-pattern.md` Step 0 (Zero-Question Boot).
 **If file doesn't exist** — silently create with defaults and proceed:
 ```bash
 mkdir -p ".listenhub/tts"
-echo '{"outputDir":".listenhub","outputMode":"inline","language":null,"defaultSpeakers":{}}' > ".listenhub/tts/config.json"
+echo '{"outputMode":"inline","language":null,"defaultSpeakers":{}}' > ".listenhub/tts/config.json"
 CONFIG_PATH=".listenhub/tts/config.json"
 CONFIG=$(cat "$CONFIG_PATH")
 ```
@@ -186,25 +186,26 @@ Present:
 Audio generated!
 ```
 
-**`download` or `both`**:
+**`download` or `both`**: Generate a topic slug from the text content following `shared/config-pattern.md` § Artifact Naming.
 ```bash
-JOB_ID=$(date +%s)
-DATE=$(date +%Y-%m-%d)
-JOB_DIR=".listenhub/tts/${DATE}-${JOB_ID}"
-mkdir -p "$JOB_DIR"
+SLUG="{topic-slug}"  # e.g. "server-maintenance-notice"
+NAME="${SLUG}.mp3"
+# Dedup: if file exists, append -2, -3, etc.
+BASE="${NAME%.*}"; EXT="${NAME##*.}"; i=2
+while [ -e "$NAME" ]; do NAME="${BASE}-${i}.${EXT}"; i=$((i+1)); done
 curl -sS -X POST "https://api.marswave.ai/openapi/v1/tts" \
   -H "Authorization: Bearer $LISTENHUB_API_KEY" \
   -H "Content-Type: application/json" \
   -H "X-Source: skills" \
   -d '{"input": "...", "voice": "..."}' \
-  --output "${JOB_DIR}/${JOB_ID}.mp3"
+  --output "$NAME"
 ```
 Present:
 ```
 Audio generated!
 
-已下载到 .listenhub/tts/{YYYY-MM-DD}-{jobId}/：
-  {jobId}.mp3
+已保存到当前目录：
+  {NAME}
 ```
 
 ---
@@ -296,21 +297,26 @@ Audio generated!
 消耗积分：{credits}
 ```
 
-**`download` or `both`**: Also download the file.
+**`download` or `both`**: Also download the file. Generate a topic slug following `shared/config-pattern.md` § Artifact Naming.
 ```bash
-DATE=$(date +%Y-%m-%d)
-JOB_DIR=".listenhub/tts/${DATE}-{jobId}"
-mkdir -p "$JOB_DIR"
-curl -sS -o "${JOB_DIR}/{jobId}.mp3" "{audioUrl}"
+SLUG="{topic-slug}"  # e.g. "welcome-dialogue"
+NAME="${SLUG}.mp3"
+# Dedup: if file exists, append -2, -3, etc.
+BASE="${NAME%.*}"; EXT="${NAME##*.}"; i=2
+while [ -e "$NAME" ]; do NAME="${BASE}-${i}.${EXT}"; i=$((i+1)); done
+curl -sS -o "$NAME" "{audioUrl}"
 ```
-Present the download path in addition to the above summary.
+Present:
+```
+已保存到当前目录：
+  {NAME}
+```
 
 ---
 
 ## Updating Config
 
 When saving preferences, merge into `.listenhub/tts/config.json` — do not overwrite unchanged keys.
-Follow the merge pattern in `shared/config-pattern.md`.
 
 - Quick voice: set `defaultSpeakers.{language}[0]` to the selected `speakerId`
 - Script voices: set `defaultSpeakers.{language}` to the full array assigned this session

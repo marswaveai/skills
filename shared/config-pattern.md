@@ -112,22 +112,40 @@ NEW_CONFIG=$(echo "$CONFIG" | jq '. + {"language": "zh", "defaultMode": "deep"}'
 echo "$NEW_CONFIG" > "$CONFIG_PATH"
 ```
 
-## Artifact Directory
+## Artifact Naming
 
-After a job completes, create a dated subfolder and download artifacts:
+Artifacts are saved to the **current working directory** with friendly, topic-based names.
+
+### Slug Generation
+
+After the topic/title is confirmed, generate a short filesystem-safe slug:
+
+- Summarize the topic into 2-5 words
+- Lowercase, hyphens for spaces, keep CJK characters
+- Strip characters unsafe for filenames: `/ \ : * ? " < > |`
+- Examples: `ai-developments`, `量子计算入门`, `react-hooks-tutorial`
+
+### Dedup
+
+Before saving, check for naming conflicts:
 
 ```bash
-DATE=$(date +%Y-%m-%d)
-JOB_DIR=".listenhub/{skill}/${DATE}-{jobId}"
-mkdir -p "$JOB_DIR"
+# For single files:
+NAME="{slug}-podcast.mp3"
+BASE="${NAME%.*}"; EXT="${NAME##*.}"
+i=2; while [ -e "$NAME" ]; do NAME="${BASE}-${i}.${EXT}"; i=$((i+1)); done
 
-# Download each artifact
-curl -sS -o "${JOB_DIR}/{jobId}.mp3" "{audioUrl}"
-curl -sS -o "${JOB_DIR}/{jobId}.md"  "{transcriptUrl}"  # if applicable
+# For folders:
+DIR="{slug}-podcast"
+i=2; while [ -d "$DIR" ]; do DIR="{slug}-podcast-${i}"; i=$((i+1)); done
 ```
 
-File naming: `{jobId}.{ext}` inside `YYYY-MM-DD-{jobId}/`.
-Draft files (two-step mode): `{jobId}-draft.md`, `{jobId}-draft.json`.
+### Single-File vs Folder
+
+- **Single artifact** (one mp3, one md): save as `{slug}{suffix}.{ext}` in cwd
+- **Multiple artifacts** (draft + final, script + audio): create `{slug}{suffix}/` folder in cwd
+
+Each skill defines its own suffix and structure — see individual skill files.
 
 ## Output Mode
 

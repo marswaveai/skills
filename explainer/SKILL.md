@@ -37,7 +37,7 @@ Generate explainer videos that combine a single narrator's voiceover with AI-gen
 - Follow `shared/common-patterns.md` for polling, errors, and interaction patterns
 - Always read config following `shared/config-pattern.md` before any interaction
 - Never hardcode speaker IDs — always fetch from the speakers API
-- Never save files to `~/Downloads/` — use `.listenhub/explainer/` from config
+- Never save files to `~/Downloads/` or `.listenhub/` — save artifacts to the current working directory with friendly topic-based names (see `shared/config-pattern.md` § Artifact Naming)
 - Explainer uses exactly 1 speaker
 - Mode must be `info` (for Info style) or `story` (for Story style) — never `slides` (use `/slides` skill instead)
 
@@ -57,7 +57,7 @@ Follow `shared/config-pattern.md` Step 0 (Zero-Question Boot).
 **If file doesn't exist** — silently create with defaults and proceed:
 ```bash
 mkdir -p ".listenhub/explainer"
-echo '{"outputDir":".listenhub","outputMode":"inline","language":null,"defaultStyle":null,"defaultSpeakers":{}}' > ".listenhub/explainer/config.json"
+echo '{"outputMode":"inline","language":null,"defaultStyle":null,"defaultSpeakers":{}}' > ".listenhub/explainer/config.json"
 CONFIG_PATH=".listenhub/explainer/config.json"
 CONFIG=$(cat "$CONFIG_PATH")
 ```
@@ -210,10 +210,10 @@ Wait for explicit confirmation before calling any API.
    在线查看：https://listenhub.ai/app/explainer/{episodeId}
    ```
 
-   **`download` or `both`**: Also save the script file.
-   - Create `.listenhub/explainer/YYYY-MM-DD-{episodeId}/`
-   - Write `{episodeId}.md` from the generated script content
-   - Present the download path in addition to the above summary.
+   **`download` or `both`**: Also save the script file. Generate a topic slug following `shared/config-pattern.md` § Artifact Naming.
+   - If text-only output: save as `{slug}-explainer.md` in cwd (dedup if exists)
+   - If text+video output: create `{slug}-explainer/` folder (dedup if exists), write `script.md` inside
+   - Present the save path in addition to the above summary.
 
 5. **If video requested**: `POST /storybook/episodes/{episodeId}/video` (foreground) → **poll again (background)** using the **exact** bash command below with `run_in_background: true` and `timeout: 600000`. Poll for `videoStatus`, not `processStatus`:
 
@@ -250,14 +250,17 @@ Present:
 消耗积分：{credits}
 ```
 
-**`download` or `both`**: Also download the audio file.
+**`download` or `both`**: Also download the audio file into the `{slug}-explainer/` folder.
 ```bash
-DATE=$(date +%Y-%m-%d)
-JOB_DIR=".listenhub/explainer/${DATE}-{jobId}"
-mkdir -p "$JOB_DIR"
-curl -sS -o "${JOB_DIR}/{jobId}.mp3" "{audioUrl}"
+curl -sS -o "{slug}-explainer/audio.mp3" "{audioUrl}"
 ```
-Present the download path in addition to the above summary.
+Present:
+```
+已保存到当前目录：
+  {slug}-explainer/
+    script.md
+    audio.mp3
+```
 
 ### After Successful Generation
 
