@@ -37,7 +37,7 @@ Convert text into natural-sounding speech audio. Two paths:
 - No shell scripts. Construct curl commands from the API reference files listed in Resources
 - Always read `shared/authentication.md` for API key and headers
 - Follow `shared/common-patterns.md` for errors and interaction patterns
-- Never hardcode speaker IDs — always fetch from the speakers API
+- Never hardcode speaker IDs in API calls — use built-in defaults from `shared/speaker-selection.md` as fallback only; fetch from the speakers API when the user wants to change voice
 - Always read config following `shared/config-pattern.md` before any interaction
 - Always follow `shared/speaker-selection.md` for speaker selection (text table + free-text input)
 - Never save files to `~/Downloads/` or `/tmp/` as primary output — use `.listenhub/tts/`
@@ -108,6 +108,10 @@ Then ask:
 After collecting answers, save immediately:
 ```bash
 NEW_CONFIG=$(echo "$CONFIG" | jq --arg m "$OUTPUT_MODE" '. + {"outputMode": $m}')
+# Save language if user chose one (not "每次手动选择")
+if [ "$LANGUAGE" != "null" ]; then
+  NEW_CONFIG=$(echo "$NEW_CONFIG" | jq --arg lang "$LANGUAGE" '. + {"language": $lang}')
+fi
 echo "$NEW_CONFIG" > "$CONFIG_PATH"
 CONFIG=$(cat "$CONFIG_PATH")
 ```
