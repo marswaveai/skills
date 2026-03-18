@@ -68,29 +68,35 @@ Follow `shared/config-pattern.md` § API Key Check. If the key is missing, stop 
 
 ### Step 0: Config Setup
 
-Follow `shared/config-pattern.md` Step 0.
+Follow `shared/config-pattern.md` Step 0 (Zero-Question Boot).
 
-**If file doesn't exist** — ask location, then create immediately:
+**If file doesn't exist** — silently create with defaults and proceed:
 ```bash
 mkdir -p ".listenhub/tts"
 echo '{"outputDir":".listenhub","outputMode":"inline","language":null,"defaultSpeakers":{}}' > ".listenhub/tts/config.json"
 CONFIG_PATH=".listenhub/tts/config.json"
-# (or $HOME/.listenhub/tts/config.json for global)
+CONFIG=$(cat "$CONFIG_PATH")
 ```
-Then run **Setup Flow** below.
+**Do NOT ask any setup questions.** Proceed directly to the Interaction Flow.
 
-**If file exists** — read config, display summary, and confirm:
+**If file exists** — read config silently and proceed:
+```bash
+CONFIG_PATH=".listenhub/tts/config.json"
+[ ! -f "$CONFIG_PATH" ] && CONFIG_PATH="$HOME/.listenhub/tts/config.json"
+CONFIG=$(cat "$CONFIG_PATH")
+```
+
+### Setup Flow (user-initiated reconfigure only)
+
+Only run when the user explicitly asks to reconfigure. Display current settings:
 ```
 当前配置 (tts)：
   输出方式：{inline / download / both}
   语言偏好：{zh / en / 未设置}
-  默认主播：{speakerName / 未设置}
+  默认主播：{speakerName / 使用内置默认}
 ```
-Ask: "使用已保存的配置？" → **确认，直接继续** / **重新配置**
 
-### Setup Flow (first run or reconfigure)
-
-Ask these questions in order, then save all answers to config at once:
+Then ask:
 
 1. **outputMode**: Follow `shared/output-mode.md` § Setup Flow Question.
 
@@ -101,16 +107,10 @@ Ask these questions in order, then save all answers to config at once:
 
 After collecting answers, save immediately:
 ```bash
-# Save outputMode; only update language if user picked one
-# Follow shared/output-mode.md § Save to Config
 NEW_CONFIG=$(echo "$CONFIG" | jq --arg m "$OUTPUT_MODE" '. + {"outputMode": $m}')
-# If language was chosen (not "每次手动选择"):
-NEW_CONFIG=$(echo "$NEW_CONFIG" | jq --arg lang "zh" '. + {"language": $lang}')
 echo "$NEW_CONFIG" > "$CONFIG_PATH"
 CONFIG=$(cat "$CONFIG_PATH")
 ```
-
-Note: `defaultSpeakers` are saved after speaker selection in Step 3 — not here.
 
 ### Quick Mode — `POST /v1/tts`
 
@@ -123,9 +123,12 @@ Get the text to convert. If the user hasn't provided it, ask:
 **Step 2: Determine voice**
 
 - If `config.defaultSpeakers.{language}[0]` is set → use it silently (skip to Step 4)
-- Otherwise: `GET /speakers/list?language={detected-language}`, then follow `shared/speaker-selection.md` (text table + free-text input)
+- If not set → use the **built-in default** from `shared/speaker-selection.md` for the detected language (skip to Step 4)
+- Only show speaker selection if the user explicitly asks to change voice
 
 **Step 3: Save preference**
+
+After the user explicitly selects a new voice (not when using defaults):
 
 ```
 Question: "Save {voice name} as your default voice for {language}?"
@@ -220,7 +223,8 @@ Determine whether the user already has a scripts array:
 For each unique character in the script:
 
 - If `config.defaultSpeakers.{language}` has saved voices → auto-assign silently (one per character in order)
-- Otherwise: fetch `GET /speakers/list?language={detected-language}` and follow `shared/speaker-selection.md` for each character
+- If not set → use **built-in defaults** from `shared/speaker-selection.md` (Primary for first character, Secondary for second)
+- Only show speaker selection if the user explicitly asks to change voices
 
 **Step 3: Save preferences**
 
