@@ -269,6 +269,7 @@ echo "$BASE64_DATA" | base64 --decode > output.jpg
 RESPONSE=$(curl -sS -X POST "https://api.marswave.ai/openapi/v1/images/generation" \
   -H "Authorization: Bearer $LISTENHUB_API_KEY" \
   -H "Content-Type: application/json" \
+  -H "X-Source: skills" \
   --max-time 600 \
   -d '{
     "provider": "google",

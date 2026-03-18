@@ -25,6 +25,7 @@ All polling MUST run in the background using Bash `run_in_background: true`. Thi
 RESPONSE=$(curl -sS -X POST "https://api.marswave.ai/openapi/v1/podcast/episodes" \
   -H "Authorization: Bearer $LISTENHUB_API_KEY" \
   -H "Content-Type: application/json" \
+  -H "X-Source: skills" \
   -d '{ ... }')
 
 EPISODE_ID=$(echo "$RESPONSE" | jq -r '.data.episodeId')
@@ -42,7 +43,8 @@ Run this as a **separate Bash call** with `run_in_background: true`:
 EPISODE_ID="<id-from-step-1>"
 for i in $(seq 1 30); do
   RESULT=$(curl -sS "https://api.marswave.ai/openapi/v1/podcast/episodes/$EPISODE_ID" \
-    -H "Authorization: Bearer $LISTENHUB_API_KEY" 2>/dev/null)
+    -H "Authorization: Bearer $LISTENHUB_API_KEY" \
+    -H "X-Source: skills" 2>/dev/null)
 
   STATUS=$(echo "$RESULT" | tr -d '\000-\037\177' | jq -r '.data.processStatus // "pending"')
 
@@ -137,6 +139,7 @@ ENDJSON
 curl -sS -X POST "https://api.marswave.ai/openapi/v1/podcast/episodes" \
   -H "Authorization: Bearer $LISTENHUB_API_KEY" \
   -H "Content-Type: application/json" \
+  -H "X-Source: skills" \
   -d @/tmp/lh-request.json
 ```
 

@@ -214,7 +214,8 @@ Wait for explicit confirmation before calling any API.
    EPISODE_ID="<id-from-step-1>"
    for i in $(seq 1 30); do
      RESULT=$(curl -sS "https://api.marswave.ai/openapi/v1/podcast/episodes/$EPISODE_ID" \
-       -H "Authorization: Bearer $LISTENHUB_API_KEY" 2>/dev/null)
+       -H "Authorization: Bearer $LISTENHUB_API_KEY" \
+       -H "X-Source: skills" 2>/dev/null)
      STATUS=$(echo "$RESULT" | tr -d '\000-\037\177' | jq -r '.data.processStatus // "pending"')
      case "$STATUS" in
        success|completed) echo "$RESULT"; exit 0 ;;
@@ -312,6 +313,7 @@ echo "$NEW_CONFIG" > "$CONFIG_PATH"
 curl -sS -X POST "https://api.marswave.ai/openapi/v1/podcast/episodes" \
   -H "Authorization: Bearer $LISTENHUB_API_KEY" \
   -H "Content-Type: application/json" \
+  -H "X-Source: skills" \
   -d '{
     "sources": [{"type": "text", "content": "The latest AI developments"}],
     "speakers": [{"speakerId": "cozy-man-english"}],
