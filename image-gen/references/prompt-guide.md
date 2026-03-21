@@ -46,10 +46,12 @@ A good image prompt has these elements (in any order):
 Reference images guide the AI on style, not content. Tips:
 
 - Use reference images for style transfer: "generate in this art style"
-- Direct image URLs required (`.jpg`, `.png`, `.webp`, `.gif`)
+- Two modes available:
+  - **URL mode**: Direct image URLs (`.jpg`, `.png`, `.webp`, `.gif`)
+  - **Local file mode**: Provide file paths — the agent encodes them as base64 (`.jpg`, `.png`, `.webp`, `.heic`, `.heif`)
 - Max 14 reference images per request
 - The prompt still controls the content; references control the visual style
-- Recommended image hosts: imgbb.com, sm.ms, postimages.org, imgur.com
+- For URL mode, recommended image hosts: imgbb.com, sm.ms, postimages.org, imgur.com
 
 ## Language Note
 

@@ -37,6 +37,7 @@ Create a podcast episode.
 curl -sS -X POST "https://api.marswave.ai/openapi/v1/podcast/episodes" \
   -H "Authorization: Bearer $LISTENHUB_API_KEY" \
   -H "Content-Type: application/json" \
+  -H "X-Source: skills" \
   -d '{
     "query": "The future of AI development",
     "sources": [{"type": "text", "content": "Reference material about AI trends"}],
@@ -72,7 +73,8 @@ Get podcast episode details and status.
 
 ```bash
 curl -sS "https://api.marswave.ai/openapi/v1/podcast/episodes/688c9a27348f001e707ba331" \
-  -H "Authorization: Bearer $LISTENHUB_API_KEY"
+  -H "Authorization: Bearer $LISTENHUB_API_KEY" \
+  -H "X-Source: skills"
 ```
 
 **Response:**

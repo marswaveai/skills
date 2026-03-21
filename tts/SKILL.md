@@ -37,10 +37,10 @@ Convert text into natural-sounding speech audio. Two paths:
 - No shell scripts. Construct curl commands from the API reference files listed in Resources
 - Always read `shared/authentication.md` for API key and headers
 - Follow `shared/common-patterns.md` for errors and interaction patterns
-- Never hardcode speaker IDs — always fetch from the speakers API
+- Never hardcode speaker IDs in API calls — use built-in defaults from `shared/speaker-selection.md` as fallback only; fetch from the speakers API when the user wants to change voice
 - Always read config following `shared/config-pattern.md` before any interaction
 - Always follow `shared/speaker-selection.md` for speaker selection (text table + free-text input)
-- Never save files to `~/Downloads/` or `/tmp/` as primary output — use `.listenhub/tts/`
+- Never save files to `~/Downloads/` or `/tmp/` as primary output — save artifacts to the current working directory with friendly topic-based names (see `shared/config-pattern.md` § Artifact Naming)
 
 <HARD-GATE>
 Use the AskUserQuestion tool for every multiple-choice step — do NOT print options as plain text. Ask one question at a time. Wait for the user's answer before proceeding to the next step. After all parameters are collected, summarize the choices and ask the user to confirm. Do NOT call any generation API until the user has explicitly confirmed.
@@ -68,29 +68,35 @@ Follow `shared/config-pattern.md` § API Key Check. If the key is missing, stop 
 
 ### Step 0: Config Setup
 
-Follow `shared/config-pattern.md` Step 0.
+Follow `shared/config-pattern.md` Step 0 (Zero-Question Boot).
 
-**If file doesn't exist** — ask location, then create immediately:
+**If file doesn't exist** — silently create with defaults and proceed:
 ```bash
 mkdir -p ".listenhub/tts"
-echo '{"outputDir":".listenhub","outputMode":"inline","language":null,"defaultSpeakers":{}}' > ".listenhub/tts/config.json"
+echo '{"outputMode":"inline","language":null,"defaultSpeakers":{}}' > ".listenhub/tts/config.json"
 CONFIG_PATH=".listenhub/tts/config.json"
-# (or $HOME/.listenhub/tts/config.json for global)
+CONFIG=$(cat "$CONFIG_PATH")
 ```
-Then run **Setup Flow** below.
+**Do NOT ask any setup questions.** Proceed directly to the Interaction Flow.
 
-**If file exists** — read config, display summary, and confirm:
+**If file exists** — read config silently and proceed:
+```bash
+CONFIG_PATH=".listenhub/tts/config.json"
+[ ! -f "$CONFIG_PATH" ] && CONFIG_PATH="$HOME/.listenhub/tts/config.json"
+CONFIG=$(cat "$CONFIG_PATH")
+```
+
+### Setup Flow (user-initiated reconfigure only)
+
+Only run when the user explicitly asks to reconfigure. Display current settings:
 ```
 当前配置 (tts)：
   输出方式：{inline / download / both}
   语言偏好：{zh / en / 未设置}
-  默认主播：{speakerName / 未设置}
+  默认主播：{speakerName / 使用内置默认}
 ```
-Ask: "使用已保存的配置？" → **确认，直接继续** / **重新配置**
 
-### Setup Flow (first run or reconfigure)
-
-Ask these questions in order, then save all answers to config at once:
+Then ask:
 
 1. **outputMode**: Follow `shared/output-mode.md` § Setup Flow Question.
 
@@ -101,16 +107,14 @@ Ask these questions in order, then save all answers to config at once:
 
 After collecting answers, save immediately:
 ```bash
-# Save outputMode; only update language if user picked one
-# Follow shared/output-mode.md § Save to Config
 NEW_CONFIG=$(echo "$CONFIG" | jq --arg m "$OUTPUT_MODE" '. + {"outputMode": $m}')
-# If language was chosen (not "每次手动选择"):
-NEW_CONFIG=$(echo "$NEW_CONFIG" | jq --arg lang "zh" '. + {"language": $lang}')
+# Save language if user chose one (not "每次手动选择")
+if [ "$LANGUAGE" != "null" ]; then
+  NEW_CONFIG=$(echo "$NEW_CONFIG" | jq --arg lang "$LANGUAGE" '. + {"language": $lang}')
+fi
 echo "$NEW_CONFIG" > "$CONFIG_PATH"
 CONFIG=$(cat "$CONFIG_PATH")
 ```
-
-Note: `defaultSpeakers` are saved after speaker selection in Step 3 — not here.
 
 ### Quick Mode — `POST /v1/tts`
 
@@ -123,9 +127,12 @@ Get the text to convert. If the user hasn't provided it, ask:
 **Step 2: Determine voice**
 
 - If `config.defaultSpeakers.{language}[0]` is set → use it silently (skip to Step 4)
-- Otherwise: `GET /speakers/list?language={detected-language}`, then follow `shared/speaker-selection.md` (text table + free-text input)
+- If not set → use the **built-in default** from `shared/speaker-selection.md` for the detected language (skip to Step 4)
+- Only show speaker selection if the user explicitly asks to change voice
 
 **Step 3: Save preference**
+
+After the user explicitly selects a new voice (not when using defaults):
 
 ```
 Question: "Save {voice name} as your default voice for {language}?"
@@ -151,6 +158,7 @@ Proceed?
 curl -sS -X POST "https://api.marswave.ai/openapi/v1/tts" \
   -H "Authorization: Bearer $LISTENHUB_API_KEY" \
   -H "Content-Type: application/json" \
+  -H "X-Source: skills" \
   -d '{"input": "...", "voice": "..."}' \
   --output /tmp/tts-output.mp3
 ```
@@ -167,6 +175,7 @@ JOB_ID=$(date +%s)
 curl -sS -X POST "https://api.marswave.ai/openapi/v1/tts" \
   -H "Authorization: Bearer $LISTENHUB_API_KEY" \
   -H "Content-Type: application/json" \
+  -H "X-Source: skills" \
   -d '{"input": "...", "voice": "..."}' \
   --output /tmp/tts-${JOB_ID}.mp3
 ```
@@ -177,24 +186,26 @@ Present:
 Audio generated!
 ```
 
-**`download` or `both`**:
+**`download` or `both`**: Generate a topic slug from the text content following `shared/config-pattern.md` § Artifact Naming.
 ```bash
-JOB_ID=$(date +%s)
-DATE=$(date +%Y-%m-%d)
-JOB_DIR=".listenhub/tts/${DATE}-${JOB_ID}"
-mkdir -p "$JOB_DIR"
+SLUG="{topic-slug}"  # e.g. "server-maintenance-notice"
+NAME="${SLUG}.mp3"
+# Dedup: if file exists, append -2, -3, etc.
+BASE="${NAME%.*}"; EXT="${NAME##*.}"; i=2
+while [ -e "$NAME" ]; do NAME="${BASE}-${i}.${EXT}"; i=$((i+1)); done
 curl -sS -X POST "https://api.marswave.ai/openapi/v1/tts" \
   -H "Authorization: Bearer $LISTENHUB_API_KEY" \
   -H "Content-Type: application/json" \
+  -H "X-Source: skills" \
   -d '{"input": "...", "voice": "..."}' \
-  --output "${JOB_DIR}/${JOB_ID}.mp3"
+  --output "$NAME"
 ```
 Present:
 ```
 Audio generated!
 
-已下载到 .listenhub/tts/{YYYY-MM-DD}-{jobId}/：
-  {jobId}.mp3
+已保存到当前目录：
+  {NAME}
 ```
 
 ---
@@ -217,7 +228,8 @@ Determine whether the user already has a scripts array:
 For each unique character in the script:
 
 - If `config.defaultSpeakers.{language}` has saved voices → auto-assign silently (one per character in order)
-- Otherwise: fetch `GET /speakers/list?language={detected-language}` and follow `shared/speaker-selection.md` for each character
+- If not set → use **built-in defaults** from `shared/speaker-selection.md` (Primary for first character, Secondary for second)
+- Only show speaker selection if the user explicitly asks to change voices
 
 **Step 3: Save preferences**
 
@@ -263,6 +275,7 @@ ENDJSON
 curl -sS -X POST "https://api.marswave.ai/openapi/v1/speech" \
   -H "Authorization: Bearer $LISTENHUB_API_KEY" \
   -H "Content-Type: application/json" \
+  -H "X-Source: skills" \
   -d @/tmp/lh-speech-request.json
 
 rm /tmp/lh-speech-request.json
@@ -284,21 +297,26 @@ Audio generated!
 消耗积分：{credits}
 ```
 
-**`download` or `both`**: Also download the file.
+**`download` or `both`**: Also download the file. Generate a topic slug following `shared/config-pattern.md` § Artifact Naming.
 ```bash
-DATE=$(date +%Y-%m-%d)
-JOB_DIR=".listenhub/tts/${DATE}-{jobId}"
-mkdir -p "$JOB_DIR"
-curl -sS -o "${JOB_DIR}/{jobId}.mp3" "{audioUrl}"
+SLUG="{topic-slug}"  # e.g. "welcome-dialogue"
+NAME="${SLUG}.mp3"
+# Dedup: if file exists, append -2, -3, etc.
+BASE="${NAME%.*}"; EXT="${NAME##*.}"; i=2
+while [ -e "$NAME" ]; do NAME="${BASE}-${i}.${EXT}"; i=$((i+1)); done
+curl -sS -o "$NAME" "{audioUrl}"
 ```
-Present the download path in addition to the above summary.
+Present:
+```
+已保存到当前目录：
+  {NAME}
+```
 
 ---
 
 ## Updating Config
 
 When saving preferences, merge into `.listenhub/tts/config.json` — do not overwrite unchanged keys.
-Follow the merge pattern in `shared/config-pattern.md`.
 
 - Quick voice: set `defaultSpeakers.{language}[0]` to the selected `speakerId`
 - Script voices: set `defaultSpeakers.{language}` to the full array assigned this session

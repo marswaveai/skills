@@ -35,11 +35,11 @@ Generate podcast episodes with 1-2 AI speakers discussing a topic. Supports quic
 - No shell scripts. Construct curl commands from the API reference files listed in Resources
 - Always read `shared/authentication.md` for API key and headers
 - Follow `shared/common-patterns.md` for polling, errors, and interaction patterns
-- Never hardcode speaker IDs — always fetch from the speakers API
+- Never hardcode speaker IDs in API calls — use built-in defaults from `shared/speaker-selection.md` as fallback only; fetch from the speakers API when the user wants to change voice
 - Never fabricate API endpoints or parameters
 - Always read config following `shared/config-pattern.md` before any interaction
 - Always follow `shared/speaker-selection.md` for speaker selection (text table + free-text input)
-- Never save files to `~/Downloads/` — use `.listenhub/podcast/` from config
+- Never save files to `~/Downloads/` or `.listenhub/` — save artifacts to the current working directory with friendly topic-based names (see `shared/config-pattern.md` § Artifact Naming)
 
 <HARD-GATE>
 Use the AskUserQuestion tool for every multiple-choice step — do NOT print options as plain text. Ask one question at a time. Wait for the user's answer before proceeding to the next step. After all parameters are collected, summarize the choices and ask the user to confirm. Do NOT call any generation API until the user has explicitly confirmed.
@@ -52,31 +52,37 @@ Follow `shared/config-pattern.md` § API Key Check. If the key is missing, stop 
 
 ## Step 0: Config Setup
 
-Follow `shared/config-pattern.md` Step 0.
+Follow `shared/config-pattern.md` Step 0 (Zero-Question Boot).
 
-**If file doesn't exist** — ask location, then create immediately:
+**If file doesn't exist** — silently create with defaults and proceed:
 ```bash
 mkdir -p ".listenhub/podcast"
-echo '{"outputDir":".listenhub","outputMode":"inline","language":null,"defaultMode":null,"defaultMethod":null,"defaultSpeakers":{}}' > ".listenhub/podcast/config.json"
+echo '{"outputMode":"inline","language":null,"defaultMode":"quick","defaultMethod":"one-step","defaultSpeakers":{}}' > ".listenhub/podcast/config.json"
 CONFIG_PATH=".listenhub/podcast/config.json"
-# (or $HOME/.listenhub/podcast/config.json for global)
+CONFIG=$(cat "$CONFIG_PATH")
 ```
-Then run **Setup Flow** below.
+**Do NOT ask any setup questions.** Proceed directly to the Interaction Flow.
 
-**If file exists** — read config, display summary, and confirm:
+**If file exists** — read config silently and proceed:
+```bash
+CONFIG_PATH=".listenhub/podcast/config.json"
+[ ! -f "$CONFIG_PATH" ] && CONFIG_PATH="$HOME/.listenhub/podcast/config.json"
+CONFIG=$(cat "$CONFIG_PATH")
+```
+
+### Setup Flow (user-initiated reconfigure only)
+
+Only run when the user explicitly asks to reconfigure. Display current settings:
 ```
 当前配置 (podcast)：
   输出方式：{inline / download / both}
   语言偏好：{zh / en / 未设置}
   默认模式：{quick / deep / debate / 未设置}
-  默认生成方式：{one-step / two-step / 未设置}
-  默认主播：{speakerName(s) / 未设置}
+  默认生成方式：{one-step / two-step}
+  默认主播：{speakerName(s) / 使用内置默认}
 ```
-Ask: "使用已保存的配置？" → **确认，直接继续** / **重新配置**
 
-### Setup Flow (first run or reconfigure)
-
-Ask these questions in order, then save all answers to config at once:
+Then ask these questions in order and save:
 
 1. **outputMode**: Follow `shared/output-mode.md` § Setup Flow Question.
 
@@ -98,92 +104,80 @@ Ask these questions in order, then save all answers to config at once:
 
 After collecting answers, save immediately:
 ```bash
-# Follow shared/output-mode.md § Save to Config
 NEW_CONFIG=$(echo "$CONFIG" | jq --arg m "$OUTPUT_MODE" '. + {"outputMode": $m}')
+# Save language if user chose one (not "每次手动选择")
+if [ "$LANGUAGE" != "null" ]; then
+  NEW_CONFIG=$(echo "$NEW_CONFIG" | jq --arg lang "$LANGUAGE" '. + {"language": $lang}')
+fi
+# Save mode if user chose one
+if [ "$MODE" != "null" ]; then
+  NEW_CONFIG=$(echo "$NEW_CONFIG" | jq --arg mode "$MODE" '. + {"defaultMode": $mode}')
+fi
+# Save method if user chose one
+if [ "$METHOD" != "null" ]; then
+  NEW_CONFIG=$(echo "$NEW_CONFIG" | jq --arg method "$METHOD" '. + {"defaultMethod": $method}')
+fi
 echo "$NEW_CONFIG" > "$CONFIG_PATH"
 CONFIG=$(cat "$CONFIG_PATH")
 ```
 
-Note: `defaultSpeakers` are saved after generation (see After Successful Generation section).
-
 ## Interaction Flow
 
-### Step 1: Topic / Content Source
+### Step 1: Topic + Reference Materials
 
-Free text input. Ask the user:
+Ask topic and optional reference materials **together in a single question** using AskUserQuestion with two sub-questions, or a single free-text prompt:
 
-> What topic or content would you like to turn into a podcast?
+> What topic would you like to turn into a podcast? If you have reference materials (URLs or text), include them here too.
 
-Accept: topic description, URL, or pasted text.
+Accept: topic description, URL(s), pasted text, or any combination.
+
+Examples of valid input:
+- "AI developments in 2026"
+- "https://example.com/article — discuss this"
+- "The pros and cons of remote work. Reference: https://study.com/remote-work-2026"
 
 ### Step 2: Mode
 
-If `config.defaultMode` is set, pre-fill and show in summary — skip this question.
-Otherwise ask:
+**Default: "quick"** — skip this question unless:
+- `config.defaultMode` is set to something else → use that value silently
+- User explicitly mentioned a mode keyword in Step 1 (e.g. "deep dive", "debate", "in depth") → infer mode from intent
 
-```
-Question: "What podcast generation mode?"
-Options:
-  - "Quick" — Short, concise overview (~5 min)
-  - "Deep" — Thorough analysis with more detail (~10-15 min)
-  - "Debate" — Two speakers with opposing views (requires 2 speakers)
-```
+Only ask this question if the user's intent is ambiguous AND no default is configured. In most cases, just use "quick".
 
 ### Step 3: Language
 
-If `config.language` is set, pre-fill and show in summary — skip this question.
-Otherwise ask:
+**Default: match the user's interaction language.** Detect from the language the user used in Step 1:
+- If the user wrote in Chinese → `zh`
+- If the user wrote in English → `en`
+- If `config.language` is set → use that value
 
-```
-Question: "What language?"
-Options:
-  - "Chinese (zh)" — Content in Mandarin Chinese
-  - "English (en)" — Content in English
-```
+**Never ask this question.** Always infer silently. Show in the confirmation summary so the user can override if needed.
 
 ### Step 4: Speaker Count
 
-```
-Question: "How many speakers?"
-Options:
-  - "1 speaker (solo)" — Monologue style
-  - "2 speakers (dialogue)" — Conversation style
-```
+**Default: 2 speakers (dialogue)** — the most common and engaging format.
 
-Note: Debate mode automatically sets 2 speakers.
+Skip this question. Debate mode requires 2 speakers. For quick/deep, default to 2 speakers as well.
+
+Only use 1 speaker if the user explicitly requests a monologue or solo format.
 
 ### Step 5: Speaker Selection
 
-Follow `shared/speaker-selection.md` for the full selection flow, including:
-- Default from `config.defaultSpeakers.{language}` (skip step if set)
-- Text table + free-text input
-- Input matching and re-prompt on no match
+Follow `shared/speaker-selection.md`:
+- If `config.defaultSpeakers.{language}` is set → use saved speakers silently
+- If not set → use **built-in defaults** from `shared/speaker-selection.md` (no question asked)
+- Show the speaker(s) in the confirmation summary — user can change from there if desired
+- Only show the full speaker list if the user explicitly asks to change voices
 
-For 2-speaker mode (dialogue/debate): run selection twice (or until both are chosen).
+For 2-speaker mode (dialogue/debate): use Primary + Secondary defaults for the language.
 
-### Step 6: Reference Materials (optional)
+### Step 6: Generation Method
 
-```
-Question: "Any reference materials to include?"
-Options:
-  - "Yes, URL(s)" — Provide URLs to analyze
-  - "Yes, text" — Paste reference text
-  - "No references" — Generate from topic alone
-```
+**Default: "one-step"** — skip this question unless:
+- `config.defaultMethod` is set → use that value silently
+- User explicitly asks to review text first → use "two-step"
 
-### Step 7: Generation Method
-
-If `config.defaultMethod` is set, pre-fill and show in summary — skip this question.
-Otherwise ask:
-
-```
-Question: "How would you like to generate?"
-Options:
-  - "One step (recommended)" — Generate text + audio together, faster
-  - "Two steps (review first)" — Generate text, review/edit, then generate audio
-```
-
-### Step 8: Confirm & Generate
+### Step 7: Confirm & Generate
 
 Summarize all choices:
 
@@ -194,13 +188,13 @@ Ready to generate podcast:
   Mode: {mode}
   Language: {language}
   Speakers: {speaker name(s)}
-  References: {yes/no}
+  References: {yes/no + brief description}
   Method: {one-step/two-step}
 
   Proceed?
 ```
 
-Wait for explicit confirmation before calling any API.
+Wait for explicit confirmation before calling any API. The user can adjust any parameter here before confirming.
 
 ## Workflow
 
@@ -214,7 +208,8 @@ Wait for explicit confirmation before calling any API.
    EPISODE_ID="<id-from-step-1>"
    for i in $(seq 1 30); do
      RESULT=$(curl -sS "https://api.marswave.ai/openapi/v1/podcast/episodes/$EPISODE_ID" \
-       -H "Authorization: Bearer $LISTENHUB_API_KEY" 2>/dev/null)
+       -H "Authorization: Bearer $LISTENHUB_API_KEY" \
+       -H "X-Source: skills" 2>/dev/null)
      STATUS=$(echo "$RESULT" | tr -d '\000-\037\177' | jq -r '.data.processStatus // "pending"')
      case "$STATUS" in
        success|completed) echo "$RESULT"; exit 0 ;;
@@ -240,32 +235,39 @@ Wait for explicit confirmation before calling any API.
    消耗积分：{credits}
    ```
 
-   **`download` or `both`**: Also download the file.
+   **`download` or `both`**: Also download the file. Generate a topic slug following `shared/config-pattern.md` § Artifact Naming.
    ```bash
-   DATE=$(date +%Y-%m-%d)
-   JOB_DIR=".listenhub/podcast/${DATE}-{episodeId}"
-   mkdir -p "$JOB_DIR"
-   curl -sS -o "${JOB_DIR}/{episodeId}.mp3" "{audioUrl}"
+   SLUG="{topic-slug}"  # e.g. "ai-developments"
+   NAME="${SLUG}-podcast.mp3"
+   # Dedup: if file exists, append -2, -3, etc.
+   BASE="${NAME%.*}"; EXT="${NAME##*.}"; i=2
+   while [ -e "$NAME" ]; do NAME="${BASE}-${i}.${EXT}"; i=$((i+1)); done
+   curl -sS -o "$NAME" "{audioUrl}"
    ```
-   Present the download path in addition to the above summary.
+   Present:
+   ```
+   已保存到当前目录：
+     {NAME}
+   ```
 5. Offer to show transcript or provide download URL on request
 
 ### Two-Step Generation
 
 1. **Step 1 — Submit text (foreground)**: `POST /podcast/episodes/text-content` → extract `episodeId`
 2. **Poll text (background)**: Use the exact `jq`-based polling loop above (substitute endpoint `podcast/episodes/text-content/{episodeId}` if needed), with `run_in_background: true` and `timeout: 600000`
-3. When notified, **save draft to config output dir**:
-   - Create `.listenhub/podcast/YYYY-MM-DD-{episodeId}/`
-   - Write `{episodeId}-draft.md` (human-readable: `**{speakerName}**: {content}` per line)
-   - Write `{episodeId}-draft.json` (raw `scripts` array)
+3. When notified, **save draft to a topic-based folder in cwd**:
+   - Generate a topic slug following `shared/config-pattern.md` § Artifact Naming
+   - Create `{slug}-podcast/` folder (dedup if exists)
+   - Write `draft.md` (human-readable: `**{speakerName}**: {content}` per line)
+   - Write `draft.json` (raw `scripts` array)
    - Present the draft location and content preview
 4. **STOP**: Present the draft and wait for explicit user approval
 5. **Step 2 — Submit audio (foreground, after approval)**:
    - No changes: `POST /podcast/episodes/{episodeId}/audio` with `{}`
    - With edits: `POST /podcast/episodes/{episodeId}/audio` with modified `{scripts: [...]}`
 6. **Poll audio (background)**: Same exact `jq`-based loop, `run_in_background: true`, `timeout: 600000`
-7. When notified, **download audio to same folder**:
-   - `curl -sS -o .listenhub/podcast/{dir}/{episodeId}.mp3 {audioUrl}`
+7. When notified, **download audio to the same folder**:
+   - `curl -sS -o {slug}-podcast/podcast.mp3 {audioUrl}`
    - Present final result (same format as one-step, folder now has draft + final files)
 
 ### After Successful Generation
@@ -300,18 +302,15 @@ echo "$NEW_CONFIG" > "$CONFIG_PATH"
 **User**: "Make a podcast about the latest AI developments"
 
 **Agent workflow**:
-1. Detect: podcast request, topic = "latest AI developments"
-2. Ask mode → user picks "Deep"
-3. Ask language → "English"
-4. Ask speakers → 1 speaker
-5. Fetch speakers list, user picks "cozy-man-english"
-6. No references
-7. One-step generation
+1. Detect: podcast request, topic = "latest AI developments", no references
+2. Infer: mode = "quick" (default), language = "en" (user wrote in English), 2 speakers (default), one-step (default)
+3. Show confirmation summary → user confirms
 
 ```bash
 curl -sS -X POST "https://api.marswave.ai/openapi/v1/podcast/episodes" \
   -H "Authorization: Bearer $LISTENHUB_API_KEY" \
   -H "Content-Type: application/json" \
+  -H "X-Source: skills" \
   -d '{
     "sources": [{"type": "text", "content": "The latest AI developments"}],
     "speakers": [{"speakerId": "cozy-man-english"}],

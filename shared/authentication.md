@@ -25,7 +25,7 @@ source ~/.zshrc
 | Service | Base URL |
 |---------|----------|
 | ListenHub API | `https://api.marswave.ai/openapi/v1` |
-| Image Generation (Labnana) | `https://api.labnana.com/openapi/v1` |
+| Image Generation | `https://api.marswave.ai/openapi/v1` |
 | Staging (ListenHub) | `https://staging-api.marswave.ai/openapi/v1` |
 
 ## Required Headers
@@ -35,7 +35,10 @@ Every request must include:
 ```
 Authorization: Bearer $LISTENHUB_API_KEY
 Content-Type: application/json
+X-Source: skills
 ```
+
+The `X-Source: skills` header identifies requests as coming from Claude Code skills (CLI tool), distinguishing them from `openapi` (web) or other sources on the server side.
 
 ## curl Template
 
@@ -43,6 +46,7 @@ Content-Type: application/json
 curl -sS -X POST "https://api.marswave.ai/openapi/v1/{endpoint}" \
   -H "Authorization: Bearer $LISTENHUB_API_KEY" \
   -H "Content-Type: application/json" \
+  -H "X-Source: skills" \
   -d '{ ... }'
 ```
 

@@ -37,7 +37,7 @@ Generate explainer videos that combine a single narrator's voiceover with AI-gen
 - Follow `shared/common-patterns.md` for polling, errors, and interaction patterns
 - Always read config following `shared/config-pattern.md` before any interaction
 - Never hardcode speaker IDs — always fetch from the speakers API
-- Never save files to `~/Downloads/` — use `.listenhub/explainer/` from config
+- Never save files to `~/Downloads/` or `.listenhub/` — save artifacts to the current working directory with friendly topic-based names (see `shared/config-pattern.md` § Artifact Naming)
 - Explainer uses exactly 1 speaker
 - Mode must be `info` (for Info style) or `story` (for Story style) — never `slides` (use `/slides` skill instead)
 
@@ -52,30 +52,36 @@ Follow `shared/config-pattern.md` § API Key Check. If the key is missing, stop 
 
 ## Step 0: Config Setup
 
-Follow `shared/config-pattern.md` Step 0.
+Follow `shared/config-pattern.md` Step 0 (Zero-Question Boot).
 
-**If file doesn't exist** — ask location, then create immediately:
+**If file doesn't exist** — silently create with defaults and proceed:
 ```bash
 mkdir -p ".listenhub/explainer"
-echo '{"outputDir":".listenhub","outputMode":"inline","language":null,"defaultStyle":null,"defaultSpeakers":{}}' > ".listenhub/explainer/config.json"
+echo '{"outputMode":"inline","language":null,"defaultStyle":null,"defaultSpeakers":{}}' > ".listenhub/explainer/config.json"
 CONFIG_PATH=".listenhub/explainer/config.json"
-# (or $HOME/.listenhub/explainer/config.json for global)
+CONFIG=$(cat "$CONFIG_PATH")
 ```
-Then run **Setup Flow** below.
+**Do NOT ask any setup questions.** Proceed directly to the Interaction Flow.
 
-**If file exists** — read config, display summary, and confirm:
+**If file exists** — read config silently and proceed:
+```bash
+CONFIG_PATH=".listenhub/explainer/config.json"
+[ ! -f "$CONFIG_PATH" ] && CONFIG_PATH="$HOME/.listenhub/explainer/config.json"
+CONFIG=$(cat "$CONFIG_PATH")
+```
+
+### Setup Flow (user-initiated reconfigure only)
+
+Only run when the user explicitly asks to reconfigure. Display current settings:
 ```
 当前配置 (explainer)：
   输出方式：{inline / download / both}
   语言偏好：{zh / en / 未设置}
   默认风格：{info / story / 未设置}
-  默认主播：{speakerName / 未设置}
+  默认主播：{speakerName / 使用内置默认}
 ```
-Ask: "使用已保存的配置？" → **确认，直接继续** / **重新配置**
 
-### Setup Flow (first run or reconfigure)
-
-Ask these questions in order, then save all answers to config at once:
+Then ask:
 
 1. **outputMode**: Follow `shared/output-mode.md` § Setup Flow Question.
 
@@ -91,13 +97,10 @@ Ask these questions in order, then save all answers to config at once:
 
 After collecting answers, save immediately:
 ```bash
-# Follow shared/output-mode.md § Save to Config
 NEW_CONFIG=$(echo "$CONFIG" | jq --arg m "$OUTPUT_MODE" '. + {"outputMode": $m}')
 echo "$NEW_CONFIG" > "$CONFIG_PATH"
 CONFIG=$(cat "$CONFIG_PATH")
 ```
-
-Note: `defaultSpeakers` are saved after generation (see After Successful Generation section).
 
 ## Interaction Flow
 
@@ -135,10 +138,11 @@ Options:
 
 ### Step 4: Speaker Selection
 
-Follow `shared/speaker-selection.md` for the full selection flow, including:
-- Default from `config.defaultSpeakers.{language}` (skip step if set)
-- Text table + free-text input
-- Input matching and re-prompt on no match
+Follow `shared/speaker-selection.md`:
+- If `config.defaultSpeakers.{language}` is set → use saved speaker silently
+- If not set → use **built-in default** from `shared/speaker-selection.md` for the language
+- Show the speaker in the confirmation summary (Step 6) — user can change from there if desired
+- Only show the full speaker list if the user explicitly asks to change voice
 
 Only 1 speaker is supported for explainer videos.
 
@@ -179,7 +183,8 @@ Wait for explicit confirmation before calling any API.
    EPISODE_ID="<id-from-step-1>"
    for i in $(seq 1 30); do
      RESULT=$(curl -sS "https://api.marswave.ai/openapi/v1/storybook/episodes/$EPISODE_ID" \
-       -H "Authorization: Bearer $LISTENHUB_API_KEY" 2>/dev/null)
+       -H "Authorization: Bearer $LISTENHUB_API_KEY" \
+       -H "X-Source: skills" 2>/dev/null)
      STATUS=$(echo "$RESULT" | tr -d '\000-\037\177' | jq -r '.data.processStatus // "pending"')
      case "$STATUS" in
        success|completed) echo "$RESULT"; exit 0 ;;
@@ -205,10 +210,10 @@ Wait for explicit confirmation before calling any API.
    在线查看：https://listenhub.ai/app/explainer/{episodeId}
    ```
 
-   **`download` or `both`**: Also save the script file.
-   - Create `.listenhub/explainer/YYYY-MM-DD-{episodeId}/`
-   - Write `{episodeId}.md` from the generated script content
-   - Present the download path in addition to the above summary.
+   **`download` or `both`**: Also save the script file. Generate a topic slug following `shared/config-pattern.md` § Artifact Naming.
+   - If text-only output: save as `{slug}-explainer.md` in cwd (dedup if exists)
+   - If text+video output: create `{slug}-explainer/` folder (dedup if exists), write `script.md` inside
+   - Present the save path in addition to the above summary.
 
 5. **If video requested**: `POST /storybook/episodes/{episodeId}/video` (foreground) → **poll again (background)** using the **exact** bash command below with `run_in_background: true` and `timeout: 600000`. Poll for `videoStatus`, not `processStatus`:
 
@@ -216,7 +221,8 @@ Wait for explicit confirmation before calling any API.
    EPISODE_ID="<id-from-step-1>"
    for i in $(seq 1 30); do
      RESULT=$(curl -sS "https://api.marswave.ai/openapi/v1/storybook/episodes/$EPISODE_ID" \
-       -H "Authorization: Bearer $LISTENHUB_API_KEY" 2>/dev/null)
+       -H "Authorization: Bearer $LISTENHUB_API_KEY" \
+       -H "X-Source: skills" 2>/dev/null)
      STATUS=$(echo "$RESULT" | tr -d '\000-\037\177' | jq -r '.data.videoStatus // "pending"')
      case "$STATUS" in
        success|completed) echo "$RESULT"; exit 0 ;;
@@ -244,14 +250,17 @@ Present:
 消耗积分：{credits}
 ```
 
-**`download` or `both`**: Also download the audio file.
+**`download` or `both`**: Also download the audio file into the `{slug}-explainer/` folder.
 ```bash
-DATE=$(date +%Y-%m-%d)
-JOB_DIR=".listenhub/explainer/${DATE}-{jobId}"
-mkdir -p "$JOB_DIR"
-curl -sS -o "${JOB_DIR}/{jobId}.mp3" "{audioUrl}"
+curl -sS -o "{slug}-explainer/audio.mp3" "{audioUrl}"
 ```
-Present the download path in addition to the above summary.
+Present:
+```
+已保存到当前目录：
+  {slug}-explainer/
+    script.md
+    audio.mp3
+```
 
 ### After Successful Generation
 
@@ -298,6 +307,7 @@ echo "$NEW_CONFIG" > "$CONFIG_PATH"
 curl -sS -X POST "https://api.marswave.ai/openapi/v1/storybook/episodes" \
   -H "Authorization: Bearer $LISTENHUB_API_KEY" \
   -H "Content-Type: application/json" \
+  -H "X-Source: skills" \
   -d '{
     "sources": [{"type": "text", "content": "Introduce Claude Code: what it is, key features, and how to get started"}],
     "speakers": [{"speakerId": "cozy-man-english"}],

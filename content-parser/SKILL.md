@@ -48,25 +48,33 @@ Follow `shared/config-pattern.md` § API Key Check. If the key is missing, stop 
 
 ## Step 0: Config Setup
 
-Follow `shared/config-pattern.md` Step 0.
+Follow `shared/config-pattern.md` Step 0 (Zero-Question Boot).
 
-**If file doesn't exist** — ask location, then create immediately:
+**If file doesn't exist** — silently create with defaults and proceed:
 ```bash
 mkdir -p ".listenhub/content-parser"
 echo '{"autoDownload":true}' > ".listenhub/content-parser/config.json"
 CONFIG_PATH=".listenhub/content-parser/config.json"
-# (or $HOME/.listenhub/content-parser/config.json for global)
+CONFIG=$(cat "$CONFIG_PATH")
 ```
-Then run **Setup Flow** below.
+**Do NOT ask any setup questions.** Proceed directly to the Interaction Flow.
 
-**If file exists** — read config, display summary, and confirm:
+**If file exists** — read config silently and proceed:
+```bash
+CONFIG_PATH=".listenhub/content-parser/config.json"
+[ ! -f "$CONFIG_PATH" ] && CONFIG_PATH="$HOME/.listenhub/content-parser/config.json"
+CONFIG=$(cat "$CONFIG_PATH")
+```
+
+### Setup Flow (user-initiated reconfigure only)
+
+Only run when the user explicitly asks to reconfigure. Display current settings:
 ```
 当前配置 (content-parser)：
   自动下载：{是 / 否}
 ```
-Ask: "使用已保存的配置？" → **确认，直接继续** / **重新配置**
 
-### Setup Flow (first run or reconfigure)
+Then ask:
 
 1. **autoDownload**: "自动保存提取的内容到当前目录？"
    - "是（推荐）" → `autoDownload: true`
@@ -146,7 +154,8 @@ Wait for explicit confirmation before calling the API.
    TASK_ID="<id-from-step-3>"
    for i in $(seq 1 60); do
      RESULT=$(curl -sS "https://api.marswave.ai/openapi/v1/content/extract/$TASK_ID" \
-       -H "Authorization: Bearer $LISTENHUB_API_KEY" 2>/dev/null)
+       -H "Authorization: Bearer $LISTENHUB_API_KEY" \
+       -H "X-Source: skills" 2>/dev/null)
      STATUS=$(echo "$RESULT" | tr -d '\000-\037\177' | jq -r '.data.status // "processing"')
      case "$STATUS" in
        completed) echo "$RESULT"; exit 0 ;;
@@ -158,13 +167,18 @@ Wait for explicit confirmation before calling the API.
    ```
 6. When notified, **download and present result**:
 
-   If `autoDownload` is `true`:
-   - Write `{taskId}-extracted.md` to the **current directory** — full extracted content in markdown
-   - Write `{taskId}-extracted.json` to the **current directory** — full raw API response data
+   If `autoDownload` is `true`, generate a slug from the extracted title (falling back to domain name if no title). Follow `shared/config-pattern.md` § Artifact Naming for slug generation and dedup.
+
+   - Write `{slug}.md` to the **current directory** — full extracted content in markdown
+   - Write `{slug}.json` to the **current directory** — full raw API response data
 
    ```bash
-   echo "$CONTENT_MD" > "${TASK_ID}-extracted.md"
-   echo "$RESULT" > "${TASK_ID}-extracted.json"
+   SLUG="{title-slug}"  # e.g. "topology-wikipedia"
+   # Dedup: check if files exist
+   BASE="$SLUG"; i=2
+   while [ -e "${SLUG}.md" ] || [ -e "${SLUG}.json" ]; do SLUG="${BASE}-${i}"; i=$((i+1)); done
+   echo "$CONTENT_MD" > "${SLUG}.md"
+   echo "$RESULT" > "${SLUG}.json"
    ```
 
    Present:
@@ -177,8 +191,8 @@ Wait for explicit confirmation before calling the API.
    消耗积分：{credits}
 
    已保存到当前目录：
-     {taskId}-extracted.md
-     {taskId}-extracted.json
+     {slug}.md
+     {slug}.json
    ```
 
 7. Show a preview of the extracted content (first ~500 chars)
@@ -207,6 +221,7 @@ Wait for explicit confirmation before calling the API.
 curl -sS -X POST "https://api.marswave.ai/openapi/v1/content/extract" \
   -H "Authorization: Bearer $LISTENHUB_API_KEY" \
   -H "Content-Type: application/json" \
+  -H "X-Source: skills" \
   -d '{
     "source": {
       "type": "url",
@@ -219,7 +234,8 @@ curl -sS -X POST "https://api.marswave.ai/openapi/v1/content/extract" \
 
 ```bash
 curl -sS "https://api.marswave.ai/openapi/v1/content/extract/69a7dac700cf95938f86d9bb" \
-  -H "Authorization: Bearer $LISTENHUB_API_KEY"
+  -H "Authorization: Bearer $LISTENHUB_API_KEY" \
+  -H "X-Source: skills"
 ```
 
 5. Present extracted content preview and offer next actions.
@@ -237,6 +253,7 @@ curl -sS "https://api.marswave.ai/openapi/v1/content/extract/69a7dac700cf95938f8
 curl -sS -X POST "https://api.marswave.ai/openapi/v1/content/extract" \
   -H "Authorization: Bearer $LISTENHUB_API_KEY" \
   -H "Content-Type: application/json" \
+  -H "X-Source: skills" \
   -d '{
     "source": {
       "type": "url",

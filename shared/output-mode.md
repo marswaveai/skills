@@ -30,7 +30,7 @@ OUTPUT_MODE=$(echo "$CONFIG" | jq -r '.outputMode // "inline"')
 
 ## Setup Flow Question
 
-Replace the "自动下载？" question with:
+Only asked during user-initiated reconfigure (not on first run — first run uses `"inline"` as default):
 
 ```
 Question: "输出方式？"
@@ -63,19 +63,14 @@ Show the result directly in the conversation. Do NOT save to `.listenhub/`.
 
 ### `download`
 
-Save to `.listenhub/{skill}/YYYY-MM-DD-{jobId}/` and show the local file path. This is the previous `autoDownload: true` behavior.
+Save to the **current working directory** with a friendly topic-based name. Follow `shared/config-pattern.md` § Artifact Naming for slug generation and dedup.
 
-```bash
-DATE=$(date +%Y-%m-%d)
-JOB_DIR=".listenhub/{skill}/${DATE}-{jobId}"
-mkdir -p "$JOB_DIR"
-curl -sS -o "${JOB_DIR}/{jobId}.mp3" "{audioUrl}"
-```
+Each skill defines its own naming convention (see individual SKILL.md files).
 
 Present:
 ```
-已下载到 .listenhub/{skill}/{YYYY-MM-DD}-{jobId}/：
-  {jobId}.mp3
+已保存到当前目录：
+  {filename or folder}/
 ```
 
 ### `both`

@@ -4,24 +4,38 @@ Reusable pattern for per-skill config lookup, creation, and update.
 
 ## API Key Check
 
-Run this **before Step 0** in every skill that requires `LISTENHUB_API_KEY`. Hard gate — if missing, stop immediately and do not proceed.
+Run this **before Step 0** in every skill that requires `LISTENHUB_API_KEY`.
 
 ```bash
 [ -z "$LISTENHUB_API_KEY" ] && echo "MISSING" || echo "OK"
 ```
 
-**If `OK`**: proceed to Step 0.
+**If `OK`**: proceed to Step 0 silently. Do NOT display or confirm the key.
 
-**If `MISSING`**: tell the user that `LISTENHUB_API_KEY` is not set, and show the steps below to configure it. Then stop — do NOT proceed to Step 0 or any interaction flow.
+**If `MISSING`**: run the interactive setup below. Do NOT stop — guide the user through configuration and then continue.
 
-### Missing Key Message
+### Interactive Key Setup
 
-Tell the user:
-- `LISTENHUB_API_KEY` is not set
-- Get an API key at https://listenhub.ai/settings/api-keys (Pro plan required)
-- Add `export LISTENHUB_API_KEY="lh_sk_..."` to `~/.zshrc` (macOS) or `~/.bashrc` (Linux)
-- Run `source ~/.zshrc` to reload
-- Re-run this skill after configuring
+1. Tell the user:
+   > `LISTENHUB_API_KEY` 未配置。请前往 https://listenhub.ai/settings/api-keys 获取 API Key（需要 Pro 订阅）。
+
+2. Use `AskUserQuestion` to collect the key:
+   > 请粘贴你的 API Key（以 `lh_sk_` 开头）：
+
+3. Validate format — must start with `lh_sk_`. If not, re-prompt.
+
+4. Write to shell profile and source:
+   ```bash
+   echo '' >> ~/.zshrc
+   echo 'export LISTENHUB_API_KEY="lh_sk_..."' >> ~/.zshrc
+   source ~/.zshrc
+   ```
+   On Linux, use `~/.bashrc` instead.
+
+5. Confirm to the user:
+   > API Key 已保存到 `~/.zshrc`，后续会话无需重复配置。
+
+6. **Continue** — proceed to Step 0 and the skill's Interaction Flow. Do NOT ask the user to re-run.
 
 ## Config Location
 
@@ -31,57 +45,48 @@ Each skill stores config at:
 .listenhub/{skill}/config.json
 ```
 
-## Step 0: Config Setup
+## Step 0: Config Setup (Zero-Question Boot)
 
-Run before any interaction in every skill. Three possible states:
+Run before any interaction in every skill. The goal is **zero questions on first run** — create config silently with sensible defaults and proceed directly to the task.
 
 ### State A — File Doesn't Exist (first run)
 
-Use `AskUserQuestion`:
-```
-Question: "ListenHub 配置文件存在哪里？"
-Options:
-  - "当前目录" — {CWD}/.listenhub/{skill}/config.json（仅此项目）
-  - "全局" — ~/.listenhub/{skill}/config.json（所有项目共用）
-```
-
-Then create the directory and write the skill's initial defaults **immediately**:
+**Do NOT ask any questions.** Silently create the config in the current directory with the skill's default values:
 
 ```bash
-# 当前目录:
 mkdir -p ".listenhub/{skill}"
 echo '{...skill initial defaults...}' > ".listenhub/{skill}/config.json"
 CONFIG_PATH=".listenhub/{skill}/config.json"
-
-# 全局:
-mkdir -p "$HOME/.listenhub/{skill}"
-echo '{...skill initial defaults...}' > "$HOME/.listenhub/{skill}/config.json"
-CONFIG_PATH="$HOME/.listenhub/{skill}/config.json"
+CONFIG=$(cat "$CONFIG_PATH")
 ```
 
-Then run the skill's **Setup Flow** to collect preferences and save them.
+Then proceed directly to the skill's **Interaction Flow** (skip Setup Flow entirely).
 
 ### State B — File Exists
 
-Read the config:
+Read the config silently and proceed:
+
 ```bash
 CONFIG_PATH=".listenhub/{skill}/config.json"
 [ ! -f "$CONFIG_PATH" ] && CONFIG_PATH="$HOME/.listenhub/{skill}/config.json"
 CONFIG=$(cat "$CONFIG_PATH")
 ```
 
-Display the current settings in a readable summary (skill-specific format), then ask:
+**Do NOT display config summary or ask for confirmation.** Proceed directly to the skill's Interaction Flow.
 
-```
-Question: "使用已保存的配置？"
-Options:
-  - "确认，直接继续" — use saved config as-is, skip Setup Flow
-  - "重新配置" — run Setup Flow again and overwrite saved values
-```
+### Reconfigure (user-initiated only)
+
+If the user explicitly asks to reconfigure (e.g., "reconfigure", "change settings", "重新配置"), then:
+
+1. Display the current settings in a readable summary (skill-specific format)
+2. Run the skill's **Setup Flow** to collect new preferences
+3. Save updated values
+
+This is the **only** time Setup Flow questions are asked.
 
 ## Setup Flow
 
-Each skill defines its own Setup Flow — questions to collect preferences on first run or reconfigure. After answers are collected, **save immediately** using the merge pattern:
+Each skill defines its own Setup Flow — questions to collect preferences when the user explicitly requests reconfiguration. After answers are collected, **save immediately** using the merge pattern:
 
 ```bash
 NEW_CONFIG=$(echo "$CONFIG" | jq '. + {"key": "value"}')
@@ -107,22 +112,40 @@ NEW_CONFIG=$(echo "$CONFIG" | jq '. + {"language": "zh", "defaultMode": "deep"}'
 echo "$NEW_CONFIG" > "$CONFIG_PATH"
 ```
 
-## Artifact Directory
+## Artifact Naming
 
-After a job completes, create a dated subfolder and download artifacts:
+Artifacts are saved to the **current working directory** with friendly, topic-based names.
+
+### Slug Generation
+
+After the topic/title is confirmed, generate a short filesystem-safe slug:
+
+- Summarize the topic into 2-5 words
+- Lowercase, hyphens for spaces, keep CJK characters
+- Strip characters unsafe for filenames: `/ \ : * ? " < > |`
+- Examples: `ai-developments`, `量子计算入门`, `react-hooks-tutorial`
+
+### Dedup
+
+Before saving, check for naming conflicts:
 
 ```bash
-DATE=$(date +%Y-%m-%d)
-JOB_DIR=".listenhub/{skill}/${DATE}-{jobId}"
-mkdir -p "$JOB_DIR"
+# For single files:
+NAME="{slug}-podcast.mp3"
+BASE="${NAME%.*}"; EXT="${NAME##*.}"
+i=2; while [ -e "$NAME" ]; do NAME="${BASE}-${i}.${EXT}"; i=$((i+1)); done
 
-# Download each artifact
-curl -sS -o "${JOB_DIR}/{jobId}.mp3" "{audioUrl}"
-curl -sS -o "${JOB_DIR}/{jobId}.md"  "{transcriptUrl}"  # if applicable
+# For folders:
+DIR="{slug}-podcast"
+i=2; while [ -d "$DIR" ]; do DIR="{slug}-podcast-${i}"; i=$((i+1)); done
 ```
 
-File naming: `{jobId}.{ext}` inside `YYYY-MM-DD-{jobId}/`.
-Draft files (two-step mode): `{jobId}-draft.md`, `{jobId}-draft.json`.
+### Single-File vs Folder
+
+- **Single artifact** (one mp3, one md): save as `{slug}{suffix}.{ext}` in cwd
+- **Multiple artifacts** (draft + final, script + audio): create `{slug}{suffix}/` folder in cwd
+
+Each skill defines its own suffix and structure — see individual skill files.
 
 ## Output Mode
 
