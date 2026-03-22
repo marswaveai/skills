@@ -127,6 +127,8 @@ After execution, record output path in history. On next run, compare previous ou
 │   ├── cover.jpg       # Cover image
 │   ├── section-1.jpg   # Section illustrations
 │   └── section-2.jpg
+├── .original/
+│   └── article.md      # Snapshot for style learning diff
 └── meta.json           # Title, summary, tags
 ```
 
@@ -156,6 +158,8 @@ After execution, record output path in history. On next run, compare previous ou
 │   ├── 03-page.jpg       # ...
 │   └── prompts.json      # Prompt record per card (for regeneration)
 ├── long-text.md           # Long text version
+├── .original/
+│   └── long-text.md      # Snapshot for style learning diff
 └── meta.json              # Title, tags, topics
 ```
 
@@ -174,6 +178,8 @@ After execution, record output path in history. On next run, compare previous ou
 {slug}-narration/
 ├── script.md             # Spoken script
 ├── audio.mp3             # Voiceover (if generated)
+├── .original/
+│   └── script.md         # Snapshot for style learning diff
 └── meta.json
 ```
 
@@ -181,15 +187,31 @@ After execution, record output path in history. On next run, compare previous ou
 
 ## Skill Orchestration
 
-### Dependency Detection
+### Dependency Detection & API Key Strategy
 
-Before calling another skill's API, check prerequisites:
-- `LISTENHUB_API_KEY` env var for content-parser, image-gen, tts
-- `coli` command for asr (local tool, no API key needed)
+**API Key requirement depends on whether the pipeline calls remote APIs**:
 
-If unavailable: output a one-line notice with install command suggestion (`npx skills add marswaveai/skills`). Do not block the entire workflow — skip the dependent step, deliver what's possible, annotate what was skipped.
+| Scenario | Needs `LISTENHUB_API_KEY`? | Reason |
+|----------|--------------------------|--------|
+| Topic → narration script (text only) | No | Pure AI writing, no API calls |
+| Topic → WeChat article with images | **Yes** | image-gen requires API |
+| URL → any template | **Yes** | content-parser requires API |
+| Audio/video → any template | No (ASR is local) | But if template then needs images/TTS, yes |
 
-Note: ASR uses the local `coli` CLI tool (see `asr/SKILL.md`), not a remote API. All other skills use the ListenHub API endpoints documented in `shared/api-*.md`.
+**Rule**: Check at the confirmation gate (before pipeline execution) whether any step in the selected template's pipeline requires `LISTENHUB_API_KEY`. If yes and the key is missing, run the interactive setup from `shared/authentication.md` — do NOT skip and do NOT proceed without it. Image generation and content extraction are core to the output quality and should not be silently skipped.
+
+**ASR is the exception**: It uses the local `coli` CLI tool (see `asr/SKILL.md`), not a remote API. If `coli` is unavailable, suggest installation and skip the transcription step.
+
+### Audio/Video Input Handling
+
+When the input is an audio/video URL (not a local file):
+
+1. Download the file to `/tmp/creator-{slug}.{ext}` using `curl -L -o`
+2. Call `coli` to transcribe the downloaded file
+3. Delete the downloaded file after transcription: `rm /tmp/creator-{slug}.{ext}`
+4. Use the transcript as text material for the selected template
+
+For local audio/video files, call `coli` directly on the file path (no download/cleanup needed).
 
 ### Call Method
 
@@ -215,7 +237,7 @@ Preferences are stored alongside config in `.listenhub/creator/config.json` unde
 
 ### Step -1: API Key Check
 
-Follow `shared/authentication.md`. If `LISTENHUB_API_KEY` is not set, run the interactive setup.
+Deferred until the confirmation gate. If the selected template's pipeline includes any remote API call (image-gen, content-parser, tts), check `LISTENHUB_API_KEY` at that point. If missing, run interactive setup from `shared/authentication.md`. Pure text-only pipelines (e.g., topic → narration script without TTS) can proceed without an API key.
 
 ### Step 0: Config Setup (Zero-Question Boot)
 
@@ -276,11 +298,12 @@ Follows `shared/config-pattern.md` conventions.
 ### Evolution Mechanisms
 
 **Automatic learning**:
-- Each generation records output path in `preferences.json` history
-- On next run, if the previous output file has been modified by the user, read both the original output (from git or a cached copy in meta.json) and the current file
+- Each generation saves a snapshot of the main output file alongside the output. For example, `{slug}-wechat/.original/article.md` is an exact copy of the generated `article.md` before any user edits.
+- Each generation records output path in `config.json` → `preferences.{platform}.history`
+- On next run, if `.original/article.md` exists and differs from the current `article.md`, compute the diff
 - Present the diff to the AI with the prompt: "The user edited the generated content. What style preferences can you infer? Express each as a short directive (e.g., '减少 emoji 使用', '段落更短')."
 - Append inferred notes to `styleNotes`; array keeps latest 10 entries, newer replaces older
-- If the file was not modified, skip learning
+- If the file was not modified (or `.original/` doesn't exist), skip learning
 
 **Manual tuning**:
 - User can say "记住：我的公众号不要用问句结尾" → append to platform's styleNotes
@@ -300,9 +323,8 @@ description: 创作者工作流 - 一键生成公众号/小红书/口播等平�
 metadata:
   openclaw:
     emoji: "✍️"
-    requires:
-      env: ["LISTENHUB_API_KEY"]
-    primaryEnv: "LISTENHUB_API_KEY"
+    # No hard env requirement — API key is checked at confirmation gate
+    # only when the pipeline includes remote API calls (image-gen, content-parser, tts)
 ```
 
 **Trigger keywords**: `"创作"`, `"写公众号"`, `"小红书"`, `"口播"`, `"creator"`, `"content workflow"`, `"帮我写一篇"`, `"生成内容"`
@@ -332,9 +354,10 @@ Creator:
 ### Error Handling
 
 - content-parser fails → "URL 解析失败，你可以直接粘贴文字内容给我"
-- image-gen fails → Skip illustrations, deliver article, annotate which images were not generated
-- API key missing → Follow standard authentication flow (shared/authentication.md)
-- asr/tts unavailable → Skip audio step, deliver text output, suggest installing the skill
+- image-gen fails → Retry once; if still fails, deliver article without that image, annotate which images were not generated
+- API key missing at confirmation gate → Run interactive setup, do not proceed without it
+- `coli` unavailable → Skip transcription step, ask user to paste text instead or install coli
+- tts fails → Deliver script without audio, note that TTS generation failed
 
 ## Scope Boundaries
 
