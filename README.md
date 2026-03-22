@@ -50,6 +50,7 @@ Restart your agent (Claude Code, Cursor, etc.) after updating.
 | `/image-gen` | "generate image", "画一张" | AI image generation from text prompts |
 | `/content-parser` | "parse this URL", "解析链接" | Extract content from URLs |
 | `/asr` | "transcribe", "语音转文字", "ASR" | Transcribe audio files to text |
+| `/creator` | "创作", "写公众号", "小红书", "口播" | Creator workflow — platform-ready content packages |
 
 ## Supported Inputs
 
@@ -76,6 +77,7 @@ Keys auto-configure on first use.
 ├── image-gen/           # AI image generation
 ├── content-parser/      # URL content extraction
 ├── asr/                 # Audio transcription
+├── creator/             # Creator workflow (WeChat, Xiaohongshu, narration)
 └── listenhub/           # Deprecated (see DEPRECATED.md)
 ```
 
