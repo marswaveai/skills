@@ -13,6 +13,29 @@ A template-based creator workflow skill that orchestrates existing skills (conte
 | Narration (口播) | Spoken script + optional TTS audio | V1 |
 | PPT | Slide deck | Future |
 
+## Hard Constraints
+
+- **No shell scripts**: Construct all API calls with `curl` referencing `shared/api-*.md`
+- **Always read config first**: Follow `shared/config-pattern.md` Step -1 and Step 0 before any interaction
+- **Language adaptation** `<HARD-GATE>`: All UI text (questions, confirmations, errors, output summaries) follows the user's input language. Chinese input → Chinese output.
+- **AskUserQuestion for choices** `<HARD-GATE>`: Use AskUserQuestion for all multiple-choice parameters. One question at a time, wait for answer.
+- **Confirmation before API calls** `<HARD-GATE>`: After input is understood and template is selected, show a brief summary of what will be generated and wait for user confirmation before executing the pipeline.
+- **Artifact output**: Save to current working directory, never `~/Downloads/` or `.listenhub/`
+- **Dedup filenames**: Use `-2`, `-3` pattern if file already exists
+- **Slug naming**: Follow `shared/config-pattern.md` slug generation rules
+- **JSON parsing**: Use `jq` only (no python3, awk)
+- **Polling**: Follow `shared/common-patterns.md` async polling pattern with `run_in_background: true`
+
+## When NOT to Use
+
+- User wants a single image without a content workflow → use image-gen directly
+- User wants a single TTS audio → use tts directly
+- User wants to transcribe audio → use asr directly
+- User wants a podcast episode → use podcast directly
+- User wants to extract content from a URL without further processing → use content-parser directly
+
+Creator is for **multi-step content production** that combines writing + media generation into a platform-ready package.
+
 ## Architecture: Template Registry (方案 B)
 
 The skill consists of a lightweight dispatcher (SKILL.md) and self-contained template folders. Adding a new platform = adding a new folder. The dispatcher does not need modification.
@@ -24,8 +47,6 @@ creator/
 ├── SKILL.md                    # Dispatcher: input recognition, template selection,
 │                               #   pipeline execution, preference evolution
 ├── shared -> ../shared         # Reuse existing infrastructure
-├── references/
-│   └── skill-discovery.md      # How to detect/install other skills
 │
 └── templates/
     ├── wechat/
@@ -54,7 +75,7 @@ The dispatcher handles four responsibilities: **Input Understanding → Template
 | Input Type | Detection | Auto Action |
 |-----------|-----------|-------------|
 | URL (web/article) | `http(s)://` prefix | Call content-parser to extract content |
-| URL (audio/video) | File extension `.mp3/.mp4/.wav` or known video platform | Call asr to transcribe → text material |
+| URL (audio/video) | File extension `.mp3/.mp4/.wav`, or known video platforms (youtube.com, bilibili.com, douyin.com) | Call asr to transcribe → text material |
 | Local file | File path exists on disk | Read file / call asr for audio |
 | Raw text | Not a URL, not a file path | Use directly as material |
 | Topic/keywords | Short text, no explicit material | AI writes from scratch |
@@ -78,7 +99,9 @@ The dispatcher reads `templates/{name}/template.md` and executes steps sequentia
 - **Skill call**: Call image-gen, tts, content-parser, asr APIs (referencing shared/ docs)
 - **Output operation**: Write files, assemble content package
 
-Execution is fully automatic — no mid-process user interruptions.
+**Image generation calls**: When a template needs multiple images (e.g., WeChat article with 3-5 illustrations), generate them sequentially. If some fail, deliver what succeeded and annotate failures in the output summary.
+
+After all parameters are collected and input is processed, execution is automatic — no mid-step interruptions. (The confirmation gate happens before execution starts, per Hard Constraints.)
 
 ### 4. Preference Update
 
@@ -111,7 +134,7 @@ After execution, record output path in history. On next run, compare previous ou
 
 ### Xiaohongshu (小红书)
 
-**Two sub-modes, both output simultaneously**:
+**Two sub-modes (default: both; user can choose one via preferences)**:
 
 **Card mode (图文)**:
 1. Acquire material
@@ -161,10 +184,12 @@ After execution, record output path in history. On next run, compare previous ou
 ### Dependency Detection
 
 Before calling another skill's API, check prerequisites:
-- `LISTENHUB_API_KEY` env var for content-parser, image-gen, tts, podcast, explainer
-- `coli` command for asr
+- `LISTENHUB_API_KEY` env var for content-parser, image-gen, tts
+- `coli` command for asr (local tool, no API key needed)
 
-If unavailable: output a one-line notice with install command suggestion. Do not block the entire workflow — skip the dependent step, deliver what's possible, annotate what was skipped.
+If unavailable: output a one-line notice with install command suggestion (`npx skills add marswaveai/skills`). Do not block the entire workflow — skip the dependent step, deliver what's possible, annotate what was skipped.
+
+Note: ASR uses the local `coli` CLI tool (see `asr/SKILL.md`), not a remote API. All other skills use the ListenHub API endpoints documented in `shared/api-*.md`.
 
 ### Call Method
 
@@ -184,19 +209,78 @@ Creator does NOT nest-trigger other skills. It directly calls their APIs using `
 
 ### Storage
 
+Preferences are stored alongside config in `.listenhub/creator/config.json` under a `preferences` key, following the single-config-file convention from `shared/config-pattern.md`.
+
+## Config Schema
+
+### Step -1: API Key Check
+
+Follow `shared/authentication.md`. If `LISTENHUB_API_KEY` is not set, run the interactive setup.
+
+### Step 0: Config Setup (Zero-Question Boot)
+
+On first run, silently create `.listenhub/creator/config.json` with defaults:
+
+```json
+{
+  "outputMode": "download",
+  "language": null,
+  "preferences": {
+    "wechat": { "styleNotes": [], "history": [] },
+    "xiaohongshu": { "styleNotes": [], "mode": "both", "history": [] },
+    "narration": { "styleNotes": [], "history": [] }
+  }
+}
 ```
-.listenhub/creator/
-├── config.json           # Base config (outputMode, language, etc.)
-└── preferences.json      # Style preferences (per-platform)
+
+Follows `shared/config-pattern.md` conventions.
+
+### Full Config Schema
+
+```json
+{
+  "outputMode": "download",
+  "language": null,
+  "preferences": {
+    "wechat": {
+      "styleNotes": [
+        "段落保持在3-4行以内",
+        "配图偏好：科技感、扁平插画"
+      ],
+      "history": [
+        {
+          "date": "2026-03-22",
+          "output": "ai-future-wechat/article.md",
+          "topic": "AI的未来"
+        }
+      ]
+    },
+    "xiaohongshu": {
+      "styleNotes": ["标题必须带数字", "少用emoji"],
+      "mode": "both",
+      "cardStyle": "简约白底",
+      "history": []
+    },
+    "narration": {
+      "styleNotes": [],
+      "history": []
+    }
+  }
+}
 ```
+
+- `mode` (xiaohongshu only): `"both"` | `"cards"` | `"long-text"` — which sub-mode to generate
+- `styleNotes`: Max 10 entries per platform, newest replaces oldest
+- `history`: Last 5 generation records for automatic learning
 
 ### Evolution Mechanisms
 
 **Automatic learning**:
 - Each generation records output path in `preferences.json` history
-- On next run, compare previous output with current file state (user edits)
-- Extract style tendencies from diff (e.g., "user removed all emoji" → record "减少 emoji 使用")
-- `styleNotes` array keeps latest 10 entries, newer replaces older
+- On next run, if the previous output file has been modified by the user, read both the original output (from git or a cached copy in meta.json) and the current file
+- Present the diff to the AI with the prompt: "The user edited the generated content. What style preferences can you infer? Express each as a short directive (e.g., '减少 emoji 使用', '段落更短')."
+- Append inferred notes to `styleNotes`; array keeps latest 10 entries, newer replaces older
+- If the file was not modified, skip learning
 
 **Manual tuning**:
 - User can say "记住：我的公众号不要用问句结尾" → append to platform's styleNotes
@@ -204,36 +288,7 @@ Creator does NOT nest-trigger other skills. It directly calls their APIs using `
 
 **Style application order**:
 1. `style.md` — platform baseline style (shared across all users)
-2. `preferences.json` → `styleNotes` — user's personal adjustments (additive)
-
-### preferences.json Schema
-
-```json
-{
-  "wechat": {
-    "styleNotes": [
-      "段落保持在3-4行以内",
-      "配图偏好：科技感、扁平插画"
-    ],
-    "history": [
-      {
-        "date": "2026-03-22",
-        "output": "ai-future-wechat/article.md",
-        "topic": "AI的未来"
-      }
-    ]
-  },
-  "xiaohongshu": {
-    "styleNotes": ["标题必须带数字", "少用emoji"],
-    "cardStyle": "简约白底",
-    "history": []
-  },
-  "narration": {
-    "styleNotes": [],
-    "history": []
-  }
-}
-```
+2. `config.json` → `preferences.{platform}.styleNotes` — user's personal adjustments (additive)
 
 ## Trigger & Interaction
 
@@ -286,14 +341,3 @@ Creator:
 **V1 includes**: WeChat, Xiaohongshu (cards + long text), Narration templates. Style evolution. Skill orchestration with content-parser, image-gen, tts, asr.
 
 **V1 excludes**: PPT template (future). Custom user-defined templates. Publishing/posting to platforms. Analytics or A/B testing.
-
-## Config Schema
-
-```json
-{
-  "outputMode": "download",
-  "language": null
-}
-```
-
-Follows `shared/config-pattern.md` conventions. Zero-question boot on first run.
