@@ -32,7 +32,7 @@ Include:
 
 ### 5. Design Card Prompts (if mode includes cards)
 
-For each card (cover + 4-7 content cards, 5-8 total per style.md):
+For each card (cover + 4-7 content cards, 5-8 total per style.md). Apply any user style directives from `.listenhub/creator/styles/xiaohongshu.md` (if exists) and `sessionStyle` to card tone and formatting choices:
 1. Write the text content that appears ON the card (Chinese, concise)
 2. Write an English image generation prompt that describes the card as a designed graphic:
    - Include the exact text to appear on the card
