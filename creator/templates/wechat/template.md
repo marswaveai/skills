@@ -22,15 +22,33 @@ Apply any user style directives from `.listenhub/creator/styles/wechat.md` (if e
 
 Write the complete article as `article.md` in the output folder.
 
-### 4. Plan Illustrations
+### 4. Select Illustration Preset
+
+Choose an illustration preset from `presets/` for image generation.
+
+**If user specified a preset** (e.g., "用水彩风格"): use that preset directly.
+
+**If not specified**: auto-select based on content topic:
+
+| Content Signals | Recommended Preset |
+|---|---|
+| 科技, 职场, 效率, 工具, 通用 | flat |
+| 文化, 读书, 情感, 文艺, 哲学 | watercolor |
+| 商业, 产品, 前沿科技, 城市 | photo-realistic |
+
+Show the selected preset in the confirmation gate. User can override.
+
+After selection, read the full preset file to get the Prompt Fragment for use in Step 5.
+
+### 5. Plan Illustrations
 
 After writing, identify illustration positions:
 - **Cover image**: Always required. Placed at the top.
 - **Section images**: One every 300-500 characters. Place after the paragraph that introduces a new concept or topic shift.
-- For each image, write a detailed English prompt describing the desired illustration.
-- All prompts should share a consistent visual style descriptor (e.g., "flat illustration, soft pastel colors, minimalist" or per user's imageStyle preference).
+- For each image, write a detailed English prompt that starts with the selected preset's **Prompt Fragment** as the visual foundation, then adds scene-specific details.
+- All prompts inherit the preset's color palette and style — ensuring visual consistency across the article.
 
-### 5. Generate Images
+### 6. Generate Images
 
 For each planned illustration, call the image generation API:
 
@@ -43,7 +61,7 @@ Save images to `{output}/images/cover.jpg`, `{output}/images/section-1.jpg`, etc
 
 Generate sequentially. On 429: exponential backoff (wait 15s → 30s → 60s), retry up to 3 times. After 3 retries, skip and note in output summary.
 
-### 6. Insert Image References
+### 7. Insert Image References
 
 Update `article.md` to reference images with relative paths:
 
@@ -53,7 +71,7 @@ Update `article.md` to reference images with relative paths:
 
 Insert at the planned positions.
 
-### 7. Write meta.json
+### 8. Write meta.json
 
 ```json
 {
@@ -62,6 +80,7 @@ Insert at the planned positions.
   "tags": ["tag1", "tag2", "tag3"],
   "platform": "wechat",
   "date": "YYYY-MM-DD",
+  "preset": "flat",
   "imageCount": N,
   "wordCount": N
 }
