@@ -175,13 +175,15 @@ AI reads the reference content and extracts 3-5 concrete style directives. Focus
 
 Wait for user confirmation. The confirmed directives become `sessionStyle` — applied to this generation only.
 
-**Standalone style learning:** If the user only provided a style reference without material/topic (e.g., "学习一下这篇文章的风格"), run the extraction above, then ask:
+After user confirms the style directives, proactively ask whether to persist:
 
 ```
 要将这些风格规则保存吗？（保存后每次生成{platform}内容都会应用）
 ```
 
-If yes → append to `.listenhub/creator/styles/{platform}.md` and save. If no → discard. Do not proceed to content generation.
+If yes → write to `.listenhub/creator/styles/{platform}.md`. If no → only apply to this generation.
+
+**Standalone style learning:** If the user only provided a style reference without material/topic (e.g., "学习一下这篇文章的风格"), run the extraction above, then **persist directly** to `.listenhub/creator/styles/{platform}.md` without asking — the user's intent to save is already explicit. Confirm with a brief message: "已保存到 styles/{platform}.md". Do not proceed to content generation.
 
 ### Step 4: Confirmation Gate
 
