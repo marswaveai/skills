@@ -23,8 +23,6 @@
 | `creator/templates/xiaohongshu/style.md` | Xiaohongshu style guide (punchy, trendy, hook-first) | Create |
 | `creator/templates/narration/template.md` | Narration pipeline: script writing + optional TTS | Create |
 | `creator/templates/narration/style.md` | Narration style guide (conversational, rhythmic, oral) | Create |
-| `creator/templates/ppt/template.md` | PPT placeholder (future, empty with TODO note) | Create |
-| `creator/templates/ppt/style.md` | PPT style placeholder (future, empty with TODO note) | Create |
 | `creator/shared` | Symlink → `../shared` | Create (symlink) |
 | `README.md` | Add creator skill to the skill matrix table | Modify |
 
@@ -42,7 +40,6 @@
 mkdir -p creator/templates/wechat
 mkdir -p creator/templates/xiaohongshu
 mkdir -p creator/templates/narration
-mkdir -p creator/templates/ppt  # Future placeholder per spec
 ```
 
 - [ ] **Step 2: Create shared symlink**
@@ -282,7 +279,7 @@ Append inferred notes to `preferences.{platform}.styleNotes` (max 10, FIFO).
 - Xiaohongshu cards mode needs image-gen → requires API key
 - Xiaohongshu long-text only → no API key needed
 - Narration without TTS → no API key needed
-- Any URL input → needs content-parser → requires API key
+- Web/article URL input → needs content-parser → requires API key (audio/video URLs use local `coli asr`, no API key needed)
 
 If API key required and missing: run `shared/authentication.md` interactive setup.
 
@@ -377,7 +374,7 @@ else
 fi
 ` ``
 
-On 429: wait 15s, retry up to 3 times. On failure after retries: skip this image, annotate in output summary.
+On 429: exponential backoff (wait 15s → 30s → 60s), retry up to 3 times. On failure after retries: skip this image, annotate in output summary.
 
 Generate images **sequentially** (not parallel) to respect rate limits.
 
@@ -601,7 +598,7 @@ For each planned illustration, call the image generation API:
 
 Save images to `{output}/images/cover.jpg`, `{output}/images/section-1.jpg`, etc.
 
-Generate sequentially. On failure: wait 15s on 429, retry up to 3 times per `shared/api-image.md`. After 3 retries, skip and note in output summary.
+Generate sequentially. On 429: exponential backoff (wait 15s → 30s → 60s), retry up to 3 times. After 3 retries, skip and note in output summary.
 
 ### 6. Insert Image References
 
@@ -725,7 +722,7 @@ Read `preferences.xiaohongshu.mode` from config:
 ### 3. Generate Content Plan
 
 Based on material:
-- **For cards**: Distill into 5-8 key points. Each point becomes one card.
+- **For cards**: Distill into 4-7 key points. Each point becomes one card (plus cover = 5-8 cards total).
 - **For long text**: Plan a hook-first short article (500-1000 chars).
 - **Cover**: Design a cover card with attention-grabbing title.
 
@@ -741,7 +738,7 @@ Include:
 
 ### 5. Design Card Prompts (if mode includes cards)
 
-For each card (cover + 5-8 content cards):
+For each card (cover + 4-7 content cards, 5-8 total per style.md):
 1. Write the text content that appears ON the card (Chinese, concise)
 2. Write an English image generation prompt that describes the card as a designed graphic:
    - Include the exact text to appear on the card
@@ -778,7 +775,7 @@ For each prompt in `prompts.json`:
 
 Save to `{output}/cards/01-cover.jpg`, `{output}/cards/02-page.jpg`, etc.
 
-Generate sequentially. On failure: wait 15s on 429, retry up to 3 times per `shared/api-image.md`. After 3 retries, skip and note.
+Generate sequentially. On 429: exponential backoff (wait 15s → 30s → 60s), retry up to 3 times. After 3 retries, skip and note.
 
 ### 7. Write meta.json
 

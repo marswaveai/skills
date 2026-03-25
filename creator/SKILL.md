@@ -174,7 +174,7 @@ Append inferred notes to `preferences.{platform}.styleNotes` (max 10, FIFO).
 - Xiaohongshu cards mode needs image-gen → requires API key
 - Xiaohongshu long-text only → no API key needed
 - Narration without TTS → no API key needed
-- Any URL input → needs content-parser → requires API key
+- Web/article URL input → needs content-parser → requires API key (audio/video URLs use local `coli asr`, no API key needed)
 
 If API key required and missing: run `shared/authentication.md` interactive setup.
 

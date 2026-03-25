@@ -41,7 +41,7 @@ For each planned illustration, call the image generation API:
 
 Save images to `{output}/images/cover.jpg`, `{output}/images/section-1.jpg`, etc.
 
-Generate sequentially. On failure: wait 15s on 429, retry up to 3 times per `shared/api-image.md`. After 3 retries, skip and note in output summary.
+Generate sequentially. On 429: exponential backoff (wait 15s → 30s → 60s), retry up to 3 times. After 3 retries, skip and note in output summary.
 
 ### 6. Insert Image References
 

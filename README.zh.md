@@ -50,6 +50,7 @@ git pull origin main
 | `/image-gen` | "生成图片"、"画一张" | AI 图片生成 |
 | `/content-parser` | "解析链接"、"提取内容" | URL 内容提取 |
 | `/asr` | "转录"、"语音转文字"、"ASR" | 音频文件转文字 |
+| `/creator` | "创作"、"写公众号"、"小红书"、"口播" | 创作者工作流 — 一键生成平台内容包 |
 
 ## 支持的输入
 
@@ -76,6 +77,7 @@ git pull origin main
 ├── image-gen/           # AI 图片生成
 ├── content-parser/      # URL 内容提取
 ├── asr/                 # 音频转文字
+├── creator/             # 创作者工作流
 └── listenhub/           # 已弃用（见 DEPRECATED.md）
 ```
 

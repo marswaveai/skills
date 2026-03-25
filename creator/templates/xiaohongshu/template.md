@@ -16,7 +16,7 @@ Read `preferences.xiaohongshu.mode` from config:
 ### 3. Generate Content Plan
 
 Based on material:
-- **For cards**: Distill into 5-8 key points. Each point becomes one card.
+- **For cards**: Distill into 4-7 key points. Each point becomes one card (plus cover = 5-8 cards total).
 - **For long text**: Plan a hook-first short article (500-1000 chars).
 - **Cover**: Design a cover card with attention-grabbing title.
 
@@ -32,7 +32,7 @@ Include:
 
 ### 5. Design Card Prompts (if mode includes cards)
 
-For each card (cover + 5-8 content cards):
+For each card (cover + 4-7 content cards, 5-8 total per style.md):
 1. Write the text content that appears ON the card (Chinese, concise)
 2. Write an English image generation prompt that describes the card as a designed graphic:
    - Include the exact text to appear on the card
@@ -69,7 +69,7 @@ For each prompt in `prompts.json`:
 
 Save to `{output}/cards/01-cover.jpg`, `{output}/cards/02-page.jpg`, etc.
 
-Generate sequentially. On failure: wait 15s on 429, retry up to 3 times per `shared/api-image.md`. After 3 retries, skip and note.
+Generate sequentially. On 429: exponential backoff (wait 15s → 30s → 60s), retry up to 3 times. After 3 retries, skip and note.
 
 ### 7. Write meta.json
 
