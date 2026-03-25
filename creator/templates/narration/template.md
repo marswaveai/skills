@@ -13,7 +13,7 @@ Write a spoken-word script following `style.md`:
 - 2-4 talking points with clear transitions
 - Strong closing
 
-Apply user `styleNotes` from preferences.
+Apply user `styleNotes` and `sessionStyle` (from style reference) on top of the baseline style. `sessionStyle` takes priority over `styleNotes`, which takes priority over `style.md`.
 
 Save as `script.md` in the output folder.
 
@@ -71,7 +71,5 @@ If TTS fails: deliver script without audio, note in output summary.
 {slug}-narration/
 ├── script.md
 ├── audio.mp3          (if TTS was generated)
-├── .original/
-│   └── script.md
 └── meta.json
 ```

@@ -22,7 +22,7 @@ Based on material:
 
 ### 4. Write Long Text (if mode includes long text)
 
-Write `long-text.md` following `style.md` § Long Text structure.
+Write `long-text.md` following `style.md` § Long Text structure. Apply user `styleNotes` and `sessionStyle` (from style reference) on top of the baseline style. `sessionStyle` takes priority over `styleNotes`, which takes priority over `style.md`.
 
 Include:
 - Hook title with number/emotional hook
@@ -94,7 +94,5 @@ Generate sequentially. On 429: exponential backoff (wait 15s → 30s → 60s), r
 │   ├── ...
 │   └── prompts.json
 ├── long-text.md        (if mode includes long text)
-├── .original/
-│   └── long-text.md    (snapshot, only if long text was generated)
 └── meta.json
 ```

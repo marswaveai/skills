@@ -107,6 +107,8 @@ The user provides input along with their request. Classify the input:
 | Raw text | Multi-line or >50 chars, not a URL/path | Use directly as material |
 | Topic/keywords | Short text (<50 chars), no URL/path pattern | AI writes from scratch |
 
+**Style reference detection:** If the user's prompt contains keywords like "参考", "风格", "照着…写", "style", "reference", the associated input (file path / URL / pasted text) should be classified as a **style reference** rather than content material. A single request may contain both material and a style reference — classify them separately. If only a style reference is provided with no material or topic, this is a **standalone style learning** request (see Step 2.5).
+
 **For URL (audio/video) inputs:**
 1. Download to `/tmp/creator-{slug}.{ext}` using `curl -L -o`
 2. Check `coli` is available: `which coli 2>/dev/null && echo yes || echo no`
@@ -133,39 +135,46 @@ Options (adapt language to user's input):
 - "Xiaohongshu (小红书)" — Image cards + long text post
 - "Narration script (口播稿)" — Spoken script with optional audio
 
-### Step 3: Style Learning Check (silent)
+### Step 3: Style Extraction (if style reference provided)
 
-Before the confirmation gate, check if there's a previous generation to learn from.
+This step runs only when the user provided a style reference in Step 1. If no style reference was detected, skip to Step 4.
 
-**Note**: Style learning uses relative paths from `history[].output`. It only works when running creator from the same working directory as the previous generation. If the output folder is not found, this step is silently skipped.
+**Read the reference content:**
+- Local file → Read tool
+- URL → content-parser API (requires API key)
+- Pasted text → use directly
 
-```bash
-PLATFORM="{selected platform}"
-LAST_OUTPUT=$(echo "$CONFIG" | jq -r ".preferences.$PLATFORM.history[-1].output // empty")
-if [ -n "$LAST_OUTPUT" ] && [ -d "$LAST_OUTPUT" ]; then
-  # Check for .original/ snapshot
-  # Determine the main content file based on platform
-  case "$PLATFORM" in
-    wechat) MAIN_FILE="article.md" ;;
-    xiaohongshu) MAIN_FILE="long-text.md" ;;
-    narration) MAIN_FILE="script.md" ;;
-  esac
-  ORIGINAL="$LAST_OUTPUT/.original/$MAIN_FILE"
-  CURRENT="$LAST_OUTPUT/$MAIN_FILE"
-  if [ -f "$ORIGINAL" ] && [ -f "$CURRENT" ]; then
-    DIFF=$(diff "$ORIGINAL" "$CURRENT" 2>/dev/null)
-    if [ -n "$DIFF" ]; then
-      echo "USER_EDITED: $DIFF"
-      # AI will analyze the diff and append to styleNotes
-    fi
-  fi
-fi
+**Analyze and extract style directives:**
+
+AI reads the reference content and extracts 3-5 concrete style directives. Focus on observable patterns:
+- Sentence length and paragraph structure
+- Tone and register (formal/casual, first/third person)
+- Use of rhetorical devices (questions, lists, bold, quotes)
+- Vocabulary level and domain jargon
+- Formatting habits (heading style, emoji usage, whitespace)
+
+**Present to user for confirmation:**
+
+```
+从参考文章中提炼了以下风格特征：
+
+  1. {directive 1}
+  2. {directive 2}
+  3. {directive 3}
+  ...
+
+你可以修改或删除其中的条目。确认后本次生成会应用这些规则。
 ```
 
-If the user edited the previous output, analyze the diff:
-> "The user edited the generated content. What style preferences can you infer? Express each as a short directive (e.g., '减少 emoji 使用', '段落更短')."
+Wait for user confirmation. The confirmed directives become `sessionStyle` — applied to this generation only.
 
-Append inferred notes to `preferences.{platform}.styleNotes` (max 10, FIFO).
+**Standalone style learning:** If the user only provided a style reference without material/topic (e.g., "学习一下这篇文章的风格"), run the extraction above, then ask:
+
+```
+要将这些风格规则保存吗？（保存后每次生成{platform}内容都会应用）
+```
+
+If yes → append to `preferences.{platform}.styleNotes` (max 10, FIFO) and save config. If no → discard. Do not proceed to content generation.
 
 ### Step 4: Confirmation Gate
 
@@ -187,7 +196,8 @@ If API key required and missing: run `shared/authentication.md` interactive setu
   输入：{topic description / URL / text excerpt...}
   输出目录：{slug}-{platform}/
   需要 API 调用：{content-parser, image-gen, ...}
-  风格偏好：{N条自定义规则 / 使用默认风格}
+  风格偏好：{N条持久化规则 / 使用默认风格}
+  本次风格参考：{M条来自参考文章 / 无}
 
 确认开始？
 ```
@@ -240,6 +250,11 @@ Extract content: `MATERIAL=$(echo "$RESULT" | jq -r '.data.data.content')`
 If extraction fails: tell user "URL 解析失败，你可以直接粘贴文字内容给我" and stop.
 
 **Then follow the platform template** — read `template.md` and execute each step. The template specifies the exact writing instructions and API calls. See `creator/templates/{platform}/template.md` for template contents.
+
+**Style application:** When writing content, apply style directives in this priority order (higher overrides lower):
+1. `sessionStyle` — directives from the current style reference (Step 3), if any
+2. `preferences.{platform}.styleNotes` — persisted directives from previous sessions
+3. `templates/{platform}/style.md` — baseline platform style
 
 **For image generation** (called by wechat and xiaohongshu templates):
 
@@ -301,14 +316,7 @@ i=2; while [ -d "$OUTPUT_DIR" ]; do OUTPUT_DIR="${SLUG}-{platform}-${i}"; i=$((i
 mkdir -p "$OUTPUT_DIR"
 ```
 
-Write content files per template spec. Then write `.original/` snapshot:
-
-```bash
-mkdir -p "$OUTPUT_DIR/.original"
-cp "$OUTPUT_DIR/{main-file}" "$OUTPUT_DIR/.original/{main-file}"
-```
-
-Write `meta.json`:
+Write content files per template spec. Then write `meta.json`:
 
 ```json
 {
@@ -329,8 +337,6 @@ Write `meta.json`:
 📄 {main files list}
 🖼️ images/ — N 张配图（如有）
 📋 meta.json — 标题、标签、摘要
-
-你可以编辑 {main-file}，下次我会学习你的修改偏好。
 ```
 
 (Adapt language to user's input language per Hard Constraints.)
@@ -343,17 +349,18 @@ Record this generation in history:
 NEW_CONFIG=$(echo "$CONFIG" | jq \
   --arg platform "$PLATFORM" \
   --arg date "$(date +%Y-%m-%d)" \
-  --arg output "$OUTPUT_DIR" \
   --arg topic "$TOPIC" \
-  '.preferences[$platform].history = (.preferences[$platform].history + [{"date": $date, "output": $output, "topic": $topic}])[-5:]')
+  '.preferences[$platform].history = (.preferences[$platform].history + [{"date": $date, "topic": $topic}])[-5:]')
 echo "$NEW_CONFIG" > "$CONFIG_PATH"
 ```
 
-Keep only the last 5 history entries per platform. Note: `output` stores the folder path (e.g., `ai-future-wechat/`), relative to the CWD where creator was invoked. The style learning check in Step 3 uses this to find `.original/` snapshots.
+Keep only the last 5 history entries per platform.
 
 Note: `cardStyle` from the spec is deferred — not implemented in V1 config. Can be added later when card style customization is needed.
 
 ### Manual Style Tuning
+
+**Adding style directives:**
 
 If the user says "记住：{style directive}" or "remember: {style directive}":
 
@@ -361,6 +368,10 @@ If the user says "记住：{style directive}" or "remember: {style directive}":
 2. Append to `preferences.{platform}.styleNotes`
 3. Trim to max 10 entries (remove oldest)
 4. Save config
+
+This also applies after Step 3 (Style Extraction): if the user says "记住这个风格" after reviewing extracted directives, persist all confirmed directives to `styleNotes`.
+
+**Resetting style:**
 
 If the user says "重置风格偏好" or "reset style":
 1. Ask which platform (or all)
