@@ -26,6 +26,7 @@
 ## Image Prompt Guidelines for Cards
 - Describe the card as a graphic design composition, not a photo
 - Include: text content, layout direction, color palette, typography style
+- **Keep on-card text short** (under 10 Chinese characters per line) — AI image models render long text or complex characters unreliably. Users should expect to manually adjust text on generated cards.
 - Example prompt: "Minimalist card design with bold Chinese text '5个关键习惯' centered, subtitle '改变你的生活' below, clean white background with soft blue gradient accent, modern sans-serif typography"
 
 ## Language

@@ -61,7 +61,7 @@ creator/
     │   ├── template.md         # Script generation workflow
     │   └── style.md            # Spoken-word style guide
     │
-    └── ppt/                    # Future placeholder
+    └── ppt/                    # Future placeholder (not created in V1)
         ├── template.md
         └── style.md
 ```
@@ -143,6 +143,7 @@ After execution, record output path in history. On next run, compare previous ou
 2. Distill content into 5-8 key points/pages
 3. Design each page: core quote + brief explanation + visual theme description
 4. Call image-gen to generate integrated text-on-image cards for each page
+   - **Note**: AI image generation models may render Chinese text imperfectly. Generated cards may need manual text adjustment. Prompts should keep on-card text short (under 10 characters per line) for best results.
 5. Generate cover card (attention-grabbing title)
 
 **Long text mode**:
@@ -250,7 +251,7 @@ On first run, silently create `.listenhub/creator/config.json` with defaults:
   "preferences": {
     "wechat": { "styleNotes": [], "history": [] },
     "xiaohongshu": { "styleNotes": [], "mode": "both", "history": [] },
-    "narration": { "styleNotes": [], "history": [] }
+    "narration": { "styleNotes": [], "defaultSpeaker": null, "history": [] }
   }
 }
 ```
@@ -272,7 +273,7 @@ Follows `shared/config-pattern.md` conventions.
       "history": [
         {
           "date": "2026-03-22",
-          "output": "ai-future-wechat/article.md",
+          "output": "ai-future-wechat/",
           "topic": "AI的未来"
         }
       ]
@@ -285,6 +286,7 @@ Follows `shared/config-pattern.md` conventions.
     },
     "narration": {
       "styleNotes": [],
+      "defaultSpeaker": null,
       "history": []
     }
   }
@@ -293,13 +295,15 @@ Follows `shared/config-pattern.md` conventions.
 
 - `mode` (xiaohongshu only): `"both"` | `"cards"` | `"long-text"` — which sub-mode to generate
 - `styleNotes`: Max 10 entries per platform, newest replaces oldest
+- `defaultSpeaker` (narration only): Speaker ID for TTS (e.g., `CN-Man-Beijing-V2`), `null` uses built-in defaults
 - `history`: Last 5 generation records for automatic learning
 
 ### Evolution Mechanisms
 
 **Automatic learning**:
 - Each generation saves a snapshot of the main output file alongside the output. For example, `{slug}-wechat/.original/article.md` is an exact copy of the generated `article.md` before any user edits.
-- Each generation records output path in `config.json` → `preferences.{platform}.history`
+- Each generation records output folder path in `config.json` → `preferences.{platform}.history` (relative to the CWD where creator was invoked)
+- **CWD dependency**: Style learning only works when the user runs creator from the same working directory as the previous generation. If the previous output folder is not found at the recorded relative path, style learning is silently skipped.
 - On next run, if `.original/article.md` exists and differs from the current `article.md`, compute the diff
 - Present the diff to the AI with the prompt: "The user edited the generated content. What style preferences can you infer? Express each as a short directive (e.g., '减少 emoji 使用', '段落更短')."
 - Append inferred notes to `styleNotes`; array keeps latest 10 entries, newer replaces older
@@ -354,7 +358,7 @@ Creator:
 ### Error Handling
 
 - content-parser fails → "URL 解析失败，你可以直接粘贴文字内容给我"
-- image-gen fails → Retry once; if still fails, deliver article without that image, annotate which images were not generated
+- image-gen 429 → Exponential backoff (15s → 30s → 60s), retry up to 3 times; if still fails, deliver article without that image, annotate which images were not generated
 - API key missing at confirmation gate → Run interactive setup, do not proceed without it
 - `coli` unavailable → Skip transcription step, ask user to paste text instead or install coli
 - tts fails → Deliver script without audio, note that TTS generation failed

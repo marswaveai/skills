@@ -25,9 +25,12 @@ TTS is offered only if:
 
 If generating audio:
 
-1. Select speaker using built-in defaults from `shared/speaker-selection.md`:
-   - Chinese: "原野" (`CN-Man-Beijing-V2`)
-   - English: "Mars" (`cozy-man-english`)
+1. Select speaker:
+   - Check `preferences.narration.defaultSpeaker` in config — if set, use it
+   - Otherwise use built-in defaults from `shared/speaker-selection.md`:
+     - Chinese: "原野" (`CN-Man-Beijing-V2`)
+     - English: "Mars" (`cozy-man-english`)
+   - On first TTS use, ask the user via AskUserQuestion if they want to choose a different speaker. Save their choice to `preferences.narration.defaultSpeaker` for future runs.
 
 2. Call TTS API (use `@file` pattern for safe text handling per `shared/common-patterns.md`):
 ```bash
