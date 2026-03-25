@@ -61,7 +61,7 @@ Follow `shared/config-pattern.md` Step 0 (Zero-Question Boot).
 ```bash
 mkdir -p ".listenhub/creator"
 cat > ".listenhub/creator/config.json" << 'EOF'
-{"outputMode":"download","language":null,"preferences":{"wechat":{"styleNotes":[],"history":[]},"xiaohongshu":{"styleNotes":[],"mode":"both","history":[]},"narration":{"styleNotes":[],"history":[]}}}
+{"outputMode":"download","language":null,"preferences":{"wechat":{"styleNotes":[],"history":[]},"xiaohongshu":{"styleNotes":[],"mode":"both","history":[]},"narration":{"styleNotes":[],"defaultSpeaker":null,"history":[]}}}
 EOF
 CONFIG_PATH=".listenhub/creator/config.json"
 CONFIG=$(cat "$CONFIG_PATH")
@@ -135,7 +135,9 @@ Options (adapt language to user's input):
 
 ### Step 3: Style Learning Check (silent)
 
-Before the confirmation gate, check if there's a previous generation to learn from:
+Before the confirmation gate, check if there's a previous generation to learn from.
+
+**Note**: Style learning uses relative paths from `history[].output`. It only works when running creator from the same working directory as the previous generation. If the output folder is not found, this step is silently skipped.
 
 ```bash
 PLATFORM="{selected platform}"
@@ -214,7 +216,7 @@ RESPONSE=$(curl -sS -X POST "https://api.marswave.ai/openapi/v1/content/extract"
 TASK_ID=$(echo "$RESPONSE" | jq -r '.data.taskId')
 ```
 
-Then poll in background. Run this as a **separate Bash call** with `run_in_background: true` and `timeout: 600000` (per `shared/common-patterns.md`). Content-parser uses 5s intervals; 60 polls × 5s = 300s matches the standard 300s timeout budget:
+Then poll in background. Run this as a **separate Bash call** with `run_in_background: true` and `timeout: 600000` (per `shared/common-patterns.md`). The polling loop itself runs up to 300s (60 polls × 5s); `timeout: 600000` is set higher at the tool level to give the Bash process headroom beyond the poll budget:
 
 ```bash
 # Run with: run_in_background: true, timeout: 600000
@@ -263,7 +265,7 @@ else
 fi
 ```
 
-On 429: wait 15s, retry up to 3 times. On failure after retries: skip this image, annotate in output summary.
+On 429: exponential backoff (wait 15s → 30s → 60s), retry up to 3 times. On failure after retries: skip this image, annotate in output summary.
 
 Generate images **sequentially** (not parallel) to respect rate limits.
 
@@ -347,7 +349,7 @@ NEW_CONFIG=$(echo "$CONFIG" | jq \
 echo "$NEW_CONFIG" > "$CONFIG_PATH"
 ```
 
-Keep only the last 5 history entries per platform. Note: `output` stores the folder path (e.g., `ai-future-wechat/`), not a file path. The style learning check in Step 3 uses this to find `.original/` snapshots.
+Keep only the last 5 history entries per platform. Note: `output` stores the folder path (e.g., `ai-future-wechat/`), relative to the CWD where creator was invoked. The style learning check in Step 3 uses this to find `.original/` snapshots.
 
 Note: `cardStyle` from the spec is deferred — not implemented in V1 config. Can be added later when card style customization is needed.
 
