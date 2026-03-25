@@ -18,7 +18,7 @@ Based on the material and `style.md`, generate:
 
 Write the full article section by section, following `style.md` for tone, structure, and formatting.
 
-Apply any user `styleNotes` and `sessionStyle` (from style reference) on top of the baseline style. `sessionStyle` takes priority over `styleNotes`, which takes priority over `style.md`.
+Apply any user style directives from `.listenhub/creator/styles/wechat.md` (if exists) and `sessionStyle` (from style reference) on top of the baseline style. `sessionStyle` takes priority over the user style file, which takes priority over `style.md`.
 
 Write the complete article as `article.md` in the output folder.
 

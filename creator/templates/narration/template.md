@@ -13,7 +13,7 @@ Write a spoken-word script following `style.md`:
 - 2-4 talking points with clear transitions
 - Strong closing
 
-Apply user `styleNotes` and `sessionStyle` (from style reference) on top of the baseline style. `sessionStyle` takes priority over `styleNotes`, which takes priority over `style.md`.
+Apply any user style directives from `.listenhub/creator/styles/narration.md` (if exists) and `sessionStyle` (from style reference) on top of the baseline style. `sessionStyle` takes priority over the user style file, which takes priority over `style.md`.
 
 Save as `script.md` in the output folder.
 

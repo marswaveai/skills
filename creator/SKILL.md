@@ -59,13 +59,20 @@ Follow `shared/config-pattern.md` Step 0 (Zero-Question Boot).
 
 **If file doesn't exist** — silently create with defaults and proceed:
 ```bash
-mkdir -p ".listenhub/creator"
+mkdir -p ".listenhub/creator" ".listenhub/creator/styles"
 cat > ".listenhub/creator/config.json" << 'EOF'
-{"outputMode":"download","language":null,"preferences":{"wechat":{"styleNotes":[],"history":[]},"xiaohongshu":{"styleNotes":[],"mode":"both","history":[]},"narration":{"styleNotes":[],"defaultSpeaker":null,"history":[]}}}
+{"outputMode":"download","language":null,"preferences":{"wechat":{"history":[]},"xiaohongshu":{"mode":"both","history":[]},"narration":{"defaultSpeaker":null,"history":[]}}}
 EOF
 CONFIG_PATH=".listenhub/creator/config.json"
 CONFIG=$(cat "$CONFIG_PATH")
 ```
+
+User style preferences are stored as markdown files in `.listenhub/creator/styles/`:
+- `.listenhub/creator/styles/wechat.md`
+- `.listenhub/creator/styles/xiaohongshu.md`
+- `.listenhub/creator/styles/narration.md`
+
+These files are plain markdown — one directive per line. If the file does not exist, no custom style is applied. Users can edit these files directly.
 
 Note: `outputMode` defaults to `"download"` (not the usual `"inline"`) because creator always produces multi-file output folders that must be saved to disk.
 
@@ -174,7 +181,7 @@ Wait for user confirmation. The confirmed directives become `sessionStyle` — a
 要将这些风格规则保存吗？（保存后每次生成{platform}内容都会应用）
 ```
 
-If yes → append to `preferences.{platform}.styleNotes` (max 10, FIFO) and save config. If no → discard. Do not proceed to content generation.
+If yes → append to `.listenhub/creator/styles/{platform}.md` and save. If no → discard. Do not proceed to content generation.
 
 ### Step 4: Confirmation Gate
 
@@ -196,7 +203,7 @@ If API key required and missing: run `shared/authentication.md` interactive setu
   输入：{topic description / URL / text excerpt...}
   输出目录：{slug}-{platform}/
   需要 API 调用：{content-parser, image-gen, ...}
-  风格偏好：{N条持久化规则 / 使用默认风格}
+  风格偏好：{styles/{platform}.md 已配置 / 使用默认风格}
   本次风格参考：{M条来自参考文章 / 无}
 
 确认开始？
@@ -253,7 +260,7 @@ If extraction fails: tell user "URL 解析失败，你可以直接粘贴文字�
 
 **Style application:** When writing content, apply style directives in this priority order (higher overrides lower):
 1. `sessionStyle` — directives from the current style reference (Step 3), if any
-2. `preferences.{platform}.styleNotes` — persisted directives from previous sessions
+2. `.listenhub/creator/styles/{platform}.md` — persisted user style directives (if file exists)
 3. `templates/{platform}/style.md` — baseline platform style
 
 **For image generation** (called by wechat and xiaohongshu templates):
@@ -365,18 +372,15 @@ Note: `cardStyle` from the spec is deferred — not implemented in V1 config. Ca
 If the user says "记住：{style directive}" or "remember: {style directive}":
 
 1. Detect which platform it applies to (from context or ask)
-2. Append to `preferences.{platform}.styleNotes`
-3. Trim to max 10 entries (remove oldest)
-4. Save config
+2. Append the directive as a new line to `.listenhub/creator/styles/{platform}.md` (create the file if it doesn't exist)
 
-This also applies after Step 3 (Style Extraction): if the user says "记住这个风格" after reviewing extracted directives, persist all confirmed directives to `styleNotes`.
+This also applies after Step 3 (Style Extraction): if the user says "记住这个风格" after reviewing extracted directives, write all confirmed directives to `.listenhub/creator/styles/{platform}.md`.
 
 **Resetting style:**
 
 If the user says "重置风格偏好" or "reset style":
 1. Ask which platform (or all)
-2. Set `preferences.{platform}.styleNotes` to `[]`
-3. Save config
+2. Delete `.listenhub/creator/styles/{platform}.md`
 
 ## API Reference
 

@@ -22,7 +22,7 @@ Based on material:
 
 ### 4. Write Long Text (if mode includes long text)
 
-Write `long-text.md` following `style.md` § Long Text structure. Apply user `styleNotes` and `sessionStyle` (from style reference) on top of the baseline style. `sessionStyle` takes priority over `styleNotes`, which takes priority over `style.md`.
+Write `long-text.md` following `style.md` § Long Text structure. Apply any user style directives from `.listenhub/creator/styles/xiaohongshu.md` (if exists) and `sessionStyle` (from style reference) on top of the baseline style. `sessionStyle` takes priority over the user style file, which takes priority over `style.md`.
 
 Include:
 - Hook title with number/emotional hook
