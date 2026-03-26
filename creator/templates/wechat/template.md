@@ -36,7 +36,7 @@ Choose an illustration preset from `presets/` for image generation.
 | 文化, 读书, 情感, 文艺, 哲学 | watercolor |
 | 商业, 产品, 前沿科技, 城市 | photo-realistic |
 
-The selected preset MUST be shown in the Step 4 confirmation summary.
+The selected preset MUST be shown in the confirmation gate summary (SKILL.md Step 4).
 
 After selection, read the full preset file to get the Prompt Fragment for use in Step 5.
 

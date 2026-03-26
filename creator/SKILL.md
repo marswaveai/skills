@@ -206,6 +206,7 @@ If API key required and missing: run `shared/authentication.md` interactive setu
   输出目录：{slug}-{platform}/
   需要 API 调用：{content-parser, image-gen, ...}
   风格偏好：{styles/{platform}.md 已配置 / 使用默认风格}
+  配图/卡片预设：{preset label / 待选择}
   本次风格参考：{M条来自参考文章 / 无}
 
 确认开始？
