@@ -26,9 +26,9 @@ Write the complete article as `article.md` in the output folder.
 
 Choose an illustration preset from `presets/` for image generation.
 
-**If user specified a preset** (e.g., "用水彩风格"): use that preset directly.
+**If user specified a preset** (e.g., "用水彩风格"): use that preset directly, skip the question below.
 
-**If not specified**: auto-select based on content topic:
+**If not specified**: MUST ask the user via AskUserQuestion. Before presenting the options, output a one-line hint: "配图风格可以随时换，先选一个开始吧". List all available presets with their Chinese labels (from frontmatter `label` field). Use the topic-matching table below only as a hint to put the most relevant option first (marked "Recommended"), but always let the user choose:
 
 | Content Signals | Recommended Preset |
 |---|---|
@@ -36,7 +36,7 @@ Choose an illustration preset from `presets/` for image generation.
 | 文化, 读书, 情感, 文艺, 哲学 | watercolor |
 | 商业, 产品, 前沿科技, 城市 | photo-realistic |
 
-Show the selected preset in the confirmation gate. User can override.
+The selected preset MUST be shown in the Step 4 confirmation summary.
 
 After selection, read the full preset file to get the Prompt Fragment for use in Step 5.
 

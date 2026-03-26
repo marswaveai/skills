@@ -17,9 +17,9 @@ Read `preferences.xiaohongshu.mode` from config:
 
 Choose a visual preset from `presets/` for card generation.
 
-**If user specified a preset** (e.g., "用 notion 风格"): use that preset directly.
+**If user specified a preset** (e.g., "用 notion 风格"): use that preset directly, skip the question below.
 
-**If not specified**: auto-select by scanning frontmatter of all `presets/*.md` files. Match the content topic against `best_for` and `mood` fields:
+**If not specified**: MUST ask the user via AskUserQuestion. Before presenting the options, output a one-line hint: "配图风格可以随时换，先选一个开始吧". List all available presets with their Chinese labels (from frontmatter `label` field). Use the topic-matching table below only as a hint to put the most relevant option first (marked "Recommended"), but always let the user choose:
 
 | Content Signals | Recommended Preset |
 |---|---|
@@ -34,7 +34,7 @@ Choose a visual preset from `presets/` for card generation.
 | 教程, 学习方法, 教学 | chalkboard |
 | 笔记, 考试, 学习, 框架 | study-notes |
 
-Show the selected preset in the confirmation gate. User can override.
+The selected preset MUST be shown in the Step 4 confirmation summary.
 
 After selection, read the full preset file to get Color Palette, Typography, Decorations, and Prompt Fragment for use in Step 5.
 
