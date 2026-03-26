@@ -144,7 +144,7 @@ Options (adapt language to user's input):
 
 ### Step 3: Style Extraction (if style reference provided)
 
-This step runs only when the user provided a style reference in Step 1. If no style reference was detected, skip to Step 4.
+This step runs only when the user provided a style reference in Step 1. If no style reference was detected, skip to Step 3b.
 
 **Read the reference content:**
 - Local file → Read tool
@@ -187,13 +187,17 @@ If yes → write to `.listenhub/creator/styles/{platform}.md`. If no → only ap
 
 ### Step 3b: Preset Selection (if applicable)
 
-If the selected template uses illustration or card presets (wechat, xiaohongshu), the preset MUST be chosen **before** the confirmation gate so it can be displayed in the summary.
+If the selected template uses illustration or card presets **and** the mode requires images, the preset MUST be chosen **before** the confirmation gate so it can be displayed in the summary.
+
+**Skip this step entirely** for:
+- Narration template (no visual presets)
+- Xiaohongshu with `preferences.xiaohongshu.mode` = `"long-text"` (no cards or images generated)
+
+Otherwise:
 
 1. Read the template's preset section to get available presets and the topic-matching table.
 2. **If the user already specified a preset** in their prompt (e.g., "用水彩风格"): use that preset directly.
 3. **If not specified**: ask the user via AskUserQuestion. Output a one-line hint first: "配图风格可以随时换，先选一个开始吧". List all available presets with their Chinese labels (from frontmatter `label` field). Use the topic-matching table to put the most relevant option first (marked "Recommended"), but always let the user choose.
-
-Templates that do not use presets (e.g., narration): skip this step.
 
 ### Step 4: Confirmation Gate
 
@@ -216,7 +220,7 @@ If API key required and missing: run `shared/authentication.md` interactive setu
   输出目录：{slug}-{platform}/
   需要 API 调用：{content-parser, image-gen, ...}
   风格偏好：{styles/{platform}.md 已配置 / 使用默认风格}
-  配图/卡片预设：{preset label / 待选择}
+  配图/卡片预设：{preset label / 不适用}
   本次风格参考：{M条来自参考文章 / 无}
 
 确认开始？
