@@ -34,7 +34,7 @@ Choose a visual preset from `presets/` for card generation.
 | 教程, 学习方法, 教学 | chalkboard |
 | 笔记, 考试, 学习, 框架 | study-notes |
 
-The selected preset MUST be shown in the Step 4 confirmation summary.
+The selected preset MUST be shown to the user after selection so they can override it before generation.
 
 After selection, read the full preset file to get Color Palette, Typography, Decorations, and Prompt Fragment for use in Step 5.
 
