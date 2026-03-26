@@ -15,11 +15,9 @@ Read `preferences.xiaohongshu.mode` from config:
 
 ### 3. Select Visual Preset (if mode includes cards)
 
-Choose a visual preset from `presets/` for card generation.
+The preset was already selected in SKILL.md Step 3b (before the confirmation gate). Use the preset chosen there.
 
-**If user specified a preset** (e.g., "用 notion 风格"): use that preset directly, skip the question below.
-
-**If not specified**: MUST ask the user via AskUserQuestion. Before presenting the options, output a one-line hint: "配图风格可以随时换，先选一个开始吧". List all available presets with their Chinese labels (from frontmatter `label` field). Use the topic-matching table below only as a hint to put the most relevant option first (marked "Recommended"), but always let the user choose:
+Available presets and topic-matching hints (used by SKILL.md Step 3b for ordering recommendations):
 
 | Content Signals | Recommended Preset |
 |---|---|
@@ -34,9 +32,7 @@ Choose a visual preset from `presets/` for card generation.
 | 教程, 学习方法, 教学 | chalkboard |
 | 笔记, 考试, 学习, 框架 | study-notes |
 
-The selected preset MUST be shown in the confirmation gate summary (SKILL.md Step 4).
-
-After selection, read the full preset file to get Color Palette, Typography, Decorations, and Prompt Fragment for use in Step 5.
+Read the full preset file to get Color Palette, Typography, Decorations, and Prompt Fragment for use in Step 5.
 
 ### 4. Generate Content Plan
 

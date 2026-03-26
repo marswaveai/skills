@@ -185,6 +185,16 @@ If yes → write to `.listenhub/creator/styles/{platform}.md`. If no → only ap
 
 **Standalone style learning:** If the user only provided a style reference without material/topic (e.g., "学习一下这篇文章的风格"), run the extraction above, then **persist directly** to `.listenhub/creator/styles/{platform}.md` without asking — the user's intent to save is already explicit. Confirm with a brief message: "已保存到 styles/{platform}.md". Do not proceed to content generation.
 
+### Step 3b: Preset Selection (if applicable)
+
+If the selected template uses illustration or card presets (wechat, xiaohongshu), the preset MUST be chosen **before** the confirmation gate so it can be displayed in the summary.
+
+1. Read the template's preset section to get available presets and the topic-matching table.
+2. **If the user already specified a preset** in their prompt (e.g., "用水彩风格"): use that preset directly.
+3. **If not specified**: ask the user via AskUserQuestion. Output a one-line hint first: "配图风格可以随时换，先选一个开始吧". List all available presets with their Chinese labels (from frontmatter `label` field). Use the topic-matching table to put the most relevant option first (marked "Recommended"), but always let the user choose.
+
+Templates that do not use presets (e.g., narration): skip this step.
+
 ### Step 4: Confirmation Gate
 
 **Check API key** if the pipeline needs remote APIs:
