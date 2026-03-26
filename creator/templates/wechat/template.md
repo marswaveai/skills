@@ -24,11 +24,9 @@ Write the complete article as `article.md` in the output folder.
 
 ### 4. Select Illustration Preset
 
-Choose an illustration preset from `presets/` for image generation.
+The preset was already selected in SKILL.md Step 3b (before the confirmation gate). Use the preset chosen there.
 
-**If user specified a preset** (e.g., "用水彩风格"): use that preset directly.
-
-**If not specified**: auto-select based on content topic:
+Available presets and topic-matching hints (used by SKILL.md Step 3b for ordering recommendations):
 
 | Content Signals | Recommended Preset |
 |---|---|
@@ -36,9 +34,7 @@ Choose an illustration preset from `presets/` for image generation.
 | 文化, 读书, 情感, 文艺, 哲学 | watercolor |
 | 商业, 产品, 前沿科技, 城市 | photo-realistic |
 
-Show the selected preset in the confirmation gate. User can override.
-
-After selection, read the full preset file to get the Prompt Fragment for use in Step 5.
+Read the full preset file to get the Prompt Fragment for use in Step 5.
 
 ### 5. Plan Illustrations
 
