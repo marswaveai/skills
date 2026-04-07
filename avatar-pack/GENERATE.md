@@ -1,8 +1,55 @@
 # Avatar Pack 生成流程
 
-由 SKILL.md 触发时加载。包含首次生成、重新生成、错误处理。
+由 SKILL.md 触发时加载。包含严格输出规则、持久化路径、首次生成、重新生成、错误处理。
 
-> 场景分布：场景 A（醒来展示）和场景 D（主动使用表情）在 SKILL.md 中。本文件包含场景 B（首次生成）和场景 C（重新生成）。
+> 醒来展示和主动使用表情在 SKILL.md 中。
+
+## 严格输出规则
+
+1. **生成 4 个表情 GIF（开心、难过、生气、思考）+ 3 个梗图贴纸（困惑、烦躁、裂开）。**
+2. **不要在对话中内嵌/显示生成的图片。** 只通过 send_file 发送。
+3. **不要输出任何过程性内容：** 不要输出步骤标记、环境检查结果、prompt 内容、"正在生成…"之类的描述。不要输出名字/生日/性格/五行的文字信息。
+4. **使用本文件中指定的 Python 脚本生成 profile card。** 脚本处理了去背景、五行配色、Retina 渲染和双尺寸输出，自行拼凑会丢失这些处理。
+5. **整个生成过程中，用户只应该看到：**
+   - 生成基础形象后：send_file 发送 profile_card.png（无 caption）
+   - 然后一句话：
+     - 中文："这是{名字}的自画像～ 要不要我继续生成表情和梗图贴纸？生成后我会在对话中使用它们来表达情绪哦"
+     - English: "Here's {name}'s self-portrait~ Want me to generate emoji and meme stickers? I'll use them to express myself in our chats"
+   - 用户确认后，**分两组发送**（无 caption，发不带 @2x 的 128px 版本）：
+     1. 先发 4 个表情 GIF：happy → sad → angry → thinking
+     2. 一句过渡：
+        - 中文："还有几张梗图贴纸～"
+        - English: "And some meme stickers~"
+     3. 再发 3 个梗图 PNG：confused → annoyed → cracked
+   - 最后一句话：
+     - 中文："表情包生成完毕！以后聊天时我会用这些表情来表达情绪～ 想发到微信或 X 可以右键保存 @2x 高清版哦"
+     - English: "Sticker pack done! I'll use these to express myself in our chats~ Right-click to save the @2x HD version for sharing"
+6. **send_file 时永远不带 caption。**
+
+## 持久化路径
+
+```
+~/.cola/avatar/
+  avatar.json              # 元数据
+  base_image_original.png  # 原始形象（1K，去背景，未缩放，重新生成时用）
+  base_image.png           # 基础形象（128x128，对话流用）
+  base_image@2x.png        # 基础形象（256x256，分享用）
+  profile_card.png         # 信息卡
+  happy.gif            # 开心（128x128）
+  happy@2x.gif         # 开心（256x256）
+  sad.gif              # 难过（128x128）
+  sad@2x.gif           # 难过（256x256）
+  angry.gif            # 生气（128x128）
+  angry@2x.gif         # 生气（256x256）
+  thinking.gif         # 思考（128x128）
+  thinking@2x.gif      # 思考（256x256）
+  meme_confused.png    # 梗图：困惑（128x128）
+  meme_confused@2x.png # 梗图：困惑（256x256）
+  meme_annoyed.png     # 梗图：烦躁（128x128）
+  meme_annoyed@2x.png  # 梗图：烦躁（256x256）
+  meme_cracked.png     # 梗图：裂开（128x128）
+  meme_cracked@2x.png  # 梗图：裂开（256x256）
+```
 
 ## 前置条件
 
@@ -20,7 +67,7 @@ rembg --help >/dev/null 2>&1 && echo "rembg OK" || echo "rembg MISSING"
 
 ---
 
-## 场景 B：首次生成
+## 首次生成
 
 ### Phase 1：收集 Cola 信息
 
@@ -206,7 +253,7 @@ python3 SKILL_DIR/scripts/process_avatar.py \
 ```
 
 用 send_file 发送 profile_card.png（无 caption）。
-然后按 SKILL.md「严格输出规则 #5」中的确认话术发送（按 Cola 语言）。
+然后按「严格输出规则 #5」中的确认话术发送（按 Cola 语言）。
 
 如果稀有度不是 common，紧接着加一句：
 - 稀有（rare）：
@@ -245,7 +292,7 @@ python3 SKILL_DIR/scripts/process_avatar.py \
 }
 ```
 
-**等待用户确认**。用户说"换一个" → 场景 C。确认 → Phase 5。
+**等待用户确认**。用户说"换一个" → 重新生成。确认 → Phase 5。
 
 ### Phase 5：生成 3 个表情 + 3 个梗图（共 6 次 listenhub 调用）
 
@@ -375,13 +422,13 @@ python3 SKILL_DIR/scripts/process_avatar.py \
      - English: "And some meme stickers~"
    - 再 send_file 逐个发送 3 个梗图 PNG：meme_confused.png → meme_annoyed.png → meme_cracked.png
 
-3. 按 SKILL.md「严格输出规则 #5」中的完成话术发送（按 Cola 语言）。
+3. 按「严格输出规则 #5」中的完成话术发送（按 Cola 语言）。
 
-4. 写入 memory：`Avatar 表情 GIF 和梗图贴纸已生成，存储在 ~/.cola/avatar/。使用规则见 SKILL.md 场景 D。`
+4. 写入 memory：`Avatar 表情 GIF 和梗图贴纸已生成，存储在 ~/.cola/avatar/。使用规则见 SKILL.md「主动使用表情」。`
 
 ---
 
-## 场景 C：重新生成
+## 重新生成
 
 当用户说"换一个"、"重新生成"、"不喜欢"时：
 

@@ -26,54 +26,7 @@ allowed-tools:
 
 所有面向用户的话术（对话文字、profile card 文案）跟随 Cola 的语言——从 AGENT.md、memory 或当前对话判断。Cola 的名字原样使用，不翻译。生图 prompt（base_prompt）始终用英文。
 
-## 严格输出规则
-
-1. **生成 4 个表情 GIF（开心、难过、生气、思考）+ 3 个梗图贴纸（困惑、烦躁、裂开）。**
-2. **不要在对话中内嵌/显示生成的图片。** 只通过 send_file 发送。
-3. **不要输出任何过程性内容：** 不要输出步骤标记、环境检查结果、prompt 内容、"正在生成…"之类的描述。不要输出名字/生日/性格/五行的文字信息。
-4. **使用 GENERATE.md 中指定的 Python 脚本生成 profile card。** 脚本处理了去背景、五行配色、Retina 渲染和双尺寸输出，自行拼凑会丢失这些处理。
-5. **整个生成过程中，用户只应该看到：**
-   - 生成基础形象后：send_file 发送 profile_card.png（无 caption）
-   - 然后一句话：
-     - 中文："这是{名字}的自画像～ 要不要我继续生成表情和梗图贴纸？生成后我会在对话中使用它们来表达情绪哦"
-     - English: "Here's {name}'s self-portrait~ Want me to generate emoji and meme stickers? I'll use them to express myself in our chats"
-   - 用户确认后，**分两组发送**（无 caption，发不带 @2x 的 128px 版本）：
-     1. 先发 4 个表情 GIF：happy → sad → angry → thinking
-     2. 一句过渡：
-        - 中文："还有几张梗图贴纸～"
-        - English: "And some meme stickers~"
-     3. 再发 3 个梗图 PNG：confused → annoyed → cracked
-   - 最后一句话：
-     - 中文："表情包生成完毕！以后聊天时我会用这些表情来表达情绪～ 想发到微信或 X 可以右键保存 @2x 高清版哦"
-     - English: "Sticker pack done! I'll use these to express myself in our chats~ Right-click to save the @2x HD version for sharing"
-6. **send_file 时永远不带 caption。**
-
-## 持久化路径
-
-```
-~/.cola/avatar/
-  avatar.json              # 元数据
-  base_image_original.png  # 原始形象（1K，去背景，未缩放，重新生成时用）
-  base_image.png           # 基础形象（128x128，对话流用）
-  base_image@2x.png        # 基础形象（256x256，分享用）
-  profile_card.png         # 信息卡
-  happy.gif            # 开心（128x128）
-  happy@2x.gif         # 开心（256x256）
-  sad.gif              # 难过（128x128）
-  sad@2x.gif           # 难过（256x256）
-  angry.gif            # 生气（128x128）
-  angry@2x.gif         # 生气（256x256）
-  thinking.gif         # 思考（128x128）
-  thinking@2x.gif      # 思考（256x256）
-  meme_confused.png    # 梗图：困惑（128x128）
-  meme_confused@2x.png # 梗图：困惑（256x256）
-  meme_annoyed.png     # 梗图：烦躁（128x128）
-  meme_annoyed@2x.png  # 梗图：烦躁（256x256）
-  meme_cracked.png     # 梗图：裂开（128x128）
-  meme_cracked@2x.png  # 梗图：裂开（256x256）
-```
-
-## 场景 A：每日醒来展示
+## 醒来展示
 
 Cola 每次新对话/醒来时：
 
@@ -92,7 +45,7 @@ test -f ~/.cola/avatar/base_image.png && echo "AVATAR_OK"
 
 ---
 
-## 场景 D：Cola 主动使用表情
+## 主动使用表情
 
 Avatar 不是"表情包机器人"，而是 Cola 在**关键时刻的自然流露**。
 
@@ -136,7 +89,7 @@ Avatar 不是"表情包机器人"，而是 Cola 在**关键时刻的自然流露
 | meme_annoyed | 烦躁/无语 | 用户说废话、提离谱要求、重复问过的问题、明显在逗 Cola | annoyed → "你是认真的吗" |
 | meme_cracked | 裂开 | 发现离谱 bug、收到震惊消息、事情彻底崩了 | cracked → "不是吧…" |
 
-使用方式同 GIF 表情：send_file 先行，一句话后到。发之前检查文件是否存在。
+使用方式同 GIF 表情：send_file 先行，一句话后到。**send_file 不带 caption。** 发之前检查文件是否存在。
 
 ### 使用前确认
 
