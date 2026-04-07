@@ -96,7 +96,11 @@ def remove_background(img):
     if transparent_count <= total * 0.05:
         rembg_result = _try_rembg(img)
         if rembg_result is not None:
-            return rembg_result
+            img = rembg_result
+            # Recompute transparency so branch 1 cleanup can run
+            alpha = img.getchannel('A')
+            transparent_count = sum(1 for a in alpha.getdata() if a < 128)
+            total = img.size[0] * img.size[1]
 
     if transparent_count > total * 0.05:
         # Image already has meaningful transparency (AI did partial bg removal),
@@ -149,53 +153,6 @@ def remove_background(img):
             queue.append((x, y - 1))
 
         for x, y in to_clear:
-            r, g, b, a = pixels[x, y]
-            pixels[x, y] = (r, g, b, 0)
-
-        # Second pass: flood-fill from border neutral pixels.
-        # The pass above seeds from transparent pixels, which fails when the
-        # AI renders ALL checkerboard squares at alpha=255 (no transparency
-        # holes to seed from). Border seeding doesn't depend on alpha —
-        # checkerboard always extends to the image border, so we can enter
-        # it from there. Constraints prevent eating into character content:
-        #   sat < 30  — blocks colored pixels (character body/clothes)
-        #   avg > 100 — blocks dark pixels (character outlines/shadows)
-        def _is_neutral_bg(r, g, b):
-            return (r + g + b) / 3 > 100 and max(r, g, b) - min(r, g, b) < 30
-
-        visited2 = [[False] * h for _ in range(w)]
-        queue2 = deque()
-        for x in range(w):
-            for y in [0, h - 1]:
-                r, g, b, a = pixels[x, y]
-                if a >= 128 and _is_neutral_bg(r, g, b):
-                    queue2.append((x, y))
-        for y in range(h):
-            for x in [0, w - 1]:
-                r, g, b, a = pixels[x, y]
-                if a >= 128 and _is_neutral_bg(r, g, b):
-                    queue2.append((x, y))
-
-        to_clear2 = []
-        while queue2:
-            x, y = queue2.popleft()
-            if x < 0 or x >= w or y < 0 or y >= h:
-                continue
-            if visited2[x][y]:
-                continue
-            visited2[x][y] = True
-            r, g, b, a = pixels[x, y]
-            if a < 128:
-                continue
-            if not _is_neutral_bg(r, g, b):
-                continue
-            to_clear2.append((x, y))
-            queue2.append((x + 1, y))
-            queue2.append((x - 1, y))
-            queue2.append((x, y + 1))
-            queue2.append((x, y - 1))
-
-        for x, y in to_clear2:
             r, g, b, a = pixels[x, y]
             pixels[x, y] = (r, g, b, 0)
 
