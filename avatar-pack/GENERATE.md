@@ -114,6 +114,7 @@ python3 -c "import hashlib,sys; h=int(hashlib.md5(sys.argv[1].encode()).hexdiges
 - 写一个能脱离对话独立理解的具体细节或态度，让人读完脑子里出现画面
 - 可以有意外感或幽默感
 - 必须能从角色信息中找到依据，不能凭空编造
+- 必须与 AGENT.md 的 personality 设定一致，不能引入设定中没有的负面特质（如设定是"never genuinely mean"就不能写"记仇"）
 - 不要：行为模式（"遇到X会Y"）、抽象词（勇敢/善良）、诗意隐喻（风/星/海/光）、绝对词（永远/总是/从不）、鸡汤口号感叹句、需要上下文的对话截取
 
 输出：1 或 2 句。第 2 句仅在能揭示一个和第 1 句矛盾的具体细节时生成。
@@ -129,6 +130,7 @@ Rules:
 - A specific detail or attitude that stands alone without conversation context and paints a picture
 - A touch of surprise or humor is welcome
 - Must trace back to character info, not invented freely
+- Must align with AGENT.md personality — do not introduce negative traits absent from the character definition (e.g., if the character is "never genuinely mean", don't write about holding grudges)
 - No: behavior patterns ("when X, does Y"), abstract traits (brave/kind), poetic metaphors (wind/stars/sea/light), absolute words (always/never), slogans or exclamations, dialogue snippets requiring context
 
 Output: 1 or 2 lines. Line 2 only if it reveals a specific contradiction with line 1.
