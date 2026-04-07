@@ -153,7 +153,8 @@ front facing, centered, single character, retro game sprite style"
 
 negative_prompt = "multiple characters, background elements, text, watermark,
 signature, soft brush strokes, realistic proportions, side view, 3D rendering,
-blurry edges, gradient shading, photo-realistic"
+blurry edges, gradient shading, photo-realistic, grid lines, graph paper,
+ruled background, checkerboard pattern"
 ```
 
 每个 slot 用 5-15 个英文单词描述，具体到颜色和形状：
@@ -297,13 +298,16 @@ happy 表情已由 Phase 3 基础形象生成（base_image 即 happy），此处
 |--------|-----------|------|
 | 背景 | 可见网格线、棋盘格、纯色背景残留 | 重新生成该图 |
 | 画风 | 明显偏离像素风（变成 anime/写实/柔化笔触）| 重新生成该图 |
-| 配色 | 与 base_image 的体色/服饰色明显不同 | 重新生成该图 |
+| 服饰配色 | 衣服/配饰的主色与 base_image 明显不同（如黑夹克变白、橙T恤变灰）| 重新生成该图 |
 | 比例 | 头身比与 base_image 不一致（如头变小了）| 重新生成该图 |
 
 **重新生成规则：**
 - 每张最多重试 2 次（共 3 次机会）
-- 重试时在 prompt 中追加 `solid color background` 替换 `transparent background`（有些模型对纯色背景更稳定），后处理脚本的 `remove_background()` 会自动去背
-- 如果 3 次都不合格，使用最好的一张继续，后处理脚本会尽力清理
+- 重试时做以下调整：
+  1. 将 prompt 中的 `transparent background` 替换为 `solid white background`（模型对纯色背景更稳定，脚本的 `remove_background()` 会自动去背）
+  2. 在 prompt 末尾追加 `maintain exact same outfit colors and style as reference image`
+  3. negative_prompt 中已包含 `grid lines, graph paper`（Phase 2.5 模板）
+- 如果 3 次都不合格，使用最好的一张继续
 
 ### Phase 6：处理图片 + 生成 GIF + 梗图
 
@@ -314,8 +318,6 @@ python3 SKILL_DIR/scripts/process_avatar.py \
   --angry "{angry_image_path}" \
   --thinking "{thinking_image_path}" \
   --name "{cola_name}" \
-  --line1 "{profile_tagline}" \
-  --line2 "{profile_tagline_2}" \
   --output "~/.cola/avatar" \
   --direct \
   --wuxing "{wuxing}" \

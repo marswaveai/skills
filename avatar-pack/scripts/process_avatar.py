@@ -63,6 +63,43 @@ def remove_background(img):
     total = img.size[0] * img.size[1]
 
     if transparent_count > total * 0.05:
+        # Image already has meaningful transparency (AI did partial bg removal),
+        # but may have opaque grid line remnants. Clean them up using a
+        # window-based approach: if an opaque pixel is neutral/light AND
+        # mostly surrounded by transparent pixels, it's a background remnant.
+        w, h = img.size
+        pixels = img.load()
+        win = 7  # half-window size → 15x15 window
+        threshold = 0.80  # >80% transparent in window → remnant
+        to_clear = []
+
+        for y in range(h):
+            for x in range(w):
+                r, g, b, a = pixels[x, y]
+                if a < 128:
+                    continue
+                # Color filter: only neutral/light pixels (grid lines are gray)
+                avg = (r + g + b) / 3
+                if avg <= 160 or max(r, g, b) - min(r, g, b) > 30:
+                    continue
+                # Window check: count transparent neighbors in 15x15
+                x0 = max(0, x - win)
+                x1 = min(w, x + win + 1)
+                y0 = max(0, y - win)
+                y1 = min(h, y + win + 1)
+                total_win = (x1 - x0) * (y1 - y0)
+                trans_count = 0
+                for wy in range(y0, y1):
+                    for wx in range(x0, x1):
+                        if pixels[wx, wy][3] < 128:
+                            trans_count += 1
+                if trans_count > total_win * threshold:
+                    to_clear.append((x, y))
+
+        for x, y in to_clear:
+            r, g, b, a = pixels[x, y]
+            pixels[x, y] = (r, g, b, 0)
+
         return img
 
     w, h = img.size
@@ -80,14 +117,15 @@ def remove_background(img):
     if not corner_colors:
         return img
 
-    # Background colors: top colors that together cover > 50% of corner samples
+    # Background colors: top colors that together cover > 90% of corner samples
+    # (high threshold ensures checkerboard backgrounds have both colors collected)
     bg_colors = set()
     total_corner = sum(corner_colors.values())
     cumulative = 0
     for color, count in corner_colors.most_common():
         bg_colors.add(color)
         cumulative += count
-        if cumulative > total_corner * 0.5:
+        if cumulative > total_corner * 0.9:
             break
 
     def _color_close(c1, c2, threshold=40):
@@ -136,83 +174,21 @@ def remove_background(img):
     return img
 
 
-def _is_fringe_color(r, g, b):
-    """Check if an RGB color looks like a background fringe artifact.
-
-    Catches: neutral gray, warm gray, cool gray, off-white, light beige —
-    the various shades AI generators leave at content edges after imperfect
-    background removal.
-    """
-    avg = (r + g + b) / 3
-    # Must be in the light-gray-to-near-white range
-    if not (140 < avg < 245):
-        return False
-    # Must be low saturation — fringe is always near-neutral
-    max_ch = max(r, g, b)
-    min_ch = min(r, g, b)
-    if max_ch - min_ch > 30:
-        return False
-    return True
-
-
 def _clean_transparent_rgb(img):
     """Zero out RGB values where alpha is 0 to prevent color bleed during resize.
 
     Many AI image generators embed a checkerboard pattern in the RGB channels
     of transparent pixels. NEAREST-neighbor resize can sample these dirty RGB
     values at content boundaries, causing visible artifacts when composited.
-
-    Also iteratively removes edge fringe: opaque low-saturation light pixels
-    (from imperfect background removal) that border transparent pixels.
     """
     if img.mode != 'RGBA':
         return img
     pixels = img.load()
     w, h = img.size
-
-    # Pass 1: zero RGB where alpha=0
     for y in range(h):
         for x in range(w):
-            r, g, b, a = pixels[x, y]
-            if a == 0:
+            if pixels[x, y][3] == 0:
                 pixels[x, y] = (0, 0, 0, 0)
-
-    # Pass 2+: iteratively remove fringe pixels (up to 3 rounds to handle
-    # multi-pixel-deep fringe from AI generators)
-    # Check 8-connected neighbors (including diagonals) for better coverage
-    neighbors_8 = [(-1, -1), (0, -1), (1, -1),
-                   (-1, 0),           (1, 0),
-                   (-1, 1),  (0, 1),  (1, 1)]
-
-    for _round in range(3):
-        to_clear = []
-        for y in range(h):
-            for x in range(w):
-                r, g, b, a = pixels[x, y]
-                if a < 128:
-                    continue
-                if not _is_fringe_color(r, g, b):
-                    continue
-                # Check if any 8-connected neighbor is transparent
-                has_transparent_neighbor = False
-                for dx, dy in neighbors_8:
-                    nx, ny = x + dx, y + dy
-                    if 0 <= nx < w and 0 <= ny < h:
-                        if pixels[nx, ny][3] == 0:
-                            has_transparent_neighbor = True
-                            break
-                    else:
-                        # Edge of image counts as transparent
-                        has_transparent_neighbor = True
-                        break
-                if has_transparent_neighbor:
-                    to_clear.append((x, y))
-
-        if not to_clear:
-            break  # No more fringe found
-        for x, y in to_clear:
-            pixels[x, y] = (0, 0, 0, 0)
-
     return img
 
 
@@ -771,11 +747,11 @@ def generate_meme_cracked(input_path, output_path, locale='zh'):
     x, y = face_cx, crack_top
     points = [(x, y)]
     bolt_segments = [
-        (16, crack_h // 5),
-        (-24, crack_h // 5),
-        (20, crack_h // 5),
-        (-16, crack_h // 5),
         (12, crack_h // 5),
+        (-20, crack_h // 5),
+        (18, crack_h // 5),
+        (-16, crack_h // 5),
+        (6, crack_h // 5),
     ]
     for dx, dy in bolt_segments:
         x += dx
