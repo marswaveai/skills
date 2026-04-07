@@ -290,6 +290,8 @@ happy 表情已由 Phase 3 基础形象生成（base_image 即 happy），此处
 
 每张加 `reference_images: [base_image_url]`。
 
+**reference_images 注意事项：** 签名 URL 有效期通常只有 15 分钟。Phase 4 等待用户确认期间 URL 可能过期。如果 reference_images 返回 400 错误，用本地 `~/.cola/avatar/base_image_original.png` 重新上传获取新 URL，再重试。如果重新上传也失败，在 prompt 末尾追加 `maintain exact same character design, outfit colors, body proportions, and facial features as the base image` 作为文字兜底。
+
 ### Phase 5.5：生图质量校验
 
 6 张图全部返回后，**逐张目视检查**（用 read 或 send_file 查看），对照 base_image 判断：

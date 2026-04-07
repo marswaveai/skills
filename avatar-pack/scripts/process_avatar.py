@@ -64,37 +64,53 @@ def remove_background(img):
 
     if transparent_count > total * 0.05:
         # Image already has meaningful transparency (AI did partial bg removal),
-        # but may have opaque grid line remnants. Clean them up using a
-        # window-based approach: if an opaque pixel is neutral/light AND
-        # mostly surrounded by transparent pixels, it's a background remnant.
+        # but may have opaque remnants (grid lines, checkerboard squares).
+        # Flood-fill from alpha=0 pixels into adjacent neutral/light opaque pixels.
+        # This extends the AI's background removal to cover missed artifacts.
         w, h = img.size
         pixels = img.load()
-        win = 7  # half-window size → 15x15 window
-        threshold = 0.80  # >80% transparent in window → remnant
-        to_clear = []
 
+        def _is_bg_remnant(r, g, b):
+            """Light, neutral pixel — likely background, not character content."""
+            avg = (r + g + b) / 3
+            return avg > 160 and max(r, g, b) - min(r, g, b) < 30
+
+        # Seed: all transparent pixels adjacent to an opaque neutral pixel
+        queue = deque()
+        visited = [[False] * h for _ in range(w)]
         for y in range(h):
             for x in range(w):
-                r, g, b, a = pixels[x, y]
-                if a < 128:
+                if pixels[x, y][3] >= 128:
                     continue
-                # Color filter: only neutral/light pixels (grid lines are gray)
-                avg = (r + g + b) / 3
-                if avg <= 160 or max(r, g, b) - min(r, g, b) > 30:
-                    continue
-                # Window check: count transparent neighbors in 15x15
-                x0 = max(0, x - win)
-                x1 = min(w, x + win + 1)
-                y0 = max(0, y - win)
-                y1 = min(h, y + win + 1)
-                total_win = (x1 - x0) * (y1 - y0)
-                trans_count = 0
-                for wy in range(y0, y1):
-                    for wx in range(x0, x1):
-                        if pixels[wx, wy][3] < 128:
-                            trans_count += 1
-                if trans_count > total_win * threshold:
-                    to_clear.append((x, y))
+                # Check 4 cardinal neighbors for opaque neutral pixels
+                for dx, dy in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
+                    nx, ny = x + dx, y + dy
+                    if 0 <= nx < w and 0 <= ny < h and not visited[nx][ny]:
+                        nr, ng, nb, na = pixels[nx, ny]
+                        if na >= 128 and _is_bg_remnant(nr, ng, nb):
+                            queue.append((nx, ny))
+
+        # Flood-fill through connected neutral/light opaque pixels
+        to_clear = []
+        while queue:
+            x, y = queue.popleft()
+            if x < 0 or x >= w or y < 0 or y >= h:
+                continue
+            if visited[x][y]:
+                continue
+            visited[x][y] = True
+
+            r, g, b, a = pixels[x, y]
+            if a < 128:
+                continue
+            if not _is_bg_remnant(r, g, b):
+                continue
+
+            to_clear.append((x, y))
+            queue.append((x + 1, y))
+            queue.append((x - 1, y))
+            queue.append((x, y + 1))
+            queue.append((x, y - 1))
 
         for x, y in to_clear:
             r, g, b, a = pixels[x, y]
