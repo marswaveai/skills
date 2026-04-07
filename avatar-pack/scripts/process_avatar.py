@@ -116,6 +116,60 @@ def remove_background(img):
             r, g, b, a = pixels[x, y]
             pixels[x, y] = (r, g, b, 0)
 
+        # Second pass: clear all semi-transparent neutral pixels.
+        # AI checkerboard backgrounds leave neutral pixels at alpha 1-253.
+        # Real character content sits at alpha 254-255 or 0.
+        for y in range(h):
+            for x in range(w):
+                r, g, b, a = pixels[x, y]
+                if a == 0 or a >= 254:
+                    continue
+                sat = max(r, g, b) - min(r, g, b)
+                if sat < 30:
+                    pixels[x, y] = (r, g, b, 0)
+
+        # Third pass: re-flood-fill from newly transparent regions.
+        # Pass 2 opened up transparent holes inside checkerboard blocks.
+        # Now flood-fill from those holes into adjacent neutral opaque
+        # blocks (the gray squares of the checkerboard, alpha=254).
+        visited2 = [[False] * h for _ in range(w)]
+        queue2 = deque()
+        for y in range(h):
+            for x in range(w):
+                if pixels[x, y][3] >= 128:
+                    continue
+                for dx, dy in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
+                    nx, ny = x + dx, y + dy
+                    if 0 <= nx < w and 0 <= ny < h and not visited2[nx][ny]:
+                        nr, ng, nb, na = pixels[nx, ny]
+                        if na >= 128 and _is_bg_remnant(nr, ng, nb):
+                            queue2.append((nx, ny))
+
+        to_clear2 = []
+        while queue2:
+            x, y = queue2.popleft()
+            if x < 0 or x >= w or y < 0 or y >= h:
+                continue
+            if visited2[x][y]:
+                continue
+            visited2[x][y] = True
+
+            r, g, b, a = pixels[x, y]
+            if a < 128:
+                continue
+            if not _is_bg_remnant(r, g, b):
+                continue
+
+            to_clear2.append((x, y))
+            queue2.append((x + 1, y))
+            queue2.append((x - 1, y))
+            queue2.append((x, y + 1))
+            queue2.append((x, y - 1))
+
+        for x, y in to_clear2:
+            r, g, b, a = pixels[x, y]
+            pixels[x, y] = (r, g, b, 0)
+
         return img
 
     w, h = img.size

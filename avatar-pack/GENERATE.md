@@ -139,7 +139,7 @@ Character info: {personality keywords, speech style, relationship with user, etc
 
 **好 / Good**：
 - "三秒决定喜不喜欢" / "Decides in three seconds" — 态度，有画面，自述
-- "三秒决定喜不喜欢 / 但记仇记三年" / "Decides in three seconds / Holds grudges for three years" — 第 2 句揭示矛盾
+- "三秒就冲 / 但兜里永远有方案 B" / "Rushes in first / Always has a plan B in pocket" — 第 2 句揭示矛盾（冲动但有准备）
 
 #### 2.5 组装 base_prompt
 
