@@ -1,11 +1,10 @@
 ---
 name: avatar-pack
 description: |
-  生成 Cola 的专属像素风自画像、profile card、表情 GIF 和梗图贴纸。物种由命运决定——88% 普通、10% 稀有、2% 传说。
-  Use when: 用户说"生成形象"、"画自画像"、"画个头像"、"设计形象"、"avatar"、"draw avatar"、"self-portrait"、"表情包"、"生成贴纸"、"梗图"、"sticker"。
-  Also use when: 用户说"换一个"、"重新生成"、"重新画"、"再画一个"、"不喜欢"、"不好看"、"换个形象"、"regenerate"。
-  Also use when: Cola 复活/醒来时展示已有 avatar 或引导生成。
-  Do NOT use when: 用户讨论 GitHub/Discord/Slack 等第三方平台头像设置，或搜索外部表情包。
+  Generate pixel-art self-portrait, profile card, emoji GIFs, and meme stickers.
+  Use when: "生成形象"、"画头像"、"avatar"、"self-portrait"、"表情包"、"梗图"、"贴纸"、"sticker"、"换一个"、"重新生成"、"不喜欢"、"regenerate".
+  Also use when: Cola wakes up — display existing avatar or prompt user to generate.
+  Do NOT use when: discussing third-party platform avatar settings or searching for external stickers.
 allowed-tools:
   - Bash
   - Read
