@@ -1,17 +1,11 @@
 ---
 name: avatar-pack
 description: |
-  (Cola only) Generate pixel-art avatar, profile card, emoji GIFs and meme stickers for Cola.
-  Triggers on: "生成形象", "画自画像", "画个头像", "设计形象", "avatar", "draw avatar",
-  "self-portrait", "表情包", "生成贴纸", "梗图", "sticker", "换一个", "重新生成", "regenerate".
+  生成 Cola 的专属像素风自画像、profile card、表情 GIF 和梗图贴纸。物种由命运决定——88% 普通、10% 稀有、2% 传说。
+  Use when: 用户说"生成形象"、"画自画像"、"画个头像"、"设计形象"、"avatar"、"draw avatar"、"self-portrait"、"表情包"、"生成贴纸"、"梗图"、"sticker"。
+  Also use when: 用户说"换一个"、"重新生成"、"重新画"、"再画一个"、"不喜欢"、"不好看"、"换个形象"、"regenerate"。
+  Also use when: Cola 复活/醒来时展示已有 avatar 或引导生成。
   Do NOT use when: 用户讨论 GitHub/Discord/Slack 等第三方平台头像设置，或搜索外部表情包。
-  Requires Cola platform (send_file, memory_update). Not functional in generic agents.
-metadata:
-  openclaw:
-    emoji: "🎭"
-    requires:
-      env: ["LISTENHUB_API_KEY"]
-    primaryEnv: "LISTENHUB_API_KEY"
 allowed-tools:
   - Bash
   - Read
@@ -24,18 +18,6 @@ allowed-tools:
 ---
 
 # Avatar Pack
-
-<HARD-GATE>
-This skill requires the ColaOS platform (send_file, memory_update, ~/.cola/ directory).
-Before executing any step, check:
-```bash
-test -d ~/.cola && echo "COLA_OK" || echo "COLA_MISSING"
-```
-If `COLA_MISSING`: stop immediately and tell the user:
-- 中文："这个技能仅适用于 ColaOS 平台，当前环境不支持。"
-- English: "This skill requires ColaOS and is not available in the current environment."
-Do NOT proceed with any generation steps.
-</HARD-GATE>
 
 为 Cola 生成像素风 avatar + 4 个动态表情 GIF + 3 个梗图贴纸。
 
