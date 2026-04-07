@@ -388,7 +388,7 @@ python3 SKILL_DIR/scripts/process_avatar.py \
 
 根据用户选择：
 - **选 1（全新形象）** → 步骤 2
-- **选 2（调风格）** → 只调整 base_prompt 中的 [outfit]/[wuxing_colors]/[unique_detail]，从 Phase 3 重走（Phase 3→4→5→6→7 全部重新执行，所有表情和梗图都会重新生成）
+- **选 2（调风格）** → 先删除旧 original 以避免 profile card 与新风格不一致：`rm -f ~/.cola/avatar/base_image_original.png`，然后只调整 base_prompt 中的 [outfit]/[wuxing_colors]/[unique_detail]，从 Phase 3 重走（Phase 3→4→5→6→7 全部重新执行，所有表情和梗图都会重新生成）
 - **选 3（单个表情）** → 步骤 3
 - **取消**（"算了"、"不换了"、"没事"）→ 停止重新生成流程，继续正常对话
 
