@@ -780,6 +780,21 @@ def generate_meme_cracked(input_path, output_path, locale='zh'):
 
     # --- Adaptive crack color: sample character brightness along crack path ---
     pixels = canvas.load()
+
+    # Refine face_cx: use centroid of opaque pixels in upper 1/3 of character
+    # (head region) instead of full bbox center, so the crack centers on the
+    # head even when the distressed pose has asymmetric limbs.
+    if content_bbox:
+        head_bottom = content_bbox[1] + (content_bbox[3] - content_bbox[1]) // 3
+        cx_sum, cx_count = 0, 0
+        for y_s in range(content_bbox[1], head_bottom):
+            for x_s in range(content_bbox[0], content_bbox[2]):
+                if pixels[x_s, y_s][3] > 128:
+                    cx_sum += x_s
+                    cx_count += 1
+        if cx_count > 0:
+            face_cx = cx_sum // cx_count
+
     brightness_samples = []
     for y_s in range(face_top, face_bottom, 4):
         for x_s in range(max(0, face_cx - 15), min(OUTPUT_SIZE, face_cx + 15)):
