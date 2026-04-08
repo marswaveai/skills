@@ -207,7 +207,7 @@ Wait for explicit confirmation before running the CLI command.
 
    ```bash
    JOB_ID=$(date +%s)
-   curl -sS -o /tmp/image-gen-${JOB_ID}.jpg "$IMAGE_URL"
+   listenhub download "$IMAGE_URL" -o /tmp/image-gen-${JOB_ID}.jpg
    ```
    Then use the Read tool on `/tmp/image-gen-{jobId}.jpg`. The image displays inline in the conversation.
 
@@ -223,7 +223,7 @@ Wait for explicit confirmation before running the CLI command.
    DATE=$(date +%Y-%m-%d)
    JOB_DIR=".listenhub/image-gen/${DATE}-${JOB_ID}"
    mkdir -p "$JOB_DIR"
-   curl -sS -o "${JOB_DIR}/${JOB_ID}.jpg" "$IMAGE_URL"
+   listenhub download "$IMAGE_URL" -o "${JOB_DIR}/${JOB_ID}.jpg"
    ```
 
    Present:

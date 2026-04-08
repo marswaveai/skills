@@ -177,54 +177,28 @@ Wait for explicit confirmation before running any CLI command.
 
 ## Workflow
 
-1. **Submit (foreground)**: Run with `--no-wait` to get the creation ID immediately:
+Run the CLI command with `run_in_background: true` and `timeout: 660000`. The CLI blocks until generation completes and returns the final result as JSON:
 
-   ```bash
-   RESULT=$(listenhub explainer create \
-     --query "{topic}" \
-     --mode {info|story} \
-     --lang {en|zh|ja} \
-     --speaker "{name}" \
-     --speaker-id "{id}" \
-     --no-wait \
-     --json)
+```bash
+listenhub explainer create \
+  --query "{topic}" \
+  --mode {info|story} \
+  --lang {en|zh|ja} \
+  --speaker "{name}" \
+  --speaker-id "{id}" \
+  --json
+```
 
-   if [ $? -ne 0 ]; then
-     echo "Error: $RESULT" >&2
-     exit 1
-   fi
+If the command fails (non-zero exit), check stderr for error details. See `shared/cli-patterns.md` § Error Handling for exit codes and common errors.
 
-   ID=$(echo "$RESULT" | jq -r '.id')
-   echo "Submitted: $ID"
-   ```
+**Optional flags** (add when applicable):
+- `--source-url "{url}"` — if the user provided a reference URL
+- `--skip-audio` — if text-only output (no video)
+- `--image-size {2K|4K}` — image resolution (default: 2K)
+- `--aspect-ratio {16:9|9:16|1:1}` — video aspect ratio (default: 16:9)
+- `--style "{style}"` — visual style for AI-generated images
 
-   **Optional flags** (add when applicable):
-   - `--source-url "{url}"` — if the user provided a reference URL
-   - `--skip-audio` — if text-only output (no video)
-   - `--image-size {2K|4K}` — image resolution (default: 2K)
-   - `--aspect-ratio {16:9|9:16|1:1}` — video aspect ratio (default: 16:9)
-   - `--style "{style}"` — visual style for AI-generated images
-
-2. Tell the user the task is submitted.
-
-3. **Poll (background)**: Run the following with `run_in_background: true` and `timeout: 660000`:
-
-   ```bash
-   ID="<id-from-step-1>"
-   for i in $(seq 1 60); do
-     RESULT=$(listenhub creation get "$ID" --json 2>/dev/null)
-     STATUS=$(echo "$RESULT" | jq -r '.status // "processing"')
-
-     case "$STATUS" in
-       completed) echo "$RESULT"; exit 0 ;;
-       failed) echo "FAILED: $RESULT" >&2; exit 1 ;;
-       *) sleep 10 ;;
-     esac
-   done
-   echo "TIMEOUT" >&2; exit 2
-   ```
-
-4. When notified, **parse and present result**:
+Tell the user the task is submitted. When notified of completion, **parse and present result**:
 
    Parse the CLI JSON output for key fields:
    ```bash
@@ -271,7 +245,7 @@ Wait for explicit confirmation before running any CLI command.
    - Write `script.md` inside
    - Download audio:
      ```bash
-     curl -sS -o "{slug}-explainer/audio.mp3" "{audioUrl}"
+     listenhub download "{audioUrl}" -o "{slug}-explainer/audio.mp3"
      ```
    - Present:
      ```
@@ -324,27 +298,14 @@ echo "$NEW_CONFIG" > "$CONFIG_PATH"
 5. Ask output → "Text + Video"
 
 ```bash
-# Submit
-RESULT=$(listenhub explainer create \
+# Run with run_in_background: true, timeout: 660000
+listenhub explainer create \
   --query "Introduce Claude Code: what it is, key features, and how to get started" \
   --mode info \
   --lang en \
   --speaker "Mars" \
   --speaker-id "cozy-man-english" \
-  --no-wait \
-  --json)
-ID=$(echo "$RESULT" | jq -r '.id')
-
-# Poll (run_in_background: true, timeout: 660000)
-for i in $(seq 1 60); do
-  RESULT=$(listenhub creation get "$ID" --json 2>/dev/null)
-  STATUS=$(echo "$RESULT" | jq -r '.status // "processing"')
-  case "$STATUS" in
-    completed) echo "$RESULT"; exit 0 ;;
-    failed) echo "FAILED: $RESULT" >&2; exit 1 ;;
-    *) sleep 10 ;;
-  esac
-done
+  --json
 ```
 
 Parse result for `episodeId`, `audioUrl`, `videoUrl`, `credits`, and present to user.

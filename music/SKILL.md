@@ -1,90 +1,55 @@
 ---
 name: music
+description: |
+  Generate AI music or create covers from reference audio. Triggers on: "音乐",
+  "music", "生成音乐", "generate music", "翻唱", "cover", "作曲", "compose",
+  "create a song", "做一首歌".
 metadata:
   openclaw:
     emoji: "🎵"
     requires:
       bin: ["listenhub"]
     primaryBin: "listenhub"
-description: |
-  AI music generation and covers via CLI. Triggers on: "音乐", "music",
-  "生成音乐", "generate music", "翻唱", "cover", "作曲", "compose",
-  "create a song", "做一首歌".
 ---
 
 ## When to Use
 
-- User wants to generate an original song from a text prompt
-- User wants to create a cover version from reference audio
-- User says "音乐", "music", "生成音乐", "generate music", "翻唱", "cover", "作曲", "compose", "create a song", "做一首歌"
+- User wants to generate original AI music from a prompt
+- User wants to create a cover from reference audio
+- User says "音乐", "music", "生成音乐", "generate music", "翻唱", "cover", "作曲", "compose", "create a song", or "做一首歌"
 
 ## When NOT to Use
 
-- User wants text-to-speech reading (use `/tts`)
+- User wants text-to-speech reading (use `/speech`)
 - User wants a podcast discussion (use `/podcast`)
 - User wants an explainer video with narration (use `/explainer`)
 - User wants to transcribe audio to text (use `/asr`)
 
 ## Purpose
 
-Generate original AI music or create cover versions from reference audio using the ListenHub CLI. Two modes:
+Generate original AI music from text prompts, or create cover versions from reference audio. Two modes:
 
 1. **Generate** (original): Create a new song from a text prompt, with optional style, title, and instrumental-only options.
 2. **Cover**: Transform a reference audio file into a new version, with optional style modifications.
 
 ## Hard Constraints
 
-- Always check CLI authentication via `shared/cli-authentication.md` before any operation
+- Always read config following `shared/config-pattern.md` before any interaction
 - Follow `shared/cli-patterns.md` for execution modes, error handling, and interaction patterns
-- Follow `shared/config-pattern.md` for config lookup, creation, and update
-- No speakers involved — this is music generation, not speech
-- Audio file constraints for cover mode: mp3, wav, flac, m4a, ogg, aac; max 20 MB
-- Long timeout: 600s default. Use `run_in_background: true` with `timeout: 660000`
+- Always follow `shared/cli-authentication.md` for auth checks
 - Never save files to `~/Downloads/` or `.listenhub/` — save artifacts to the current working directory with friendly topic-based names (see `shared/config-pattern.md` § Artifact Naming)
+- No speakers involved — music generation does not use speaker selection
+- Audio file constraints for cover mode: mp3, wav, flac, m4a, ogg, aac; max 20MB
+- Long timeout: 600s default. Use `run_in_background: true` with `timeout: 660000`
 
 <HARD-GATE>
-Use the AskUserQuestion tool for every multiple-choice step — do NOT print options as plain text. Ask one question at a time. Wait for the user's answer before proceeding to the next step. After all parameters are collected, summarize the choices and ask the user to confirm. Do NOT call any generation CLI command until the user has explicitly confirmed.
+Use the AskUserQuestion tool for every multiple-choice step — do NOT print options as plain text. Ask one question at a time. Wait for the user's answer before proceeding to the next step. After all parameters are collected, summarize the choices and ask the user to confirm. Do NOT call any CLI command until the user has explicitly confirmed.
 
 </HARD-GATE>
 
-## CLI Commands
-
-### Generate (original)
-
-```bash
-listenhub music generate --prompt "..." [--style "..."] [--title "..."] [--instrumental] --json
-```
-
-### Cover (from reference audio)
-
-```bash
-listenhub music cover --audio "{path-or-url}" [--prompt "..."] [--style "..."] [--title "..."] [--instrumental] --json
-```
-
-### List tasks
-
-```bash
-listenhub music list --page 1 --page-size 20 [--status pending|generating|uploading|success|failed] --json
-```
-
-### Get task status
-
-```bash
-listenhub music get <taskId> --json
-```
-
 ## Step -1: CLI Auth Check
 
-Follow `shared/cli-authentication.md`:
-
-```bash
-AUTH=$(listenhub auth status --json 2>/dev/null)
-AUTHED=$(echo "$AUTH" | jq -r '.authenticated // false')
-```
-
-- If `listenhub` command is not found: tell the user to install it (`npm install -g @marswave/listenhub-cli`). Stop here.
-- If `.authenticated` is `false`: tell the user to run `listenhub auth login`. Wait for completion, then re-check.
-- If `.authenticated` is `true`: proceed silently.
+Follow `shared/cli-authentication.md`. If the CLI is not installed or the user is not logged in, stop immediately and guide them through setup.
 
 ## Step 0: Config Setup
 
@@ -122,7 +87,7 @@ Then ask:
 2. **Language** (optional): "默认语言？"
    - "中文 (zh)"
    - "English (en)"
-   - "每次手动选择" -> keep `null`
+   - "每次手动选择" → keep `null`
 
 After collecting answers, save immediately:
 ```bash
@@ -177,7 +142,7 @@ Accept a local file path or URL. This maps to `--audio`.
 
 If validation fails, inform the user and re-ask.
 
-Optionally, the user may also provide a prompt to guide the cover style. If not provided in this step, it will be asked in Step 3.
+Optionally, the user may also provide a prompt to guide the cover style.
 
 ### Step 3: Style (optional)
 
@@ -215,7 +180,7 @@ Summarize all choices:
 准备生成音乐：
 
   模式：原创 (Generate)
-  描述：{prompt, first 80 chars}...
+  描述：{prompt}
   风格：{style / 自动}
   标题：{title / 自动}
   人声：{带人声 / 纯音乐}
@@ -228,7 +193,7 @@ Summarize all choices:
 准备生成音乐：
 
   模式：翻唱 (Cover)
-  参考音频：{audio path or URL}
+  参考音频：{path-or-url}
   描述：{prompt / 无}
   风格：{style / 自动}
   标题：{title / 自动}
@@ -237,140 +202,86 @@ Summarize all choices:
   确认？
 ```
 
-Wait for explicit confirmation before proceeding.
+Wait for explicit confirmation before running any CLI command.
 
 ## Workflow
 
-### Generate Mode
+1. **Submit (background)**: Run the CLI command with `run_in_background: true` and `timeout: 660000`:
 
-1. **Submit (foreground)** with `--no-wait` to get the task ID:
-
+   **Generate mode:**
    ```bash
-   RESULT=$(listenhub music generate \
+   listenhub music generate \
      --prompt "{prompt}" \
-     ${STYLE:+--style "$STYLE"} \
-     ${TITLE:+--title "$TITLE"} \
-     ${INSTRUMENTAL:+--instrumental} \
-     --no-wait --json 2>/tmp/lh-music-err)
-   EXIT_CODE=$?
-
-   if [ $EXIT_CODE -ne 0 ]; then
-     ERROR=$(cat /tmp/lh-music-err)
-     echo "Error: $ERROR"
-     rm -f /tmp/lh-music-err
-     exit $EXIT_CODE
-   fi
-   rm -f /tmp/lh-music-err
-
-   TASK_ID=$(echo "$RESULT" | jq -r '.id')
-   echo "Submitted: $TASK_ID"
+     --style "{style}" \
+     --title "{title}" \
+     --instrumental \
+     --json
    ```
 
-2. Tell the user the task is submitted.
-
-3. **Poll (background)**: Run with `run_in_background: true` and `timeout: 660000`:
-
+   **Cover mode:**
    ```bash
-   TASK_ID="<id-from-step-1>"
-   for i in $(seq 1 60); do
-     RESULT=$(listenhub music get "$TASK_ID" --json 2>/dev/null)
-     STATUS=$(echo "$RESULT" | jq -r '.status // "pending"')
-
-     case "$STATUS" in
-       success|completed) echo "$RESULT"; exit 0 ;;
-       failed) echo "FAILED: $RESULT" >&2; exit 1 ;;
-       *) sleep 10 ;;
-     esac
-   done
-   echo "TIMEOUT" >&2; exit 2
-   ```
-
-4. When notified of completion, **present the result** (see Result Presentation below).
-
-### Cover Mode
-
-1. **Submit (foreground)** with `--no-wait`:
-
-   ```bash
-   RESULT=$(listenhub music cover \
+   listenhub music cover \
      --audio "{path-or-url}" \
-     ${PROMPT:+--prompt "$PROMPT"} \
-     ${STYLE:+--style "$STYLE"} \
-     ${TITLE:+--title "$TITLE"} \
-     ${INSTRUMENTAL:+--instrumental} \
-     --no-wait --json 2>/tmp/lh-music-err)
-   EXIT_CODE=$?
-
-   if [ $EXIT_CODE -ne 0 ]; then
-     ERROR=$(cat /tmp/lh-music-err)
-     echo "Error: $ERROR"
-     rm -f /tmp/lh-music-err
-     exit $EXIT_CODE
-   fi
-   rm -f /tmp/lh-music-err
-
-   TASK_ID=$(echo "$RESULT" | jq -r '.id')
-   echo "Submitted: $TASK_ID"
+     --prompt "{prompt}" \
+     --style "{style}" \
+     --title "{title}" \
+     --instrumental \
+     --json
    ```
 
-2. Tell the user the task is submitted.
+   Flag notes:
+   - `--prompt` — text description of the music (required for generate, optional for cover)
+   - `--audio` — reference audio file path or URL (cover mode only, required)
+   - `--style` — optional style/genre hint; omit if not provided
+   - `--title` — optional track title; omit if not provided
+   - `--instrumental` — add this flag for instrumental-only (no vocals); omit if not selected
+   - Omit `--prompt` in cover mode if not provided
 
-3. **Poll (background)**: Same polling loop as Generate mode, with `run_in_background: true` and `timeout: 660000`.
+   The CLI handles polling internally. Music generation takes up to 10 minutes.
 
-4. When notified of completion, **present the result**.
+2. Tell the user the task is submitted and that they will be notified when it finishes.
 
-## Result Presentation
+3. When notified of completion, **present the result**:
 
-Read `OUTPUT_MODE` from config:
+   Parse the CLI JSON output for key fields:
+   ```bash
+   AUDIO_URL=$(echo "$RESULT" | jq -r '.audioUrl')
+   TITLE=$(echo "$RESULT" | jq -r '.title // "Untitled"')
+   DURATION=$(echo "$RESULT" | jq -r '.duration // empty')
+   CREDITS=$(echo "$RESULT" | jq -r '.credits // empty')
+   ```
 
-```bash
-OUTPUT_MODE=$(echo "$CONFIG" | jq -r '.outputMode // "download"')
-```
+   Read `OUTPUT_MODE` from config. Follow `shared/output-mode.md` for behavior.
 
-Parse the completed result:
+   **`inline` or `both`**: Display audio URL as a clickable link.
 
-```bash
-AUDIO_URL=$(echo "$RESULT" | jq -r '.audioUrl')
-TITLE=$(echo "$RESULT" | jq -r '.title // "Untitled"')
-DURATION=$(echo "$RESULT" | jq -r '.duration // 0')
-CREDITS=$(echo "$RESULT" | jq -r '.credits // 0')
-```
+   ```
+   音乐已生成！
 
-### `inline` or `both`
+   标题：{title}
+   在线收听：{audioUrl}
+   时长：{duration}s
+   消耗积分：{credits}
+   ```
 
-Display the audio URL as a clickable link:
+   **`download` or `both`**: Also download the file. Generate a slug from the title following `shared/config-pattern.md` § Artifact Naming.
+   ```bash
+   SLUG="{slug}"  # e.g. "summer-breeze"
+   NAME="${SLUG}.mp3"
+   # Dedup: if file exists, append -2, -3, etc.
+   BASE="${NAME%.*}"; EXT="${NAME##*.}"; i=2
+   while [ -e "$NAME" ]; do NAME="${BASE}-${i}.${EXT}"; i=$((i+1)); done
+   curl -sS -o "$NAME" "{audioUrl}"
+   ```
+   Present:
+   ```
+   已保存到当前目录：
+     {NAME}
+   ```
 
-```
-音乐已生成！
+### After Successful Generation
 
-标题：{title}
-在线收听：{audioUrl}
-时长：{duration}s
-消耗积分：{credits}
-```
-
-### `download` or `both`
-
-Generate a slug from the title following `shared/config-pattern.md` § Artifact Naming.
-
-```bash
-SLUG="{title-slug}"  # e.g. "summer-breeze", "夜空中最亮的星"
-NAME="${SLUG}.mp3"
-# Dedup: if file exists, append -2, -3, etc.
-BASE="${NAME%.*}"; EXT="${NAME##*.}"; i=2
-while [ -e "$NAME" ]; do NAME="${BASE}-${i}.${EXT}"; i=$((i+1)); done
-curl -sS -o "$NAME" "{audioUrl}"
-```
-
-Present:
-```
-已保存到当前目录：
-  {NAME}
-```
-
-## Updating Config
-
-After successful generation, merge the language used this session into config if the user explicitly specified one:
+Update config with the language used this session if the user explicitly specified one:
 
 ```bash
 if [ -n "$LANGUAGE" ]; then
@@ -379,7 +290,10 @@ if [ -n "$LANGUAGE" ]; then
 fi
 ```
 
-## API Reference
+**Estimated times**:
+- Music generation: 5-10 minutes
+
+## Resources
 
 - CLI authentication: `shared/cli-authentication.md`
 - CLI patterns: `shared/cli-patterns.md`
@@ -389,7 +303,7 @@ fi
 ## Composability
 
 - **Invokes**: nothing
-- **Invoked by**: nothing (standalone)
+- **Invoked by**: content-planner (Phase 3)
 
 ## Examples
 
@@ -401,10 +315,15 @@ fi
 2. Read config (first run: create defaults with `outputMode: "download"`)
 3. Infer: mode = generate, prompt = "夏天海边的歌"
 4. Ask: style? title? instrumental?
-5. Confirm summary -> user confirms
-6. Submit `listenhub music generate --prompt "关于夏天海边的歌" --no-wait --json`
-7. Poll in background
-8. On completion: download `夏天海边.mp3` to cwd
+5. Confirm summary → user confirms
+
+```bash
+listenhub music generate \
+  --prompt "关于夏天海边的歌" \
+  --json
+```
+
+Wait for CLI to return result, then download `{slug}.mp3` to cwd.
 
 **Cover from file:**
 
@@ -414,19 +333,32 @@ fi
 2. Validate: `demo.mp3` exists, is a supported format, under 20 MB
 3. Infer: style = "jazz" from user input
 4. Ask: title? instrumental?
-5. Confirm summary -> user confirms
-6. Submit `listenhub music cover --audio "demo.mp3" --style "jazz" --no-wait --json`
-7. Poll in background
-8. On completion: download `demo-cover.mp3` to cwd
+5. Confirm summary → user confirms
+
+```bash
+listenhub music cover \
+  --audio "demo.mp3" \
+  --style "jazz" \
+  --json
+```
+
+Wait for CLI to return result, then download `{slug}.mp3` to cwd.
 
 **Generate instrumental:**
 
 > "Create an instrumental electronic track for a game intro"
 
 1. Detect: generate mode ("Create ... track")
-2. Infer: style = "electronic", instrumental = yes, from user input
+2. Infer: style = "electronic", instrumental = yes
 3. Ask: title?
-4. Confirm summary -> user confirms
-5. Submit with `--style "electronic" --instrumental`
-6. Poll in background
-7. On completion: download `game-intro.mp3` to cwd
+4. Confirm summary → user confirms
+
+```bash
+listenhub music generate \
+  --prompt "instrumental electronic track for a game intro" \
+  --style "electronic" \
+  --instrumental \
+  --json
+```
+
+Wait for CLI to return result, then download `{slug}.mp3` to cwd.
