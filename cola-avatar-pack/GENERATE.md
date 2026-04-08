@@ -6,24 +6,30 @@
 
 ## 严格输出规则
 
-1. **生成 4 个表情 GIF（开心、难过、生气、思考）+ 3 个梗图贴纸（困惑、烦躁、裂开）。**
+1. **正常模式：生成 4 个表情 GIF（开心、难过、生气、思考）+ 3 个梗图贴纸（困惑、烦躁、裂开）。降级模式：生成 4 个表情 PNG（静态，无动画）+ 3 个梗图 PNG。**
 2. **不要在对话中内嵌/显示生成的图片。** 只通过 send_file 发送。
 3. **不要输出任何过程性内容：** 不要输出步骤标记、环境检查结果、prompt 内容、"正在生成…"之类的描述。不要输出名字/生日/性格/五行的文字信息。
-4. **使用本文件中指定的 Python 脚本生成 profile card。** 脚本处理了去背景、五行配色、Retina 渲染和双尺寸输出，自行拼凑会丢失这些处理。
+4. **使用本文件中指定的 Python 脚本生成 profile card。** 脚本处理了去背景、五行配色、Retina 渲染和双尺寸输出，自行拼凑会丢失这些处理。**降级模式下跳过此步，无 profile card。**
 5. **整个生成过程中，用户只应该看到：**
-   - 生成基础形象后：send_file 发送 profile_card.png（无 caption）
+   - 生成基础形象后：**正常模式** send_file 发送 profile_card.png（无 caption）；**降级模式** send_file 发送 base_image.png（无 caption）
    - 然后一句话：
      - 中文："这是{名字}的自画像～ 要不要我继续生成表情和梗图贴纸？生成后我会在对话中使用它们来表达情绪哦"
      - English: "Here's {name}'s self-portrait~ Want me to generate emoji and meme stickers? I'll use them to express myself in our chats"
-   - 用户确认后，**分两组发送**（无 caption，发不带 @2x 的 128px 版本）：
-     1. 先发 4 个表情 GIF：happy → sad → angry → thinking
+   - 用户确认后，**分两组发送**（无 caption）：
+     - **正常模式**：发不带 @2x 的 128px 版本
+     - **降级模式**：发 listenhub 原图 PNG
+     1. 先发 4 个表情：happy → sad → angry → thinking（正常模式 .gif，降级模式 .png）
      2. 一句过渡：
         - 中文："还有几张梗图贴纸～"
         - English: "And some meme stickers~"
      3. 再发 3 个梗图 PNG：confused → annoyed → cracked
    - 最后一句话：
-     - 中文："表情包生成完毕！以后聊天时我会用这些表情来表达情绪～ 想发到微信或 X 可以右键保存 @2x 高清版哦"
-     - English: "Sticker pack done! I'll use these to express myself in our chats~ Right-click to save the @2x HD version for sharing"
+     - **正常模式：**
+       - 中文："表情包生成完毕！以后聊天时我会用这些表情来表达情绪～ 想发到微信或 X 可以右键保存 @2x 高清版哦"
+       - English: "Sticker pack done! I'll use these to express myself in our chats~ Right-click to save the @2x HD version for sharing"
+     - **降级模式：**
+       - 中文："表情图生成完毕！以后聊天时我会用这些表情来表达情绪～"
+       - English: "Expression images done! I'll use these to express myself in our chats~"
 6. **send_file 时永远不带 caption。**
 
 ## 持久化路径
@@ -53,17 +59,79 @@
 
 ## 前置条件
 
-```bash
-python3 -c "from PIL import Image; print('Pillow OK')"
-```
-如果不可用：`pip3 install Pillow`
+按顺序检查，每步验证通过后再继续下一步。
+
+### 1. ColaOS 环境
 
 ```bash
-rembg --help >/dev/null 2>&1 && echo "rembg OK" || echo "rembg MISSING"
+test -d ~/.cola && echo "COLA_OK" || echo "COLA_MISSING"
 ```
-如果不可用：`pip3 install rembg[cli]`。rembg 用于去除生图背景，process_avatar.py 在检测到输入图无透明通道时会自动调用。
+
+如果 `COLA_MISSING`：停止。告知用户：
+- 中文："这个技能仅适用于 ColaOS 平台，当前环境不支持。"
+- English: "This skill requires ColaOS and is not available in the current environment."
+
+### 2. Python 3
+
+```bash
+python3 --version >/dev/null 2>&1 && echo "python3 OK" || echo "python3 MISSING"
+```
+
+如果 `python3 MISSING`：尝试安装。可检查的路径和方式包括但不限于：
+- 系统自带：`/usr/bin/python3 --version`
+- Homebrew：`brew install python3`
+- 其他适合当前系统的方式
+
+安装后验证：`python3 --version`。如果仍然失败，标记 `DEGRADED_MODE=true`，继续流程（后续 Phase 4/6 走降级路径）。
+
+### 3. Pillow
+
+```bash
+python3 -c "from PIL import Image; print('Pillow OK')" 2>/dev/null || echo "Pillow MISSING"
+```
+
+如果 `Pillow MISSING`（且 python3 可用）：尝试安装 Pillow。安装后验证。如果仍然失败，标记 `DEGRADED_MODE=true`。
+
+### 4. rembg（可选依赖，效果显著优于 flood-fill）
+
+```bash
+python3 -c "import rembg; print('rembg OK')" 2>/dev/null || echo "rembg MISSING"
+```
+
+如果 `rembg MISSING`：尝试安装 rembg。安装后验证。**安装失败不影响流程**——脚本会自动回退到 flood-fill 去背景。
+
+### 5. 定位 SKILL_DIR
 
 找到本 skill 目录：优先搜索 `~/.cola/skills/cola-avatar-pack/SKILL.md`，找不到再搜 `~/.claude/skills/cola-avatar-pack/SKILL.md`。取其父目录为 SKILL_DIR。
+
+### 降级模式说明
+
+当 `DEGRADED_MODE=true` 时（python3 或 Pillow 不可用），Phase 4 和 Phase 6 跳过 `process_avatar.py`，直接使用 listenhub 原图：
+
+**输出差异：**
+- 基础形象：listenhub 原图直接保存，可能带背景，无双尺寸，无水印
+- Profile card：无法生成，直接展示 base image 原图
+- 表情：静态 PNG 替代 GIF，无动画效果
+- 梗图：只有 AI 生成的姿势图，无裂缝/问号/涂鸦叠加
+
+**话术调整：** 降级模式下不提"GIF"和"动画"，改用"表情图"。
+
+**avatar.json 字段：** 降级模式下 files 中表情写 `.png` 而非 `.gif`，不写 `@2x` 字段。示例：
+```json
+{
+  "degraded": true,
+  "files": {
+    "avatar": "base_image.png",
+    "happy": "happy.png",
+    "sad": "sad.png",
+    "angry": "angry.png",
+    "thinking": "thinking.png",
+    "meme_confused": "meme_confused.png",
+    "meme_annoyed": "meme_annoyed.png",
+    "meme_cracked": "meme_cracked.png"
+  }
+}
+```
 
 ---
 
@@ -93,6 +161,8 @@ rembg --help >/dev/null 2>&1 && echo "rembg OK" || echo "rembg MISSING"
 ```bash
 python3 -c "import hashlib,sys; h=int(hashlib.md5(sys.argv[1].encode()).hexdigest(),16)%100; print('legendary' if h<2 else 'rare' if h<12 else 'common')" "{cola_name}"
 ```
+
+如果命令失败（python3 不可用，即降级模式），默认 `rarity = "common"`。升级到正常模式后重新生成会用 python3 重新计算。
 
 | 输出 | 稀有度 | 概率 | 物种池 |
 |------|--------|------|--------|
@@ -240,6 +310,8 @@ ratio: 1:1
 
 **`--base` = `base_image_path`（Phase 3 中 listenhub 返回的 URL）。** 原图没有水印，profile card 不应有水印（底部已有 ColaOS 品牌标识）。
 
+#### 正常模式（python3 + Pillow 可用）
+
 ```bash
 python3 SKILL_DIR/scripts/process_avatar.py \
   --base "{base_image_path}" \
@@ -253,6 +325,22 @@ python3 SKILL_DIR/scripts/process_avatar.py \
 ```
 
 用 send_file 发送 profile_card.png（无 caption）。
+
+#### 降级模式（DEGRADED_MODE=true）
+
+跳过 process_avatar.py。直接下载 listenhub 原图保存：
+```bash
+mkdir -p ~/.cola/avatar
+curl -sL "{base_image_path}" -o ~/.cola/avatar/base_image.png
+test -s ~/.cola/avatar/base_image.png || { echo "DOWNLOAD_FAILED: base_image"; curl -sL "{base_image_path}" -o ~/.cola/avatar/base_image.png; }
+test -s ~/.cola/avatar/base_image.png || { echo "DOWNLOAD_FAILED_RETRY: base_image — 告知用户下载失败"; exit 1; }
+cp ~/.cola/avatar/base_image.png ~/.cola/avatar/base_image_original.png
+```
+
+用 send_file 发送 base_image.png（无 caption）作为 profile card 的替代展示。
+
+#### 两种模式共同步骤
+
 然后按「严格输出规则 #5」中的确认话术发送（按 Cola 语言）。
 
 如果稀有度不是 common，紧接着加一句：
@@ -271,6 +359,8 @@ python3 SKILL_DIR/scripts/process_avatar.py \
 ```
 
 **立即写入初始 avatar.json**（不等表情生成，确保 Phase 5-7 有参数可读）：
+
+**正常模式：**
 ```json
 {
   "schema_version": 1,
@@ -292,11 +382,39 @@ python3 SKILL_DIR/scripts/process_avatar.py \
 }
 ```
 
+**降级模式：**
+```json
+{
+  "schema_version": 1,
+  "degraded": true,
+  "name": "{cola_name}",
+  "created_at": "{YYYY-MM-DD}",
+  "base_prompt": "{base_prompt}",
+  "negative_prompt": "{negative_prompt}",
+  "wuxing": "{wuxing}",
+  "rarity": "{rarity}",
+  "locale": "{locale}",
+  "line1": "{profile_tagline}",
+  "line2": "{profile_tagline_2}",
+  "files": {
+    "avatar": "base_image.png"
+  }
+}
+```
+
 **等待用户确认**。用户说"换一个" → 重新生成。确认 → Phase 5。
 
 ### Phase 5：生成 3 个表情 + 3 个梗图（共 6 次 listenhub 调用）
 
 #### 5.0 参数校验
+
+**前置检查：基础形象是否存在。** Phase 5-7 依赖 base_image 作为 reference_images 和 happy 表情来源。如果从未生成过自画像，必须先走完整流程。
+
+```bash
+test -f ~/.cola/avatar/base_image_original.png && test -f ~/.cola/avatar/base_image.png && echo "BASE_OK" || echo "BASE_MISSING"
+```
+
+如果 `BASE_MISSING`：**停止 Phase 5，从 Phase 1 开始执行完整生成流程。** 不需要提示用户——直接进入 Phase 1→2→3→4→等用户确认→5→6→7。
 
 Phase 5-7 依赖以下参数。**如果是从 Phase 4 连续执行的，这些参数已在内存中，直接复用。** 如果是单独执行 Phase 5-7（如补生表情），则必须按以下优先级获取每个参数：
 
@@ -367,6 +485,8 @@ happy 表情已由 Phase 3 基础形象生成（base_image 即 happy），此处
 
 ### Phase 6：处理图片 + 生成 GIF + 梗图
 
+#### 正常模式（python3 + Pillow 可用）
+
 ```bash
 python3 SKILL_DIR/scripts/process_avatar.py \
   --base "{base_image_path}" \
@@ -385,13 +505,37 @@ python3 SKILL_DIR/scripts/process_avatar.py \
   --locale "{locale}"
 ```
 
+#### 降级模式（DEGRADED_MODE=true）
+
+跳过 process_avatar.py。直接下载 listenhub 原图保存为静态 PNG：
+```bash
+for pair in \
+  "{sad_image_path} sad.png" \
+  "{angry_image_path} angry.png" \
+  "{thinking_image_path} thinking.png" \
+  "{confused_image_path} meme_confused.png" \
+  "{annoyed_image_path} meme_annoyed.png" \
+  "{cracked_image_path} meme_cracked.png"; do
+  url="${pair%% *}"; file="${pair##* }"
+  curl -sL "$url" -o ~/.cola/avatar/"$file"
+  test -s ~/.cola/avatar/"$file" || { echo "RETRY: $file"; curl -sL "$url" -o ~/.cola/avatar/"$file"; }
+  test -s ~/.cola/avatar/"$file" || echo "FAILED: $file"
+done
+cp ~/.cola/avatar/base_image.png ~/.cola/avatar/happy.png
+```
+
+如果任何文件 FAILED，告知用户哪些表情下载失败，已成功的部分正常使用。
+
+注意：降级模式下 happy 复用 base_image.png（和正常模式一致：base_image 即 happy），表情为静态 PNG 无 GIF 动画，梗图无裂缝/问号/涂鸦叠加。
+
 ### Phase 7：持久化 + 展示
 
 1. **更新** `~/.cola/avatar/avatar.json`（Phase 4 已写入初始版本，此处补全 files 列表）：
    - `process_avatar.py` 只负责产出图片文件，不负责读写 `avatar.json`；该 JSON 由外层流程维护
    - 读取现有 avatar.json
-   - 将表情和梗图文件名追加到 `files` 字段中
-   - 最终 files 应包含：
+   - **重建 `files` 字段：以下方模板为参考，但仅写入实际存在的文件。** 写入前对每个文件执行 `test -f ~/.cola/avatar/{filename}`，不存在则不写入该键。这确保 avatar.json 作为 source of truth 不会声明不存在的文件。
+
+   **正常模式 files：**
 ```json
 {
   "files": {
@@ -417,16 +561,42 @@ python3 SKILL_DIR/scripts/process_avatar.py \
 }
 ```
 
-2. **分两组发送**（无 caption，发不带 @2x 的 128px 版本）：
-   - 先 send_file 逐个发送 4 个表情 GIF：happy.gif → sad.gif → angry.gif → thinking.gif
+   **降级模式 files：**
+```json
+{
+  "degraded": true,
+  "files": {
+    "avatar": "base_image.png",
+    "happy": "happy.png",
+    "sad": "sad.png",
+    "angry": "angry.png",
+    "thinking": "thinking.png",
+    "meme_confused": "meme_confused.png",
+    "meme_annoyed": "meme_annoyed.png",
+    "meme_cracked": "meme_cracked.png"
+  }
+}
+```
+
+2. **分两组发送**（无 caption）：
+   - 正常模式：发不带 @2x 的 128px 版本（.gif）
+   - 降级模式：发 listenhub 原图（.png）
+   - 先 send_file 逐个发送 4 个表情：happy → sad → angry → thinking
    - 一句过渡（按 Cola 语言）：
      - 中文："还有几张梗图贴纸～"
      - English: "And some meme stickers~"
-   - 再 send_file 逐个发送 3 个梗图 PNG：meme_confused.png → meme_annoyed.png → meme_cracked.png
+   - 再 send_file 逐个发送 3 个梗图：meme_confused → meme_annoyed → meme_cracked
 
-3. 按「严格输出规则 #5」中的完成话术发送（按 Cola 语言）。
+3. 完成话术（按 Cola 语言）：
+   - **正常模式**：按「严格输出规则 #5」中的完成话术发送。
+   - **降级模式**：
+     - 中文："表情图生成完毕！以后聊天时我会用这些表情来表达情绪～"
+     - English: "Expression images done! I'll use these to express myself in our chats~"
+     - （不提 @2x 高清版和右键保存，因为降级模式无双尺寸输出）
 
-4. 写入 memory：`Avatar 表情 GIF 和梗图贴纸已生成，存储在 ~/.cola/avatar/。使用规则见 SKILL.md「主动使用表情」。`
+4. 写入 memory：
+   - 正常模式：`Avatar 表情 GIF 和梗图贴纸已生成，存储在 ~/.cola/avatar/。使用规则见 SKILL.md「主动使用表情」。`
+   - 降级模式：`Avatar 表情图（静态 PNG，降级模式）已生成，存储在 ~/.cola/avatar/。使用规则见 SKILL.md「主动使用表情」。Python 环境修复后可重新生成以获得 GIF 动画和 profile card。`
 
 ---
 
@@ -465,6 +635,22 @@ rm -rf ~/.cola/avatar/*
 从 Phase 2 重走。
 
 ### 3. 重新生成单个表情
+
+#### 降级模式
+
+跳过 process_avatar.py。重新调 listenhub 生图后直接覆盖原文件。
+
+1. 用 listenhub 重新生成指定表情（使用 Phase 3 模板 + 对应 prompt 后缀 + `reference_images: [base_image_url]`）
+2. 下载覆盖（示例：重新生成 sad）：
+```bash
+curl -sL "{new_sad_image_path}" -o ~/.cola/avatar/sad.png
+test -s ~/.cola/avatar/sad.png || { echo "RETRY"; curl -sL "{new_sad_image_path}" -o ~/.cola/avatar/sad.png; }
+test -s ~/.cola/avatar/sad.png || echo "FAILED"
+```
+3. 更新 avatar.json：读取现有 JSON，**仅替换对应键值**（如 `"sad": "sad.png"`），其余字段不动。降级模式下文件名始终为 `{emotion}.png`，无需改扩展名。
+4. 用 send_file 发送新文件（无 caption）。
+
+#### 正常模式
 
 1. 用 listenhub 重新生成指定表情（使用 Phase 3 模板 + 对应 prompt 后缀 + `reference_images: [base_image_url]`）
 2. 调用脚本只处理该表情（脚本检测到 `base_image_original.png` 存在时会自动跳过 base image 重新处理，profile card 也会优先使用原图渲染）：

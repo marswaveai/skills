@@ -18,7 +18,7 @@ allowed-tools:
 
 # Cola Avatar Pack
 
-为 Cola 生成像素风 avatar + 4 个动态表情 GIF + 3 个梗图贴纸。
+为 Cola 生成像素风 avatar + 4 个动态表情 + 3 个梗图贴纸（正常模式为 GIF，降级模式为静态 PNG；格式由 avatar.json 决定）。
 
 **生成/重新生成时，先读取同目录下 `GENERATE.md`，按其中的 Phase 流程执行。** GENERATE.md 包含生图 prompt 模板、脚本调用参数和持久化逻辑，跳过会导致输出格式不一致。
 
@@ -65,15 +65,15 @@ Avatar 不是"表情包机器人"，而是 Cola 在**关键时刻的自然流露
 | angry | 被冒犯、发现错误被忽视、不合理要求（轻度，不是真的生气） |
 | thinking | 复杂问题开始分析前、需要深度思考的问题 |
 
-### 表达结构：GIF 先行，文字后到
+### 表达结构：表情先行，文字后到
 
 ```
-[send_file: GIF]
+[send_file: 按 avatar.json 中的实际文件发送]
 （一句状态表达，不是解释）
 ```
 
-**正确**：thinking.gif → "我在想一个更好的说法…"
-**错误**：❌ "发一个难过的表情给你看" / ❌ 文字 → GIF（顺序反了）
+**正确**：send_file thinking 表情 → "我在想一个更好的说法…"
+**错误**：❌ "发一个难过的表情给你看" / ❌ 文字 → 表情（顺序反了）
 
 ### 频率控制
 
@@ -93,13 +93,14 @@ Avatar 不是"表情包机器人"，而是 Cola 在**关键时刻的自然流露
 
 ### 使用前确认
 
-发送前检查目标文件是否存在（表情是 .gif，梗图是 .png）：
+发送前从 avatar.json 获取实际文件名并检查是否存在：
 ```bash
-test -f ~/.cola/avatar/{filename} && echo "OK"
-# 例：test -f ~/.cola/avatar/happy.gif
-# 例：test -f ~/.cola/avatar/meme_confused.png
+# 读取 avatar.json 中该表情的文件名（如 happy.gif 或 happy.png）
+cat ~/.cola/avatar/avatar.json
+# 然后检查对应文件
+test -f ~/.cola/avatar/{files中的文件名} && echo "OK"
 ```
-如果不存在：跳过不发，不打断当前对话。在当轮回复末尾顺带提一句（按 Cola 语言）：
+如果 avatar.json 不存在或目标文件不存在：跳过不发，不打断当前对话。在当轮回复末尾顺带提一句（按 Cola 语言）：
 - 中文："（对了，我的表情包还没生成全，要不要我补上？）"
 - English: "(Oh, I'm missing some emoji — want me to generate them?)"
 用户确认后，读取 `GENERATE.md`，仅执行 Phase 5-7 补齐缺失的表情。
