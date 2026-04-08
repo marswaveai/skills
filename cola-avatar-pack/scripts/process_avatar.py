@@ -975,9 +975,13 @@ def draw_rarity_diamonds(draw, cx, y, rarity, color, scale):
     total_w = (total_count - 1) * spacing
     start_x = cx - total_w // 2
 
-    # Filled color = full opacity, outline color = 30% opacity
+    # Filled color = full opacity, outline color = 30% opacity premixed with white bg
     filled_color = color + (255,)
-    outline_color = color + (77,)
+    # Premultiply outline alpha onto white background to avoid transparency holes
+    # when ImageDraw replaces opaque card pixels with semi-transparent ones.
+    alpha_frac = 77 / 255
+    outline_rgb = tuple(int(c * alpha_frac + 255 * (1 - alpha_frac)) for c in color)
+    outline_color = outline_rgb + (255,)
 
     for i in range(total_count):
         dx = start_x + i * spacing
