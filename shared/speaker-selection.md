@@ -22,13 +22,15 @@ When no user preference is saved, use these built-in defaults. This eliminates t
 
 ## Fetching Speakers
 
-Always call the speakers API before presenting options (when user requests to change voice):
+Always query the speaker list before presenting options (when user requests to change voice):
 
-```
-GET /speakers/list?language={language}
+```bash
+listenhub speakers list --lang {language} --json
 ```
 
-Never hardcode speaker IDs in API calls — use the defaults above only as fallback when no user preference exists.
+See `shared/cli-speakers.md` for full query patterns.
+
+Never hardcode speaker IDs — use the defaults above only as fallback when no user preference exists.
 
 ## Speaker Properties
 

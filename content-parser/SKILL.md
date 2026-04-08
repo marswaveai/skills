@@ -31,9 +31,9 @@ Extract and normalize content from URLs across supported platforms. Returns stru
 
 ## Hard Constraints
 
-- No shell scripts. Construct curl commands from the API reference files listed in Resources
-- Always read `shared/authentication.md` for API key and headers
-- Follow `shared/common-patterns.md` for polling, errors, and interaction patterns
+- No shell scripts. Construct curl commands from the API Reference (Inlined) section below
+- See § API Reference (Inlined) below for API key and headers
+- See § API Reference (Inlined) below for polling, errors, and interaction patterns
 - URL must be a valid HTTP(S) URL
 - Always read config following `shared/config-pattern.md` before any interaction
 - Never save files to `~/Downloads/` or `.listenhub/` — save to the current working directory
@@ -200,13 +200,229 @@ Wait for explicit confirmation before calling the API.
 
 **Estimated time**: 10-30 seconds depending on content size and platform.
 
-## API Reference
+## API Reference (Inlined)
 
-- Content extract: `shared/api-content-extract.md`
-- Supported platforms: `references/supported-platforms.md`
-- Polling: `shared/common-patterns.md` § Async Polling
-- Error handling: `shared/common-patterns.md` § Error Handling
-- Config pattern: `shared/config-pattern.md`
+### Authentication
+
+**Environment variable**: `LISTENHUB_API_KEY` (format: `lh_sk_...`)
+
+Store in `~/.zshrc` (macOS) or `~/.bashrc` (Linux):
+
+```bash
+export LISTENHUB_API_KEY="lh_sk_..."
+```
+
+**How to obtain**: Visit https://listenhub.ai/settings/api-keys (Pro plan required).
+
+**Base URL**: `https://api.marswave.ai/openapi/v1`
+
+**Required headers** (every request):
+
+```
+Authorization: Bearer $LISTENHUB_API_KEY
+Content-Type: application/json
+X-Source: skills
+```
+
+The `X-Source: skills` header identifies requests as coming from Claude Code skills (CLI tool).
+
+**curl template:**
+
+```bash
+curl -sS -X POST "https://api.marswave.ai/openapi/v1/{endpoint}" \
+  -H "Authorization: Bearer $LISTENHUB_API_KEY" \
+  -H "Content-Type: application/json" \
+  -H "X-Source: skills" \
+  -d '{ ... }'
+```
+
+For GET requests, omit `-d` and change `-X POST` to `-X GET`.
+
+**Security notes:**
+- Never log or display full API keys in output
+- API keys are transmitted via HTTPS only
+- Do not pass sensitive or confidential information as content input — it is sent to external APIs for processing
+
+---
+
+### POST /v1/content/extract
+
+Create a content extraction task for a URL. Returns a `taskId` for polling.
+
+**Request body:**
+
+| Field | Required | Type | Description |
+|-------|----------|------|-------------|
+| source | **Yes** | object | Source to extract from |
+| source.type | **Yes** | string | Must be `"url"` |
+| source.uri | **Yes** | string | Valid HTTP(S) URL to extract content from |
+| options | No | object | Extraction options |
+| options.summarize | No | boolean | Whether to generate a summary |
+| options.maxLength | No | integer | Maximum content length |
+| options.twitter | No | object | Twitter/X specific options |
+| options.twitter.count | No | integer | Number of tweets to fetch (1-100, default 20) |
+
+**Response:**
+
+```json
+{
+  "code": 0,
+  "message": "success",
+  "data": {
+    "taskId": "69a7dac700cf95938f86d9bb"
+  }
+}
+```
+
+**Error codes:**
+
+| Code | Meaning |
+|------|---------|
+| 29003 | Validation error (`"source.uri" is required`, `"source.uri" must be a valid uri`) |
+| 21007 | Invalid API key |
+
+---
+
+### GET /v1/content/extract/{taskId}
+
+Get extraction task status and results.
+
+**Path params:**
+
+| Param | Type | Description |
+|-------|------|-------------|
+| taskId | string | 24-char hex task ID |
+
+**Response states:**
+
+- **processing** — Task is still running
+- **completed** — Extraction finished, data available
+- **failed** — Extraction failed, check `failCode` and `message`
+
+**Response (processing):**
+
+```json
+{
+  "code": 0,
+  "message": "success",
+  "data": {
+    "taskId": "69a7dac700cf95938f86d9bb",
+    "status": "processing",
+    "createdAt": "2025-04-09T12:00:00Z",
+    "data": null,
+    "credits": 0,
+    "failCode": null,
+    "message": null
+  }
+}
+```
+
+**Response (completed):**
+
+```json
+{
+  "code": 0,
+  "message": "success",
+  "data": {
+    "taskId": "69a7dac700cf95938f86d9bb",
+    "status": "completed",
+    "createdAt": "2025-04-09T12:00:00Z",
+    "data": {
+      "content": "Extracted text content...",
+      "metadata": {
+        "title": "Article Title",
+        "author": "Author Name",
+        "publishedAt": "2025-04-01T08:00:00Z"
+      },
+      "references": [
+        "https://example.com/related-article"
+      ]
+    },
+    "credits": 5,
+    "failCode": null,
+    "message": null
+  }
+}
+```
+
+**Response (failed):**
+
+```json
+{
+  "code": 0,
+  "message": "success",
+  "data": {
+    "taskId": "69a7dac700cf95938f86d9bb",
+    "status": "failed",
+    "createdAt": "2025-04-09T12:00:00Z",
+    "data": null,
+    "credits": 0,
+    "failCode": "EXTRACT_FAILED",
+    "message": "Unable to extract content from the provided URL"
+  }
+}
+```
+
+**Key fields:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| status | string | `processing`, `completed`, or `failed` |
+| data.data.content | string | Extracted text content |
+| data.data.metadata | object | Page metadata (title, author, publishedAt) |
+| data.data.references | array | Referenced URLs (array of strings) |
+| credits | integer | Credits consumed |
+| failCode | string | Error code (null on success) |
+| message | string | Error message (null on success) |
+
+**Error codes:**
+
+| Code | Meaning |
+|------|---------|
+| 29003 | Invalid taskId format |
+| 25002 | Task not found |
+
+---
+
+### Polling Pattern
+
+5-second interval, 60 polls max. Run with `run_in_background: true` and `timeout: 300000`.
+
+**Two-step pattern:**
+
+1. **Submit (foreground)**: POST the creation request, extract `taskId` from the response.
+2. **Poll (background)**: Run the polling loop with `run_in_background: true`. You will be notified automatically when it completes.
+
+The exact polling bash command is already specified in the Workflow section (Step 5).
+
+---
+
+### Error Handling
+
+**HTTP status codes:**
+
+| Code | Meaning | Action |
+|------|---------|--------|
+| 200 | Success | Parse response body |
+| 400 | Bad request | Check parameters |
+| 401 | Invalid API key | Re-check `LISTENHUB_API_KEY` |
+| 402 | Insufficient credits | Inform user to recharge |
+| 403 | Forbidden | No permission for this resource |
+| 429 | Rate limited | Exponential backoff, retry after delay |
+| 500/502/503/504 | Server error | Retry up to 3 times |
+
+**Retry strategy:**
+
+- **429 rate limit**: Wait 15 seconds, then retry (exponential backoff)
+- **5xx server errors**: Retry up to 3 times with 5-second intervals
+- **Network errors**: Retry up to 3 times
+
+**Application error codes:**
+
+| Code | Meaning |
+|------|---------|
+| 21007 | Invalid user API key |
+| 25429 | Rate limited (application-level) |
 
 ## Example
 
