@@ -162,6 +162,8 @@ python3 -c "import rembg; print('rembg OK')" 2>/dev/null || echo "rembg MISSING"
 python3 -c "import hashlib,sys; h=int(hashlib.md5(sys.argv[1].encode()).hexdigest(),16)%100; print('legendary' if h<2 else 'rare' if h<12 else 'common')" "{cola_name}"
 ```
 
+如果命令失败（python3 不可用，即降级模式），默认 `rarity = "common"`。升级到正常模式后重新生成会用 python3 重新计算。
+
 | 输出 | 稀有度 | 概率 | 物种池 |
 |------|--------|------|--------|
 | common | 普通 | 88% | 现实中存在的物种 |
@@ -633,6 +635,22 @@ rm -rf ~/.cola/avatar/*
 从 Phase 2 重走。
 
 ### 3. 重新生成单个表情
+
+#### 降级模式
+
+跳过 process_avatar.py。重新调 listenhub 生图后直接覆盖原文件。
+
+1. 用 listenhub 重新生成指定表情（使用 Phase 3 模板 + 对应 prompt 后缀 + `reference_images: [base_image_url]`）
+2. 下载覆盖（示例：重新生成 sad）：
+```bash
+curl -sL "{new_sad_image_path}" -o ~/.cola/avatar/sad.png
+test -s ~/.cola/avatar/sad.png || { echo "RETRY"; curl -sL "{new_sad_image_path}" -o ~/.cola/avatar/sad.png; }
+test -s ~/.cola/avatar/sad.png || echo "FAILED"
+```
+3. 更新 avatar.json：读取现有 JSON，**仅替换对应键值**（如 `"sad": "sad.png"`），其余字段不动。降级模式下文件名始终为 `{emotion}.png`，无需改扩展名。
+4. 用 send_file 发送新文件（无 caption）。
+
+#### 正常模式
 
 1. 用 listenhub 重新生成指定表情（使用 Phase 3 模板 + 对应 prompt 后缀 + `reference_images: [base_image_url]`）
 2. 调用脚本只处理该表情（脚本检测到 `base_image_original.png` 存在时会自动跳过 base image 重新处理，profile card 也会优先使用原图渲染）：
