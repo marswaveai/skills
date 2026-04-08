@@ -21,4 +21,8 @@ Thumbs.db
 *.tmp
 *.temp
 
+# Python
+__pycache__/
+*.pyc
+
 .worktrees/

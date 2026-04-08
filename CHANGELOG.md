@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.0] - 2026-04-07
+
+### New Skill
+
+**Added:**
+- `cola-avatar-pack/` — Generate Cola pixel-art avatar, profile card, 4 emoji GIFs (happy/sad/angry/thinking) and 3 meme stickers (confused/annoyed/cracked)
+
 ## [1.0.0] - 2026-03-04
 
 ### Architecture Migration (Phase 1)
