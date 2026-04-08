@@ -115,9 +115,12 @@ def remove_background(img):
         pixels = img.load()
 
         def _is_bg_remnant(r, g, b):
-            """Light, neutral pixel — likely background, not character content."""
+            """Neutral pixel — likely background remnant.
+            Threshold avg > 55 catches both light and dark checkerboard squares
+            (light ~150, dark ~70) while avoiding character outlines (avg 20-40).
+            Saturation < 30 prevents eroding colored content."""
             avg = (r + g + b) / 3
-            return avg > 90 and max(r, g, b) - min(r, g, b) < 30
+            return avg > 55 and max(r, g, b) - min(r, g, b) < 30
 
         # Seed: all transparent pixels adjacent to an opaque neutral pixel
         queue = deque()
@@ -159,6 +162,49 @@ def remove_background(img):
         for x, y in to_clear:
             r, g, b, a = pixels[x, y]
             pixels[x, y] = (r, g, b, 0)
+
+        # Stage B: remove small opaque islands disconnected from main character.
+        # These are enclosed background remnants (checkerboard, gap fill) that
+        # flood-fill can't reach because they're surrounded by character pixels.
+        SMALL_ISLAND_MAX_AREA = 64
+        NEUTRAL_SAT_THRESHOLD = 30
+
+        visited_cc = [[False] * h for _ in range(w)]
+        components = []
+        for sy in range(h):
+            for sx in range(w):
+                if visited_cc[sx][sy] or pixels[sx, sy][3] < 128:
+                    continue
+                comp = []
+                cc_q = deque([(sx, sy)])
+                while cc_q:
+                    cx, cy = cc_q.popleft()
+                    if cx < 0 or cx >= w or cy < 0 or cy >= h:
+                        continue
+                    if visited_cc[cx][cy] or pixels[cx, cy][3] < 128:
+                        continue
+                    visited_cc[cx][cy] = True
+                    comp.append((cx, cy))
+                    cc_q.extend([(cx+1,cy),(cx-1,cy),(cx,cy+1),(cx,cy-1)])
+                components.append(comp)
+
+        if components:
+            # Largest component is the character — keep it
+            main_size = max(len(c) for c in components)
+            for comp in components:
+                if len(comp) == main_size:
+                    continue
+                if len(comp) > SMALL_ISLAND_MAX_AREA:
+                    continue
+                # Check if island is neutral (likely background, not character detail)
+                total_sat = 0
+                for cx, cy in comp:
+                    r, g, b, _ = pixels[cx, cy]
+                    total_sat += max(r, g, b) - min(r, g, b)
+                if total_sat / len(comp) < NEUTRAL_SAT_THRESHOLD:
+                    for cx, cy in comp:
+                        r, g, b, _ = pixels[cx, cy]
+                        pixels[cx, cy] = (r, g, b, 0)
 
         return img
 
