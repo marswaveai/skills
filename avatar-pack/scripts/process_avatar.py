@@ -117,7 +117,7 @@ def remove_background(img):
         def _is_bg_remnant(r, g, b):
             """Light, neutral pixel — likely background, not character content."""
             avg = (r + g + b) / 3
-            return avg > 160 and max(r, g, b) - min(r, g, b) < 30
+            return avg > 90 and max(r, g, b) - min(r, g, b) < 30
 
         # Seed: all transparent pixels adjacent to an opaque neutral pixel
         queue = deque()
