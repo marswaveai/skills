@@ -51,6 +51,8 @@ git pull origin main
 | `/content-parser` | "解析链接"、"提取内容" | URL 内容提取 |
 | `/asr` | "转录"、"语音转文字"、"ASR" | 音频文件转文字 |
 | `/creator` | "创作"、"写公众号"、"小红书"、"口播" | 创作者工作流 — 一键生成平台内容包 |
+| `/slides` | "幻灯片"、"slides" | 幻灯片生成 |
+| `/music` | "音乐"、"music" | AI 音乐生成、翻唱 |
 
 ## 支持的输入
 
@@ -60,12 +62,19 @@ git pull origin main
 - 纯文本
 - 图片描述
 - 音频文件
+- 音乐描述
+- 参考音频文件
 
 ## 配置
 
-**ListenHub API Key** — [获取](https://listenhub.ai/zh/settings/api-keys)（Pro 订阅）
+**ListenHub CLI** — 安装并登录：
 
-首次使用时自动配置。
+```bash
+npm install -g @marswave/listenhub-cli
+listenhub auth login
+```
+
+**注意：** `/content-parser` 和 `/creator` 仍需要 [ListenHub API Key](https://listenhub.ai/zh/settings/api-keys) 用于内容提取。
 
 ## 目录结构
 
@@ -78,7 +87,10 @@ git pull origin main
 ├── content-parser/      # URL 内容提取
 ├── asr/                 # 音频转文字
 ├── creator/             # 创作者工作流
-└── listenhub/           # 已弃用（见 DEPRECATED.md）
+├── slides/              # 幻灯片生成
+├── music/               # AI 音乐生成、翻唱
+├── listenhub-cli/       # CLI 认证与配置
+└── listenhub/           # 路由 skill（listenhub-cli 的别名）
 ```
 
 ## 支持的客户端

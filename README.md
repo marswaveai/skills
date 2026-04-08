@@ -51,6 +51,8 @@ Restart your agent (Claude Code, Cursor, etc.) after updating.
 | `/content-parser` | "parse this URL", "解析链接" | Extract content from URLs |
 | `/asr` | "transcribe", "语音转文字", "ASR" | Transcribe audio files to text |
 | `/creator` | "创作", "写公众号", "小红书", "口播" | Creator workflow — platform-ready content packages |
+| `/slides` | "slides", "幻灯片" | Create slide decks with AI visuals |
+| `/music` | "music", "音乐" | AI music generation and covers |
 
 ## Supported Inputs
 
@@ -60,12 +62,19 @@ Restart your agent (Claude Code, Cursor, etc.) after updating.
 - Plain text
 - Image prompts
 - Audio files
+- Music prompts
+- Reference audio files
 
 ## Setup
 
-**ListenHub API Key** — [Get yours](https://listenhub.ai/settings/api-keys) (Pro plan required)
+**ListenHub CLI** — Install and login:
 
-Keys auto-configure on first use.
+```bash
+npm install -g @marswave/listenhub-cli
+listenhub auth login
+```
+
+**Note:** `/content-parser` and `/creator` still require a [ListenHub API Key](https://listenhub.ai/settings/api-keys) for content extraction.
 
 ## Directory Structure
 
@@ -78,7 +87,10 @@ Keys auto-configure on first use.
 ├── content-parser/      # URL content extraction
 ├── asr/                 # Audio transcription
 ├── creator/             # Creator workflow (WeChat, Xiaohongshu, narration)
-└── listenhub/           # Deprecated (see DEPRECATED.md)
+├── slides/              # Slide deck generation
+├── music/               # AI music generation and covers
+├── listenhub-cli/       # CLI authentication and setup
+└── listenhub/           # Router skill (alias for listenhub-cli)
 ```
 
 ## Supported Clients
