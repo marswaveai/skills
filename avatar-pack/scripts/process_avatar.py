@@ -5,7 +5,6 @@ Takes static PNGs, removes background if needed, and generates animated GIFs.
 """
 
 import argparse
-import math
 import os
 import re
 import sys
