@@ -996,7 +996,6 @@ def generate_profile_card(avatar_path, name, line1, line2, output_path, wuxing='
     original_path = f'{base}_original{ext}'
     if os.path.exists(original_path):
         avatar = Image.open(original_path).convert('RGBA')
-        avatar = remove_background(avatar)
     else:
         avatar = Image.open(avatar_path).convert('RGBA')
         avatar = remove_background(avatar)
