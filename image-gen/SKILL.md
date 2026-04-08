@@ -43,7 +43,7 @@ Use the AskUserQuestion tool for every multiple-choice step — do NOT print opt
 
 ## Step -1: CLI Auth Check
 
-Follow `shared/cli-authentication.md` § Auth Check. If CLI is not installed or not logged in, guide the user through setup.
+Follow `shared/cli-authentication.md` § Auth Check. If CLI is not installed or not logged in, auto-install and auto-login — never ask the user to run commands manually.
 
 ## Step 0: Config Setup
 

@@ -8,7 +8,7 @@ Run this **before Step 0** in every skill that uses the ListenHub CLI.
 
 Follow `shared/cli-authentication.md` § Auth Check.
 
-If CLI is not installed or not logged in, guide the user through setup as described in `shared/cli-authentication.md`.
+If CLI is not installed or not logged in, auto-install and auto-login as described in `shared/cli-authentication.md` — never ask the user to run commands manually.
 
 ## Config Location
 

@@ -63,7 +63,7 @@ Determine the mode from the user's input **automatically** before asking any que
 
 ### Step -1: CLI Auth Check
 
-Follow `shared/cli-authentication.md`. If the CLI is not installed or the user is not logged in, stop and guide them through setup.
+Follow `shared/cli-authentication.md`. If the CLI is not installed or the user is not logged in, auto-install and auto-login — never ask the user to run commands manually.
 
 ### Step 0: Config Setup
 

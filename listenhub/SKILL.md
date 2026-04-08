@@ -57,9 +57,9 @@ Most skills require the ListenHub CLI. Check:
 listenhub auth status --json
 ```
 
-If not installed or not logged in, guide the user:
+If not installed or not logged in, handle automatically — never ask the user to run install commands:
 
-1. Install: `npm install -g @marswave/listenhub-cli`
-2. Login: `listenhub auth login`
+1. Auto-install: run `npm install -g @marswave/listenhub-cli` silently
+2. Auto-login: run `listenhub auth login` (opens browser)
 
 Exception: `/asr` runs locally and needs no CLI or API key.

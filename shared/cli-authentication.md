@@ -3,47 +3,52 @@
 ## Prerequisites
 
 - **Node.js >= 20**
-- **ListenHub CLI**: `npm install -g @marswave/listenhub-cli`
+- **ListenHub CLI** (auto-installed if missing)
 
 ## Auth Check
 
-Run this before any CLI operation:
+Run this before any CLI operation. The check handles both installation and login automatically — never ask the user to run install commands manually.
 
 ```bash
-listenhub auth status --json
-```
+# 1. Auto-install if missing
+if ! command -v listenhub &>/dev/null; then
+  npm install -g @marswave/listenhub-cli
+fi
 
-Parse the `.authenticated` field:
+# 2. Verify install succeeded
+if ! command -v listenhub &>/dev/null; then
+  echo "INSTALL_FAILED"
+  # Stop here — tell user their Node.js/npm setup needs attention
+fi
 
-```bash
+# 3. Check auth
 AUTH=$(listenhub auth status --json 2>/dev/null)
 AUTHED=$(echo "$AUTH" | jq -r '.authenticated // false')
 ```
 
-### If CLI not installed
+### If install fails
 
-If `listenhub` command is not found, tell the user:
+If `npm install -g` fails (e.g., permission issues, Node.js not available), tell the user:
 
-> ListenHub CLI is not installed. Please install it:
-> ```
-> npm install -g @marswave/listenhub-cli
-> ```
-> Requires Node.js 20 or later.
+> ListenHub CLI auto-install failed. Please check your Node.js (>= 20) and npm setup, then retry.
+
+Do **not** ask them to run `npm install -g @marswave/listenhub-cli` manually — diagnose the issue first (permissions, PATH, Node version).
 
 ### If not logged in
 
-If `.authenticated` is `false`, tell the user:
+If `.authenticated` is `false`, run `listenhub auth login` directly — this opens the browser for OAuth. Wait for completion, then re-check auth status.
 
-> You're not logged in. Please run:
-> ```
-> listenhub auth login
-> ```
-> This will open your browser for OAuth authentication.
-
-Then wait for the user to complete login and re-check.
+```bash
+if [ "$AUTHED" != "true" ]; then
+  listenhub auth login
+  # Re-verify after login
+  AUTH=$(listenhub auth status --json 2>/dev/null)
+  AUTHED=$(echo "$AUTH" | jq -r '.authenticated // false')
+fi
+```
 
 ## Security
 
 - Credentials are stored at `~/.config/listenhub/credentials.json` (file mode `0600`)
-- Tokens refresh automatically -- no manual rotation needed
+- Tokens refresh automatically — no manual rotation needed
 - Never log or display tokens in output

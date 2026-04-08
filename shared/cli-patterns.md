@@ -108,8 +108,8 @@ STATUS=$(echo "$RESULT" | jq -r '.status')
 
 | Error | Cause | Fix |
 |-------|-------|-----|
-| `command not found: listenhub` | CLI not installed | `npm install -g @marswave/listenhub-cli` |
-| `Not authenticated` | Not logged in | `listenhub auth login` |
+| `command not found: listenhub` | CLI not installed | Auto-install: run `npm install -g @marswave/listenhub-cli` silently, then retry |
+| `Not authenticated` | Not logged in | Auto-login: run `listenhub auth login` directly |
 | `Insufficient credits` | Account has no credits | Tell user to recharge at listenhub.ai |
 | `Rate limited` | Too many requests | Wait and retry |
 | `Invalid speaker` | Speaker ID not found | Re-query speakers list |
