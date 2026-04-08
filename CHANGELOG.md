@@ -5,7 +5,7 @@
 ### New Skill
 
 **Added:**
-- `avatar-pack/` — Generate Cola pixel-art avatar, profile card, 4 emoji GIFs (happy/sad/angry/thinking) and 3 meme stickers (confused/annoyed/cracked)
+- `cola-avatar-pack/` — Generate Cola pixel-art avatar, profile card, 4 emoji GIFs (happy/sad/angry/thinking) and 3 meme stickers (confused/annoyed/cracked)
 
 ## [1.0.0] - 2026-03-04
 

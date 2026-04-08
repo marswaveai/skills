@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Avatar Pack Processor
+Cola Avatar Pack Processor
 Takes static PNGs, removes background if needed, and generates animated GIFs.
 """
 
@@ -1127,7 +1127,7 @@ def generate_profile_card(avatar_path, name, line1, line2, output_path, wuxing='
 
 
 def main():
-    parser = argparse.ArgumentParser(description='Avatar Pack Processor')
+    parser = argparse.ArgumentParser(description='Cola Avatar Pack Processor')
     parser.add_argument('--base', required=True, help='Path to base/happy image')
     parser.add_argument('--sad', help='Path to sad image')
     parser.add_argument('--angry', help='Path to angry image')
@@ -1176,7 +1176,7 @@ def main():
     if args.direct:
         output_dir = os.path.expanduser(args.output)
     else:
-        output_dir = os.path.join(os.path.expanduser(args.output), f'avatar_pack_{args.name}')
+        output_dir = os.path.join(os.path.expanduser(args.output), f'cola_avatar_pack_{args.name}')
     os.makedirs(output_dir, exist_ok=True)
 
     # Save base image as PNG — skip if only regenerating expressions (original already exists)

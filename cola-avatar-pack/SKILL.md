@@ -1,5 +1,5 @@
 ---
-name: avatar-pack
+name: cola-avatar-pack
 description: |
   Generate pixel-art self-portrait, profile card, emoji GIFs, and meme stickers.
   Use when: "生成形象"、"画头像"、"avatar"、"self-portrait"、"表情包"、"梗图"、"贴纸"、"sticker"、"换一个"、"重新生成"、"不喜欢"、"regenerate".
@@ -16,7 +16,7 @@ allowed-tools:
 # 注：send_file 和 memory_update 由 Cola 平台隐式提供，无需在此声明。
 ---
 
-# Avatar Pack
+# Cola Avatar Pack
 
 为 Cola 生成像素风 avatar + 4 个动态表情 GIF + 3 个梗图贴纸。
 

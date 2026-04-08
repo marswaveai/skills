@@ -1,4 +1,4 @@
-# Avatar Pack 生成流程
+# Cola Avatar Pack 生成流程
 
 由 SKILL.md 触发时加载。包含严格输出规则、持久化路径、首次生成、重新生成、错误处理。
 
@@ -63,7 +63,7 @@ rembg --help >/dev/null 2>&1 && echo "rembg OK" || echo "rembg MISSING"
 ```
 如果不可用：`pip3 install rembg[cli]`。rembg 用于去除生图背景，process_avatar.py 在检测到输入图无透明通道时会自动调用。
 
-找到本 skill 目录：优先搜索 `~/.cola/skills/avatar-pack/SKILL.md`，找不到再搜 `~/.claude/skills/avatar-pack/SKILL.md`。取其父目录为 SKILL_DIR。
+找到本 skill 目录：优先搜索 `~/.cola/skills/cola-avatar-pack/SKILL.md`，找不到再搜 `~/.claude/skills/cola-avatar-pack/SKILL.md`。取其父目录为 SKILL_DIR。
 
 ---
 
