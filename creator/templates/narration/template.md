@@ -32,20 +32,10 @@ If generating audio:
      - English: "Mars" (`cozy-man-english`)
    - On first TTS use, ask the user via AskUserQuestion if they want to choose a different speaker. Save their choice to `preferences.narration.defaultSpeaker` for future runs.
 
-2. Call TTS API (use `@file` pattern for safe text handling per `shared/common-patterns.md`):
+2. Call TTS API:
 ```bash
-cat > /tmp/creator-tts-request.json << ENDJSON
-{"input": $(echo "$SCRIPT_TEXT" | jq -Rs .), "voice": "$SPEAKER_ID"}
-ENDJSON
-
-curl -sS -X POST "https://api.marswave.ai/openapi/v1/tts" \
-  -H "Authorization: Bearer $LISTENHUB_API_KEY" \
-  -H "Content-Type: application/json" \
-  -H "X-Source: skills" \
-  -d @/tmp/creator-tts-request.json \
-  --output "{output}/audio.mp3"
-
-rm /tmp/creator-tts-request.json
+listenhub tts create --text "$(cat /tmp/lh-content.txt)" --speaker "$SPEAKER_ID" --json \
+  | jq -r '.data' | base64 -D > "{output}/audio.mp3"
 ```
 
 Note: TTS max input is ~10,000 characters. For longer scripts, this is still well within limits for narration (typically 300-2000 chars).

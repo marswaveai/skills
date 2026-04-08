@@ -2,40 +2,13 @@
 
 Reusable pattern for per-skill config lookup, creation, and update.
 
-## API Key Check
+## CLI Auth Check
 
-Run this **before Step 0** in every skill that requires `LISTENHUB_API_KEY`.
+Run this **before Step 0** in every skill that uses the ListenHub CLI.
 
-```bash
-[ -z "$LISTENHUB_API_KEY" ] && echo "MISSING" || echo "OK"
-```
+Follow `shared/cli-authentication.md` § Auth Check.
 
-**If `OK`**: proceed to Step 0 silently. Do NOT display or confirm the key.
-
-**If `MISSING`**: run the interactive setup below. Do NOT stop — guide the user through configuration and then continue.
-
-### Interactive Key Setup
-
-1. Tell the user:
-   > `LISTENHUB_API_KEY` 未配置。请前往 https://listenhub.ai/settings/api-keys 获取 API Key（需要 Pro 订阅）。
-
-2. Use `AskUserQuestion` to collect the key:
-   > 请粘贴你的 API Key（以 `lh_sk_` 开头）：
-
-3. Validate format — must start with `lh_sk_`. If not, re-prompt.
-
-4. Write to shell profile and source:
-   ```bash
-   echo '' >> ~/.zshrc
-   echo 'export LISTENHUB_API_KEY="lh_sk_..."' >> ~/.zshrc
-   source ~/.zshrc
-   ```
-   On Linux, use `~/.bashrc` instead.
-
-5. Confirm to the user:
-   > API Key 已保存到 `~/.zshrc`，后续会话无需重复配置。
-
-6. **Continue** — proceed to Step 0 and the skill's Interaction Flow. Do NOT ask the user to re-run.
+If CLI is not installed or not logged in, auto-install and auto-login as described in `shared/cli-authentication.md` — never ask the user to run commands manually.
 
 ## Config Location
 

@@ -8,8 +8,8 @@ metadata:
   openclaw:
     emoji: "🎬"
     requires:
-      env: ["LISTENHUB_API_KEY"]
-    primaryEnv: "LISTENHUB_API_KEY"
+      bin: ["listenhub"]
+    primaryBin: "listenhub"
 ---
 
 ## When to Use
@@ -32,23 +32,22 @@ Generate explainer videos that combine a single narrator's voiceover with AI-gen
 
 ## Hard Constraints
 
-- No shell scripts. Construct curl commands from the API reference files listed in Resources
-- Always read `shared/authentication.md` for API key and headers
-- Follow `shared/common-patterns.md` for polling, errors, and interaction patterns
 - Always read config following `shared/config-pattern.md` before any interaction
-- Never hardcode speaker IDs — always fetch from the speakers API
+- Follow `shared/cli-patterns.md` for execution modes, error handling, and interaction patterns
+- Always follow `shared/cli-authentication.md` for auth checks
+- Never hardcode speaker IDs — always fetch from the speakers CLI when the user wants to change voice
 - Never save files to `~/Downloads/` or `.listenhub/` — save artifacts to the current working directory with friendly topic-based names (see `shared/config-pattern.md` § Artifact Naming)
 - Explainer uses exactly 1 speaker
 - Mode must be `info` (for Info style) or `story` (for Story style) — never `slides` (use `/slides` skill instead)
 
 <HARD-GATE>
-Use the AskUserQuestion tool for every multiple-choice step — do NOT print options as plain text. Ask one question at a time. Wait for the user's answer before proceeding to the next step. After all parameters are collected, summarize the choices and ask the user to confirm. Do NOT call any generation API until the user has explicitly confirmed.
+Use the AskUserQuestion tool for every multiple-choice step — do NOT print options as plain text. Ask one question at a time. Wait for the user's answer before proceeding to the next step. After all parameters are collected, summarize the choices and ask the user to confirm. Do NOT call any CLI command until the user has explicitly confirmed.
 
 </HARD-GATE>
 
-## Step -1: API Key Check
+## Step -1: CLI Auth Check
 
-Follow `shared/config-pattern.md` § API Key Check. If the key is missing, stop immediately.
+Follow `shared/config-pattern.md` § CLI Auth Check. If the CLI is not installed or the user is not logged in, auto-install and auto-login per `shared/cli-authentication.md` — never ask the user to run commands manually.
 
 ## Step 0: Config Setup
 
@@ -122,6 +121,7 @@ Question: "What language?"
 Options:
   - "Chinese (zh)" — Content in Mandarin Chinese
   - "English (en)" — Content in English
+  - "Japanese (ja)" — Content in Japanese
 ```
 
 ### Step 3: Style
@@ -143,6 +143,8 @@ Follow `shared/speaker-selection.md`:
 - If not set → use **built-in default** from `shared/speaker-selection.md` for the language
 - Show the speaker in the confirmation summary (Step 6) — user can change from there if desired
 - Only show the full speaker list if the user explicitly asks to change voice
+
+Speaker query: see `shared/cli-speakers.md` for listing and filtering speakers.
 
 Only 1 speaker is supported for explainer videos.
 
@@ -171,33 +173,45 @@ Ready to generate explainer:
   Proceed?
 ```
 
-Wait for explicit confirmation before calling any API.
+Wait for explicit confirmation before running any CLI command.
 
 ## Workflow
 
-1. **Submit (foreground)**: `POST /storybook/episodes` with content, speaker, language, mode → extract `episodeId`
-2. Tell the user the task is submitted
-3. **Poll (background)**: Run the following **exact** bash command with `run_in_background: true` and `timeout: 600000`. Do NOT use python3, awk, or any other JSON parser — use `jq` as shown:
+Run the CLI command with `run_in_background: true` and `timeout: 660000`. The CLI blocks until generation completes and returns the final result as JSON:
 
+```bash
+listenhub explainer create \
+  --query "{topic}" \
+  --mode {info|story} \
+  --lang {en|zh|ja} \
+  --speaker "{name}" \
+  --speaker-id "{id}" \
+  --timeout 600 \
+  --json
+```
+
+If the command fails (non-zero exit), check stderr for error details. See `shared/cli-patterns.md` § Error Handling for exit codes and common errors.
+
+**Optional flags** (add when applicable):
+- `--source-url "{url}"` — if the user provided a reference URL
+- `--skip-audio` — if text-only output (no video)
+- `--image-size {2K|4K}` — image resolution (default: 2K)
+- `--aspect-ratio {16:9|9:16|1:1}` — video aspect ratio (default: 16:9)
+- `--style "{style}"` — visual style for AI-generated images
+
+Tell the user the task is submitted. When notified of completion, **parse and present result**:
+
+   Parse the CLI JSON output for key fields:
    ```bash
-   EPISODE_ID="<id-from-step-1>"
-   for i in $(seq 1 30); do
-     RESULT=$(curl -sS "https://api.marswave.ai/openapi/v1/storybook/episodes/$EPISODE_ID" \
-       -H "Authorization: Bearer $LISTENHUB_API_KEY" \
-       -H "X-Source: skills" 2>/dev/null)
-     STATUS=$(echo "$RESULT" | tr -d '\000-\037\177' | jq -r '.data.processStatus // "pending"')
-     case "$STATUS" in
-       success|completed) echo "$RESULT"; exit 0 ;;
-       failed|error) echo "FAILED: $RESULT" >&2; exit 1 ;;
-       *) sleep 10 ;;
-     esac
-   done
-   echo "TIMEOUT" >&2; exit 2
+   EPISODE_ID=$(echo "$RESULT" | jq -r '.episodeId')
+   AUDIO_URL=$(echo "$RESULT" | jq -r '.audioUrl // empty')
+   VIDEO_URL=$(echo "$RESULT" | jq -r '.videoUrl // empty')
+   CREDITS=$(echo "$RESULT" | jq -r '.credits // empty')
    ```
 
-4. When notified, **download and present script**:
-
    Read `OUTPUT_MODE` from config. Follow `shared/output-mode.md` for behavior.
+
+   **If text-only output**:
 
    **`inline` or `both`**: Present the script inline.
 
@@ -211,56 +225,36 @@ Wait for explicit confirmation before calling any API.
    ```
 
    **`download` or `both`**: Also save the script file. Generate a topic slug following `shared/config-pattern.md` § Artifact Naming.
-   - If text-only output: save as `{slug}-explainer.md` in cwd (dedup if exists)
-   - If text+video output: create `{slug}-explainer/` folder (dedup if exists), write `script.md` inside
+   - Save as `{slug}-explainer.md` in cwd (dedup if exists)
    - Present the save path in addition to the above summary.
 
-5. **If video requested**: `POST /storybook/episodes/{episodeId}/video` (foreground) → **poll again (background)** using the **exact** bash command below with `run_in_background: true` and `timeout: 600000`. Poll for `videoStatus`, not `processStatus`:
+   **If text + video output**:
 
-   ```bash
-   EPISODE_ID="<id-from-step-1>"
-   for i in $(seq 1 30); do
-     RESULT=$(curl -sS "https://api.marswave.ai/openapi/v1/storybook/episodes/$EPISODE_ID" \
-       -H "Authorization: Bearer $LISTENHUB_API_KEY" \
-       -H "X-Source: skills" 2>/dev/null)
-     STATUS=$(echo "$RESULT" | tr -d '\000-\037\177' | jq -r '.data.videoStatus // "pending"')
-     case "$STATUS" in
-       success|completed) echo "$RESULT"; exit 0 ;;
-       failed|error) echo "FAILED: $RESULT" >&2; exit 1 ;;
-       *) sleep 10 ;;
-     esac
-   done
-   echo "TIMEOUT" >&2; exit 2
+   **`inline` or `both`**: Display video URL and audio URL as clickable links.
+
+   Present:
    ```
-6. When notified, **download and present result**:
+   解说视频已生成！
 
-**Present result**
+   视频链接：{videoUrl}
+   音频链接：{audioUrl}
+   消耗积分：{credits}
+   ```
 
-Read `OUTPUT_MODE` from config. Follow `shared/output-mode.md` for behavior.
-
-**`inline` or `both`**: Display video URL and audio URL as clickable links.
-
-Present:
-```
-解说视频已生成！
-
-视频链接：{videoUrl}
-音频链接：{audioUrl}
-时长：{duration}s
-消耗积分：{credits}
-```
-
-**`download` or `both`**: Also download the audio file into the `{slug}-explainer/` folder.
-```bash
-curl -sS -o "{slug}-explainer/audio.mp3" "{audioUrl}"
-```
-Present:
-```
-已保存到当前目录：
-  {slug}-explainer/
-    script.md
-    audio.mp3
-```
+   **`download` or `both`**: Also save files. Generate a topic slug following `shared/config-pattern.md` § Artifact Naming.
+   - Create `{slug}-explainer/` folder (dedup if exists)
+   - Write `script.md` inside
+   - Download audio:
+     ```bash
+     listenhub download "{audioUrl}" -o "{slug}-explainer/audio.mp3"
+     ```
+   - Present:
+     ```
+     已保存到当前目录：
+       {slug}-explainer/
+         script.md
+         audio.mp3
+     ```
 
 ### After Successful Generation
 
@@ -277,19 +271,20 @@ echo "$NEW_CONFIG" > "$CONFIG_PATH"
 
 **Estimated times**:
 - Text script only: 2-3 minutes
-- Text + Video: 3-5 minutes
+- Text + Video: 5-10 minutes
 
-## API Reference
+## Resources
 
-- Speaker list: `shared/api-speakers.md`
+- CLI authentication: `shared/cli-authentication.md`
+- CLI patterns: `shared/cli-patterns.md`
+- Speaker query: `shared/cli-speakers.md`
 - Speaker selection guide: `shared/speaker-selection.md`
-- Episode creation: `shared/api-storybook.md`
-- Polling: `shared/common-patterns.md` § Async Polling
 - Config pattern: `shared/config-pattern.md`
+- Output mode: `shared/output-mode.md`
 
 ## Composability
 
-- **Invokes**: speakers API (for speaker selection); may invoke `/speech` for voiceover
+- **Invokes**: speakers CLI (for speaker selection); may invoke `/speech` for voiceover
 - **Invoked by**: content-planner (Phase 3)
 
 ## Example
@@ -300,20 +295,19 @@ echo "$NEW_CONFIG" > "$CONFIG_PATH"
 1. Topic: "Claude Code introduction"
 2. Ask language → "English"
 3. Ask style → "Info"
-4. Fetch speakers, user picks "cozy-man-english"
+4. Use default speaker "Mars" (cozy-man-english)
 5. Ask output → "Text + Video"
 
 ```bash
-curl -sS -X POST "https://api.marswave.ai/openapi/v1/storybook/episodes" \
-  -H "Authorization: Bearer $LISTENHUB_API_KEY" \
-  -H "Content-Type: application/json" \
-  -H "X-Source: skills" \
-  -d '{
-    "sources": [{"type": "text", "content": "Introduce Claude Code: what it is, key features, and how to get started"}],
-    "speakers": [{"speakerId": "cozy-man-english"}],
-    "language": "en",
-    "mode": "info"
-  }'
+# Run with run_in_background: true, timeout: 660000
+listenhub explainer create \
+  --query "Introduce Claude Code: what it is, key features, and how to get started" \
+  --mode info \
+  --lang en \
+  --speaker "Mars" \
+  --speaker-id "cozy-man-english" \
+  --timeout 600 \
+  --json
 ```
 
-Poll until text is ready, then generate video if requested.
+Parse result for `episodeId`, `audioUrl`, `videoUrl`, `credits`, and present to user.

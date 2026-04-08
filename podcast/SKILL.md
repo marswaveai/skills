@@ -8,8 +8,8 @@ metadata:
   openclaw:
     emoji: "🎙️"
     requires:
-      env: ["LISTENHUB_API_KEY"]
-    primaryEnv: "LISTENHUB_API_KEY"
+      bin: ["listenhub"]
+    primaryBin: "listenhub"
 ---
 
 ## When to Use
@@ -32,11 +32,10 @@ Generate podcast episodes with 1-2 AI speakers discussing a topic. Supports quic
 
 ## Hard Constraints
 
-- No shell scripts. Construct curl commands from the API reference files listed in Resources
-- Always read `shared/authentication.md` for API key and headers
-- Follow `shared/common-patterns.md` for polling, errors, and interaction patterns
+- Always check CLI auth following `shared/cli-authentication.md`
+- Follow `shared/cli-patterns.md` for command execution and error handling
 - Never hardcode speaker IDs in API calls — use built-in defaults from `shared/speaker-selection.md` as fallback only; fetch from the speakers API when the user wants to change voice
-- Never fabricate API endpoints or parameters
+- Never fabricate CLI commands or parameters
 - Always read config following `shared/config-pattern.md` before any interaction
 - Always follow `shared/speaker-selection.md` for speaker selection (text table + free-text input)
 - Never save files to `~/Downloads/` or `.listenhub/` — save artifacts to the current working directory with friendly topic-based names (see `shared/config-pattern.md` § Artifact Naming)
@@ -46,9 +45,9 @@ Use the AskUserQuestion tool for every multiple-choice step — do NOT print opt
 
 </HARD-GATE>
 
-## Step -1: API Key Check
+## Step -1: CLI Auth Check
 
-Follow `shared/config-pattern.md` § API Key Check. If the key is missing, stop immediately.
+Follow `shared/cli-authentication.md` § Auth Check. If the CLI is not installed or the user is not logged in, auto-install and auto-login — never ask the user to run commands manually.
 
 ## Step 0: Config Setup
 
@@ -57,7 +56,7 @@ Follow `shared/config-pattern.md` Step 0 (Zero-Question Boot).
 **If file doesn't exist** — silently create with defaults and proceed:
 ```bash
 mkdir -p ".listenhub/podcast"
-echo '{"outputMode":"inline","language":null,"defaultMode":"quick","defaultMethod":"one-step","defaultSpeakers":{}}' > ".listenhub/podcast/config.json"
+echo '{"outputMode":"inline","language":null,"defaultMode":"quick","defaultSpeakers":{}}' > ".listenhub/podcast/config.json"
 CONFIG_PATH=".listenhub/podcast/config.json"
 CONFIG=$(cat "$CONFIG_PATH")
 ```
@@ -78,7 +77,6 @@ Only run when the user explicitly asks to reconfigure. Display current settings:
   输出方式：{inline / download / both}
   语言偏好：{zh / en / 未设置}
   默认模式：{quick / deep / debate / 未设置}
-  默认生成方式：{one-step / two-step}
   默认主播：{speakerName(s) / 使用内置默认}
 ```
 
@@ -97,11 +95,6 @@ Then ask these questions in order and save:
    - "Debate — 辩论对话"
    - "每次手动选择" → keep `null`
 
-4. **Method** (optional): "默认生成方式？"
-   - "一步生成（推荐）" → `defaultMethod: "one-step"`
-   - "两步生成（先预览文本）" → `defaultMethod: "two-step"`
-   - "每次手动选择" → keep `null`
-
 After collecting answers, save immediately:
 ```bash
 NEW_CONFIG=$(echo "$CONFIG" | jq --arg m "$OUTPUT_MODE" '. + {"outputMode": $m}')
@@ -112,10 +105,6 @@ fi
 # Save mode if user chose one
 if [ "$MODE" != "null" ]; then
   NEW_CONFIG=$(echo "$NEW_CONFIG" | jq --arg mode "$MODE" '. + {"defaultMode": $mode}')
-fi
-# Save method if user chose one
-if [ "$METHOD" != "null" ]; then
-  NEW_CONFIG=$(echo "$NEW_CONFIG" | jq --arg method "$METHOD" '. + {"defaultMethod": $method}')
 fi
 echo "$NEW_CONFIG" > "$CONFIG_PATH"
 CONFIG=$(cat "$CONFIG_PATH")
@@ -171,13 +160,7 @@ Follow `shared/speaker-selection.md`:
 
 For 2-speaker mode (dialogue/debate): use Primary + Secondary defaults for the language.
 
-### Step 6: Generation Method
-
-**Default: "one-step"** — skip this question unless:
-- `config.defaultMethod` is set → use that value silently
-- User explicitly asks to review text first → use "two-step"
-
-### Step 7: Confirm & Generate
+### Step 6: Confirm & Generate
 
 Summarize all choices:
 
@@ -189,37 +172,47 @@ Ready to generate podcast:
   Language: {language}
   Speakers: {speaker name(s)}
   References: {yes/no + brief description}
-  Method: {one-step/two-step}
 
   Proceed?
 ```
 
-Wait for explicit confirmation before calling any API. The user can adjust any parameter here before confirming.
+Wait for explicit confirmation before calling any CLI command. The user can adjust any parameter here before confirming.
 
 ## Workflow
 
-### One-Step Generation
+### Generation
 
-1. **Submit (foreground)**: `POST /podcast/episodes` with collected parameters → extract `episodeId`
-2. Tell the user the task is submitted
-3. **Poll (background)**: Run the following **exact** bash command with `run_in_background: true` and `timeout: 600000`. Do NOT use python3, awk, or any other JSON parser — use `jq` as shown:
+1. **Submit (background)**: Run the CLI command with `run_in_background: true` and `timeout: 360000`:
 
    ```bash
-   EPISODE_ID="<id-from-step-1>"
-   for i in $(seq 1 30); do
-     RESULT=$(curl -sS "https://api.marswave.ai/openapi/v1/podcast/episodes/$EPISODE_ID" \
-       -H "Authorization: Bearer $LISTENHUB_API_KEY" \
-       -H "X-Source: skills" 2>/dev/null)
-     STATUS=$(echo "$RESULT" | tr -d '\000-\037\177' | jq -r '.data.processStatus // "pending"')
-     case "$STATUS" in
-       success|completed) echo "$RESULT"; exit 0 ;;
-       failed|error) echo "FAILED: $RESULT" >&2; exit 1 ;;
-       *) sleep 10 ;;
-     esac
-   done
-   echo "TIMEOUT" >&2; exit 2
+   listenhub podcast create \
+     --query "{topic}" \
+     --source-url "{url}" \
+     --source-text "{text}" \
+     --mode {quick|deep|debate} \
+     --lang {en|zh|ja} \
+     --speaker "{name}" \
+     --speaker "{name2}" \
+     --json
    ```
-4. When notified of completion, **Step 6: Present result**
+
+   Flag notes:
+   - `--query` — the topic or question to discuss
+   - `--source-url` — repeatable, one per URL reference
+   - `--source-text` — repeatable, one per text block reference
+   - `--mode` — one of `quick`, `deep`, `debate`
+   - `--lang` — language code
+   - `--speaker` — repeatable (max 2); use speaker display names
+   - `--speaker-id` — alternative to `--speaker`; use speaker IDs instead of names
+   - Omit `--source-url` / `--source-text` if the user provided no references
+
+   The CLI handles polling internally and returns the final result when generation completes.
+
+2. Tell the user the task is submitted and that they will be notified when it finishes.
+
+3. When notified of completion, **Present result**:
+
+   Parse the CLI JSON output to extract fields: `audioUrl`, `subtitlesUrl`, `audioDuration`, `credits`.
 
    Read `OUTPUT_MODE` from config. Follow `shared/output-mode.md` for behavior.
 
@@ -249,26 +242,7 @@ Wait for explicit confirmation before calling any API. The user can adjust any p
    已保存到当前目录：
      {NAME}
    ```
-5. Offer to show transcript or provide download URL on request
-
-### Two-Step Generation
-
-1. **Step 1 — Submit text (foreground)**: `POST /podcast/episodes/text-content` → extract `episodeId`
-2. **Poll text (background)**: Use the exact `jq`-based polling loop above (substitute endpoint `podcast/episodes/text-content/{episodeId}` if needed), with `run_in_background: true` and `timeout: 600000`
-3. When notified, **save draft to a topic-based folder in cwd**:
-   - Generate a topic slug following `shared/config-pattern.md` § Artifact Naming
-   - Create `{slug}-podcast/` folder (dedup if exists)
-   - Write `draft.md` (human-readable: `**{speakerName}**: {content}` per line)
-   - Write `draft.json` (raw `scripts` array)
-   - Present the draft location and content preview
-4. **STOP**: Present the draft and wait for explicit user approval
-5. **Step 2 — Submit audio (foreground, after approval)**:
-   - No changes: `POST /podcast/episodes/{episodeId}/audio` with `{}`
-   - With edits: `POST /podcast/episodes/{episodeId}/audio` with modified `{scripts: [...]}`
-6. **Poll audio (background)**: Same exact `jq`-based loop, `run_in_background: true`, `timeout: 600000`
-7. When notified, **download audio to the same folder**:
-   - `curl -sS -o {slug}-podcast/podcast.mp3 {audioUrl}`
-   - Present final result (same format as one-step, folder now has draft + final files)
+4. Offer to show transcript or provide download URL on request
 
 ### After Successful Generation
 
@@ -278,18 +252,17 @@ Update config with the choices made this session:
 NEW_CONFIG=$(echo "$CONFIG" | jq \
   --arg lang "{language}" \
   --arg mode "{mode}" \
-  --arg method "{one-step/two-step}" \
   --argjson speakers '{"{language}": ["{speakerId}"]}' \
-  '. + {"language": $lang, "defaultMode": $mode, "defaultMethod": $method, "defaultSpeakers": (.defaultSpeakers + $speakers)}')
+  '. + {"language": $lang, "defaultMode": $mode, "defaultSpeakers": (.defaultSpeakers + $speakers)}')
 echo "$NEW_CONFIG" > "$CONFIG_PATH"
 ```
 
 ## API Reference
 
-- Speaker list: `shared/api-speakers.md`
+- Speaker list: `shared/cli-speakers.md`
 - Speaker selection guide: `shared/speaker-selection.md`
-- Episode creation: `shared/api-podcast.md`
-- Polling: `shared/common-patterns.md` § Async Polling
+- CLI patterns: `shared/cli-patterns.md`
+- CLI authentication: `shared/cli-authentication.md`
 - Config pattern: `shared/config-pattern.md`
 
 ## Composability
@@ -303,20 +276,17 @@ echo "$NEW_CONFIG" > "$CONFIG_PATH"
 
 **Agent workflow**:
 1. Detect: podcast request, topic = "latest AI developments", no references
-2. Infer: mode = "quick" (default), language = "en" (user wrote in English), 2 speakers (default), one-step (default)
+2. Infer: mode = "quick" (default), language = "en" (user wrote in English), 2 speakers (default)
 3. Show confirmation summary → user confirms
 
 ```bash
-curl -sS -X POST "https://api.marswave.ai/openapi/v1/podcast/episodes" \
-  -H "Authorization: Bearer $LISTENHUB_API_KEY" \
-  -H "Content-Type: application/json" \
-  -H "X-Source: skills" \
-  -d '{
-    "sources": [{"type": "text", "content": "The latest AI developments"}],
-    "speakers": [{"speakerId": "cozy-man-english"}],
-    "language": "en",
-    "mode": "deep"
-  }'
+listenhub podcast create \
+  --query "The latest AI developments" \
+  --mode deep \
+  --lang en \
+  --speaker "Mars" \
+  --speaker "Mia" \
+  --json
 ```
 
-Poll until complete, then present the result with title and listen link.
+Wait for CLI to return result, then present with title and listen link.

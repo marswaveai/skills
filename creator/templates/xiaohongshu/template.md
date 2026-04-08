@@ -114,7 +114,7 @@ For each prompt in `prompts.json`:
 - **Model**: `gemini-3-pro-image-preview`
 - **Aspect ratio**: `3:4` (portrait, standard Xiaohongshu card)
 - **Size**: `2K`
-- **Timeout**: `--max-time 600` on curl (per `shared/api-image.md`)
+- **Timeout**: `--timeout 600` (use `listenhub image create --json`)
 
 Save to `{output}/cards/01-cover.jpg`, `{output}/cards/02-page.jpg`, etc.
 

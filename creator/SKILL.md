@@ -31,9 +31,9 @@ Generate platform-specific content packages by orchestrating existing skills. In
 
 ## Hard Constraints
 
-- No shell scripts. Construct curl commands from the API reference files in `shared/`
+- Use `listenhub` CLI commands for image-gen and TTS. Use curl for content-parser (see `content-parser/SKILL.md` § API Reference).
 - Always read config following `shared/config-pattern.md` before any interaction
-- Follow `shared/common-patterns.md` for polling, errors, and interaction patterns
+- Follow `shared/cli-patterns.md` for polling, errors, and interaction patterns
 - Never save files to `~/Downloads/` or `.listenhub/` — save content packages to the current working directory
 - JSON parsing: use `jq` only (no python3, awk)
 
@@ -46,7 +46,7 @@ Use AskUserQuestion for every multiple-choice step. One question at a time. Wait
 </HARD-GATE>
 
 <HARD-GATE>
-API Key Check at Confirmation Gate: If the pipeline includes any remote API call (image-gen, content-parser, tts), check `LISTENHUB_API_KEY` before proceeding. If missing, run interactive setup from `shared/authentication.md`. Pure text-only pipelines (e.g., topic → narration script without TTS) can proceed without an API key.
+API Key Check at Confirmation Gate: If the pipeline includes any remote API call (image-gen, content-parser, tts), check authentication before proceeding. For CLI-based calls (image-gen, TTS), run `listenhub auth login` if not authenticated. For content-parser calls, configure `LISTENHUB_API_KEY` (see `content-parser/SKILL.md` § Authentication). Pure text-only pipelines (e.g., topic → narration script without TTS) can proceed without authentication.
 </HARD-GATE>
 
 ## Step -1: API Key Check
@@ -208,7 +208,7 @@ Otherwise:
 - Narration without TTS → no API key needed
 - Web/article URL input → needs content-parser → requires API key (audio/video URLs use local `coli asr`, no API key needed)
 
-If API key required and missing: run `shared/authentication.md` interactive setup.
+If API key required and missing: for CLI-based calls, run `listenhub auth login`. For content-parser calls, configure `LISTENHUB_API_KEY` (see `content-parser/SKILL.md` § Authentication).
 
 **Show confirmation summary:**
 
@@ -250,7 +250,7 @@ RESPONSE=$(curl -sS -X POST "https://api.marswave.ai/openapi/v1/content/extract"
 TASK_ID=$(echo "$RESPONSE" | jq -r '.data.taskId')
 ```
 
-Then poll in background. Run this as a **separate Bash call** with `run_in_background: true` and `timeout: 600000` (per `shared/common-patterns.md`). The polling loop itself runs up to 300s (60 polls × 5s); `timeout: 600000` is set higher at the tool level to give the Bash process headroom beyond the poll budget:
+Then poll in background. Run this as a **separate Bash call** with `run_in_background: true` and `timeout: 600000` (per `shared/cli-patterns.md`). The polling loop itself runs up to 300s (60 polls × 5s); `timeout: 600000` is set higher at the tool level to give the Bash process headroom beyond the poll budget:
 
 ```bash
 # Run with: run_in_background: true, timeout: 600000
@@ -283,17 +283,10 @@ If extraction fails: tell user "URL 解析失败，你可以直接粘贴文字�
 **For image generation** (called by wechat and xiaohongshu templates):
 
 ```bash
-RESPONSE=$(curl -sS -X POST "https://api.marswave.ai/openapi/v1/images/generation" \
-  -H "Authorization: Bearer $LISTENHUB_API_KEY" \
-  -H "Content-Type: application/json" \
-  -H "X-Source: skills" \
-  --max-time 600 \
-  -d '{
-    "provider": "google",
-    "model": "gemini-3-pro-image-preview",
-    "prompt": "<generated prompt>",
-    "imageConfig": {"imageSize": "2K", "aspectRatio": "<ratio>"}
-  }')
+RESPONSE=$(listenhub image create \
+  --prompt "<generated prompt>" \
+  --aspect-ratio "<ratio>" \
+  --json)
 
 BASE64_DATA=$(echo "$RESPONSE" | jq -r '.candidates[0].content.parts[0].inlineData.data // .data')
 # macOS uses -D, Linux uses -d (detect platform)
@@ -310,22 +303,9 @@ Generate images **sequentially** (not parallel) to respect rate limits.
 
 **For TTS** (called by narration template when user wants audio):
 
-Use `@file` pattern per `shared/common-patterns.md` to handle special chars in script text:
-
 ```bash
-# Write TTS request to temp file (handles quotes, newlines safely)
-cat > /tmp/creator-tts-request.json << ENDJSON
-{"input": $(echo "$SCRIPT_TEXT" | jq -Rs .), "voice": "$SPEAKER_ID"}
-ENDJSON
-
-curl -sS -X POST "https://api.marswave.ai/openapi/v1/tts" \
-  -H "Authorization: Bearer $LISTENHUB_API_KEY" \
-  -H "Content-Type: application/json" \
-  -H "X-Source: skills" \
-  -d @/tmp/creator-tts-request.json \
-  --output "{slug}-narration/audio.mp3"
-
-rm /tmp/creator-tts-request.json
+listenhub tts create --text "$(cat /tmp/lh-content.txt)" --speaker "$SPEAKER_ID" --json \
+  | jq -r '.data' | base64 -D > "{slug}-narration/audio.mp3"
 ```
 
 ### Step 6: Assemble Output
@@ -401,13 +381,13 @@ If the user says "重置风格偏好" or "reset style":
 
 ## API Reference
 
-- Authentication & headers: `shared/authentication.md`
-- Image generation: `shared/api-image.md`
-- Content extraction: `shared/api-content-extract.md`
-- TTS (text-to-speech): `shared/api-tts.md`
+- Authentication: `shared/cli-authentication.md`
+- Image generation: CLI: `listenhub image create` (see `shared/cli-patterns.md`)
+- Content extraction: `content-parser/SKILL.md` § API Reference (Inlined)
+- TTS (text-to-speech): CLI: `listenhub tts create` (see `shared/cli-patterns.md`)
 - Speaker selection: `shared/speaker-selection.md`
 - Config pattern: `shared/config-pattern.md`
-- Common patterns (polling, errors): `shared/common-patterns.md`
+- Common patterns (polling, errors): `shared/cli-patterns.md`
 - Output mode: `shared/output-mode.md`
 
 ## Composability

@@ -4,8 +4,8 @@ metadata:
   openclaw:
     emoji: "🔊"
     requires:
-      env: ["LISTENHUB_API_KEY"]
-    primaryEnv: "LISTENHUB_API_KEY"
+      bin: ["listenhub"]
+    primaryBin: "listenhub"
 description: |
   Text-to-speech and voice narration. Triggers on: "朗读这段", "配音", "TTS",
   "语音合成", "text to speech", "read this aloud", "convert to speech",
@@ -29,21 +29,20 @@ description: |
 
 Convert text into natural-sounding speech audio. Two paths:
 
-1. **Quick mode** (`/v1/tts`): Single voice, low-latency, sync MP3 stream. For casual chat, reading snippets, instant audio.
-2. **Script mode** (`/v1/speech`): Multi-speaker, per-segment voice assignment. For dialogue, audiobooks, scripted content.
+1. **Quick mode** (`--mode direct`): Single voice, low-latency, sync. For casual chat, reading snippets, instant audio.
+2. **Script mode** (`--mode smart`): Multi-speaker, per-segment voice assignment. For dialogue, audiobooks, scripted content.
 
 ## Hard Constraints
 
-- No shell scripts. Construct curl commands from the API reference files listed in Resources
-- Always read `shared/authentication.md` for API key and headers
-- Follow `shared/common-patterns.md` for errors and interaction patterns
-- Never hardcode speaker IDs in API calls — use built-in defaults from `shared/speaker-selection.md` as fallback only; fetch from the speakers API when the user wants to change voice
+- Always check CLI auth following `shared/cli-authentication.md`
+- Follow `shared/cli-patterns.md` for CLI execution, errors, and interaction patterns
+- Never hardcode speaker IDs in CLI calls — use built-in defaults from `shared/speaker-selection.md` as fallback only; fetch from the speakers CLI when the user wants to change voice
 - Always read config following `shared/config-pattern.md` before any interaction
 - Always follow `shared/speaker-selection.md` for speaker selection (text table + free-text input)
 - Never save files to `~/Downloads/` or `/tmp/` as primary output — save artifacts to the current working directory with friendly topic-based names (see `shared/config-pattern.md` § Artifact Naming)
 
 <HARD-GATE>
-Use the AskUserQuestion tool for every multiple-choice step — do NOT print options as plain text. Ask one question at a time. Wait for the user's answer before proceeding to the next step. After all parameters are collected, summarize the choices and ask the user to confirm. Do NOT call any generation API until the user has explicitly confirmed.
+Use the AskUserQuestion tool for every multiple-choice step — do NOT print options as plain text. Ask one question at a time. Wait for the user's answer before proceeding to the next step. After all parameters are collected, summarize the choices and ask the user to confirm. Do NOT call any generation CLI command until the user has explicitly confirmed.
 
 </HARD-GATE>
 
@@ -62,9 +61,9 @@ Determine the mode from the user's input **automatically** before asking any que
 
 ## Interaction Flow
 
-### Step -1: API Key Check
+### Step -1: CLI Auth Check
 
-Follow `shared/config-pattern.md` § API Key Check. If the key is missing, stop immediately.
+Follow `shared/cli-authentication.md`. If the CLI is not installed or the user is not logged in, auto-install and auto-login — never ask the user to run commands manually.
 
 ### Step 0: Config Setup
 
@@ -116,7 +115,7 @@ echo "$NEW_CONFIG" > "$CONFIG_PATH"
 CONFIG=$(cat "$CONFIG_PATH")
 ```
 
-### Quick Mode — `POST /v1/tts`
+### Quick Mode — `listenhub tts create --mode direct`
 
 **Step 1: Extract text**
 
@@ -154,51 +153,58 @@ Proceed?
 
 **Step 5: Generate**
 
+For short text, pass inline:
 ```bash
-curl -sS -X POST "https://api.marswave.ai/openapi/v1/tts" \
-  -H "Authorization: Bearer $LISTENHUB_API_KEY" \
-  -H "Content-Type: application/json" \
-  -H "X-Source: skills" \
-  -d '{"input": "...", "voice": "..."}' \
-  --output /tmp/tts-output.mp3
+RESULT=$(listenhub tts create --text "{text}" --mode direct --speaker "{name}" --lang {lang} --json 2>/tmp/lh-err)
+EXIT_CODE=$?
+
+if [ $EXIT_CODE -ne 0 ]; then
+  ERROR=$(cat /tmp/lh-err)
+  case $EXIT_CODE in
+    2) echo "Auth error: run 'listenhub auth login'" ;;
+    3) echo "Timeout: try --no-wait" ;;
+    *) echo "Error: $ERROR" ;;
+  esac
+  rm -f /tmp/lh-err
+fi
+rm -f /tmp/lh-err
+
+AUDIO_URL=$(echo "$RESULT" | jq -r '.audioUrl')
+```
+
+For long text, write to a temp file first (see `shared/cli-patterns.md` § Long Text Input):
+```bash
+cat > /tmp/lh-content.txt << 'ENDCONTENT'
+Long text content goes here...
+ENDCONTENT
+
+RESULT=$(listenhub tts create --text "$(cat /tmp/lh-content.txt)" --mode direct --speaker "{name}" --lang {lang} --json)
+AUDIO_URL=$(echo "$RESULT" | jq -r '.audioUrl')
+
+rm -f /tmp/lh-content.txt
 ```
 
 **Step 6: Present result**
 
 Read `OUTPUT_MODE` from config. Follow `shared/output-mode.md` for behavior.
 
-Use a timestamped jobId: `$(date +%s)`
-
-**`inline` or `both`** (TTS quick returns a sync audio stream — no `audioUrl`):
-```bash
-JOB_ID=$(date +%s)
-curl -sS -X POST "https://api.marswave.ai/openapi/v1/tts" \
-  -H "Authorization: Bearer $LISTENHUB_API_KEY" \
-  -H "Content-Type: application/json" \
-  -H "X-Source: skills" \
-  -d '{"input": "...", "voice": "..."}' \
-  --output /tmp/tts-${JOB_ID}.mp3
-```
-Then use the Read tool on `/tmp/tts-{jobId}.mp3`.
+**`inline` or `both`**: Display the `audioUrl` as a clickable link.
 
 Present:
 ```
 Audio generated!
+
+在线收听：{audioUrl}
 ```
 
-**`download` or `both`**: Generate a topic slug from the text content following `shared/config-pattern.md` § Artifact Naming.
+**`download` or `both`**: Also download the file. Generate a topic slug from the text content following `shared/config-pattern.md` § Artifact Naming.
 ```bash
 SLUG="{topic-slug}"  # e.g. "server-maintenance-notice"
 NAME="${SLUG}.mp3"
 # Dedup: if file exists, append -2, -3, etc.
 BASE="${NAME%.*}"; EXT="${NAME##*.}"; i=2
 while [ -e "$NAME" ]; do NAME="${BASE}-${i}.${EXT}"; i=$((i+1)); done
-curl -sS -X POST "https://api.marswave.ai/openapi/v1/tts" \
-  -H "Authorization: Bearer $LISTENHUB_API_KEY" \
-  -H "Content-Type: application/json" \
-  -H "X-Source: skills" \
-  -d '{"input": "...", "voice": "..."}' \
-  --output "$NAME"
+curl -sS -o "$NAME" "$AUDIO_URL"
 ```
 Present:
 ```
@@ -210,7 +216,7 @@ Audio generated!
 
 ---
 
-### Script Mode — `POST /v1/speech`
+### Script Mode — `listenhub tts create --mode smart`
 
 **Step 1: Get scripts**
 
@@ -221,7 +227,7 @@ Determine whether the user already has a scripts array:
 
   > "Please provide the script with speaker assignments. Format: each line as `SpeakerName: text content`. I'll convert it."
 
-  Once the user provides the script, parse it into the `scripts` JSON format.
+  Once the user provides the script, parse it into speaker-annotated text.
 
 **Step 2: Assign voices per character**
 
@@ -258,30 +264,54 @@ Proceed?
 
 **Step 5: Generate**
 
-Write the request body to a temp file, then submit:
+Format the script text with speaker markers and submit. For multi-speaker scripts, include speaker names inline in the text. Run with `run_in_background: true` since script mode may take longer.
 
+**Submit (foreground)** with `--no-wait`:
 ```bash
-# Write request to temp file
-cat > /tmp/lh-speech-request.json << 'ENDJSON'
-{
-  "scripts": [
-    {"content": "...", "speakerId": "..."},
-    {"content": "...", "speakerId": "..."}
-  ]
-}
-ENDJSON
+RESULT=$(listenhub tts create --text "{formatted script with speaker markers}" --mode smart --speaker "{name1}" --speaker "{name2}" --lang {lang} --no-wait --json)
+ID=$(echo "$RESULT" | jq -r '.id')
+echo "Submitted: $ID"
+```
 
-# Submit
-curl -sS -X POST "https://api.marswave.ai/openapi/v1/speech" \
-  -H "Authorization: Bearer $LISTENHUB_API_KEY" \
-  -H "Content-Type: application/json" \
-  -H "X-Source: skills" \
-  -d @/tmp/lh-speech-request.json
+For long scripts, write to a temp file first:
+```bash
+cat > /tmp/lh-content.txt << 'ENDCONTENT'
+SpeakerA: First line of dialogue
+SpeakerB: Second line of dialogue
+...
+ENDCONTENT
 
-rm /tmp/lh-speech-request.json
+RESULT=$(listenhub tts create --text "$(cat /tmp/lh-content.txt)" --mode smart --speaker "{name1}" --speaker "{name2}" --lang {lang} --no-wait --json)
+ID=$(echo "$RESULT" | jq -r '.id')
+
+rm -f /tmp/lh-content.txt
+```
+
+**Poll (background)** with `run_in_background: true` and `timeout: 600000`:
+```bash
+ID="<id-from-above>"
+for i in $(seq 1 60); do
+  RESULT=$(listenhub creation get "$ID" --json 2>/dev/null)
+  STATUS=$(echo "$RESULT" | jq -r '.status // "processing"')
+
+  case "$STATUS" in
+    completed) echo "$RESULT"; exit 0 ;;
+    failed) echo "FAILED: $RESULT" >&2; exit 1 ;;
+    *) sleep 10 ;;
+  esac
+done
+echo "TIMEOUT" >&2; exit 2
 ```
 
 **Step 6: Present result**
+
+When the background task completes, parse the result:
+```bash
+AUDIO_URL=$(echo "$RESULT" | jq -r '.audioUrl')
+SUBTITLES_URL=$(echo "$RESULT" | jq -r '.subtitlesUrl // empty')
+DURATION=$(echo "$RESULT" | jq -r '.audioDuration // empty')
+CREDITS=$(echo "$RESULT" | jq -r '.credits // empty')
+```
 
 Read `OUTPUT_MODE` from config. Follow `shared/output-mode.md` for behavior.
 
@@ -304,7 +334,7 @@ NAME="${SLUG}.mp3"
 # Dedup: if file exists, append -2, -3, etc.
 BASE="${NAME%.*}"; EXT="${NAME##*.}"; i=2
 while [ -e "$NAME" ]; do NAME="${BASE}-${i}.${EXT}"; i=$((i+1)); done
-curl -sS -o "$NAME" "{audioUrl}"
+curl -sS -o "$NAME" "$AUDIO_URL"
 ```
 Present:
 ```
@@ -324,15 +354,16 @@ When saving preferences, merge into `.listenhub/tts/config.json` — do not over
 
 ## API Reference
 
-- TTS & Speech endpoints: `shared/api-tts.md`
-- Speaker list: `shared/api-speakers.md`
+- CLI execution patterns: `shared/cli-patterns.md`
+- CLI authentication: `shared/cli-authentication.md`
+- Speaker list: `shared/cli-speakers.md`
 - Speaker selection guide: `shared/speaker-selection.md`
-- Error handling: `shared/common-patterns.md` § Error Handling
-- Long text input: `shared/common-patterns.md` § Long Text Input
+- Config pattern: `shared/config-pattern.md`
+- Output mode: `shared/output-mode.md`
 
 ## Composability
 
-- **Invokes**: speakers API (for speaker selection)
+- **Invokes**: speakers CLI (for speaker selection)
 - **Invoked by**: explainer (for voiceover)
 
 ## Examples
@@ -342,20 +373,30 @@ When saving preferences, merge into `.listenhub/tts/config.json` — do not over
 > "TTS this: The server will be down for maintenance at midnight."
 
 1. Detect: Quick mode (plain text, "TTS this")
-2. Read config: `quickVoice` is `null`
-3. Fetch speakers, user picks "Yuanye"
-4. Ask to save → yes → update config
-5. `POST /v1/tts` with `input` + `voice`
-6. Present: `/tmp/tts-output.mp3`
+2. Read config: `defaultSpeakers.en` is empty
+3. Use built-in default: Mars (`cozy-man-english`)
+4. Confirm → user approves
+5. Generate:
+   ```bash
+   RESULT=$(listenhub tts create --text "The server will be down for maintenance at midnight." --mode direct --speaker "Mars" --lang en --json)
+   AUDIO_URL=$(echo "$RESULT" | jq -r '.audioUrl')
+   ```
+6. Present: display `audioUrl` as link (inline mode)
 
 **Script mode:**
 
 > "帮我做一段双人对话配音，A说：欢迎大家，B说：谢谢邀请"
 
 1. Detect: Script mode ("双人对话")
-2. Parse segments: A → "欢迎大家", B → "谢谢邀请"
-3. Read config: `scriptVoices` empty
-4. Fetch `zh` speakers, assign A and B voices
-5. Ask to save → yes → update config
-6. `POST /v1/speech` with scripts array
-7. Present: `audioUrl`, `subtitlesUrl`, duration
+2. Parse segments: A -> "欢迎大家", B -> "谢谢邀请"
+3. Read config: `defaultSpeakers.zh` empty
+4. Use built-in defaults: 原野 (Primary) + 高晴 (Secondary)
+5. Confirm → user approves
+6. Generate:
+   ```bash
+   RESULT=$(listenhub tts create --text "A: 欢迎大家
+   B: 谢谢邀请" --mode smart --speaker "原野" --speaker "高晴" --lang zh --no-wait --json)
+   ID=$(echo "$RESULT" | jq -r '.id')
+   ```
+7. Poll in background until complete
+8. Present: `audioUrl`, `subtitlesUrl`, duration

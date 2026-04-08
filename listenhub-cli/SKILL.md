@@ -1,5 +1,5 @@
 ---
-name: listenhub
+name: listenhub-cli
 description: |
   ListenHub CLI skills router. Routes to the correct skill based on user intent.
   Triggers on: "make a podcast", "explainer video", "read aloud", "TTS",

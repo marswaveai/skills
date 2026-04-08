@@ -33,7 +33,7 @@ Run `coli asr --help` for current CLI options and supported flags.
 
 - No shell scripts. Use direct commands only.
 - Always read config following `shared/config-pattern.md` before any interaction
-- Follow `shared/common-patterns.md` for interaction patterns
+- Follow `shared/cli-patterns.md` for interaction patterns
 - Never ask more than one question at a time
 
 <HARD-GATE>
