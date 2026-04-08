@@ -8,8 +8,8 @@ metadata:
   openclaw:
     emoji: "🖼️"
     requires:
-      env: ["LISTENHUB_API_KEY"]
-    primaryEnv: "LISTENHUB_API_KEY"
+      bin: ["listenhub"]
+    primaryBin: "listenhub"
 ---
 
 ## When to Use
@@ -28,24 +28,22 @@ metadata:
 
 ## Purpose
 
-Generate AI images using the Labnana API. Supports text prompts with optional reference images, multiple resolutions, and aspect ratios. Images are saved as local files.
+Generate AI images using the ListenHub CLI. Supports text prompts with optional reference images (local files or URLs), multiple resolutions, and aspect ratios. Images are saved as local files.
 
 ## Hard Constraints
 
-- No shell scripts. Construct curl commands from the API reference files listed in Resources
-- Always read `shared/authentication.md` for API key and headers
-- Follow `shared/common-patterns.md` for error handling
-- Image generation uses a **different base URL**: `https://api.marswave.ai/openapi/v1`
+- Always check CLI auth following `shared/cli-authentication.md`
+- Follow `shared/cli-patterns.md` for command execution and error handling
 - Always read config following `shared/config-pattern.md` before any interaction
 - Output saved to `.listenhub/image-gen/YYYY-MM-DD-{jobId}/` — never `~/Downloads/`
 
 <HARD-GATE>
-Use the AskUserQuestion tool for every multiple-choice step — do NOT print options as plain text. Ask one question at a time. Wait for the user's answer before proceeding to the next step. After all parameters are collected, summarize the choices and ask the user to confirm. Do NOT call the image generation API until the user has explicitly confirmed.
+Use the AskUserQuestion tool for every multiple-choice step — do NOT print options as plain text. Ask one question at a time. Wait for the user's answer before proceeding to the next step. After all parameters are collected, summarize the choices and ask the user to confirm. Do NOT call the image generation command until the user has explicitly confirmed.
 </HARD-GATE>
 
-## Step -1: API Key Check
+## Step -1: CLI Auth Check
 
-Follow `shared/config-pattern.md` § API Key Check. If the key is missing, stop immediately.
+Follow `shared/cli-authentication.md` § Auth Check. If CLI is not installed or not logged in, guide the user through setup.
 
 ## Step 0: Config Setup
 
@@ -135,29 +133,17 @@ If flash model was selected, also offer: `1:4` (narrow portrait), `4:1` (wide la
 ```
 Question: "Any reference images for style guidance?"
 Options:
-  - "Yes, I have URL(s)" — Provide reference image URLs
-  - "Yes, I have local file(s)" — Provide local file paths (base64 mode)
+  - "Yes" — Provide file paths or URLs
   - "No references" — Generate from prompt only
 ```
 
-**If URL mode**: Collect URLs (comma-separated, max 14). For each URL, infer mimeType from suffix and build:
-```json
-{ "fileData": { "fileUri": "<url>", "mimeType": "<inferred>" } }
-```
-Suffix mapping: `.jpg`/`.jpeg` → `image/jpeg`, `.png` → `image/png`, `.webp` → `image/webp`, `.gif` → `image/gif`
+**If yes**: Collect reference image paths or URLs (comma-separated). The CLI handles both local files and URLs natively — no need to distinguish between them.
 
-**If local file (base64) mode**: Collect file paths (comma-separated, max 14). For each file, encode to base64 and infer mimeType from suffix:
-```bash
-# macOS
-BASE64_REF=$(base64 -i /path/to/image.png)
-# Linux
-BASE64_REF=$(base64 -w 0 /path/to/image.png)
-```
-Build:
-```json
-{ "inlineData": { "data": "<base64-encoded>", "mimeType": "<inferred>" } }
-```
-Suffix mapping: `.jpg`/`.jpeg` → `image/jpeg`, `.png` → `image/png`, `.webp` → `image/webp`, `.heic` → `image/heic`, `.heif` → `image/heif`
+- Max 5 references
+- Supported formats: jpg, png, webp, gif
+- Max 10MB per file
+
+Each reference will be passed as a `--reference` flag to the CLI.
 
 ### Step 5: Confirm & Generate
 
@@ -170,67 +156,83 @@ Ready to generate image:
   Model: {pro / flash}
   Resolution: {1K / 2K / 4K}
   Aspect ratio: {ratio}
-  References: {yes — N URL(s) / yes — N local file(s) / no}
+  References: {yes — N image(s) / no}
 
   Proceed?
 ```
 
-Wait for explicit confirmation before calling the API.
+Wait for explicit confirmation before running the CLI command.
 
 ## Workflow
 
-1. **Build request**: Construct JSON with provider, model, prompt, imageConfig, and optional referenceImages (URL-based via `fileData` or base64 via `inlineData`)
-2. **Encode local files** (if base64 mode): For each local file path, encode to base64 and build `inlineData` objects
-3. **Submit**: `POST https://api.marswave.ai/openapi/v1/images/generation` with timeout of 600s
-4. **Extract image**: Parse base64 data from response
-5. **Decode and present result**
+1. **Build CLI command**: Construct the `listenhub image create` command with all collected parameters.
 
-Read `OUTPUT_MODE` from config. Follow `shared/output-mode.md` for behavior.
+2. **Execute**: Run the command with `run_in_background: true` and `timeout: 180000`:
 
-**`inline` or `both`**: Decode base64 to a temp file, then use the Read tool.
+   ```bash
+   listenhub image create \
+     --prompt "{description}" \
+     --model "{model}" \
+     --lang "{lang}" \
+     --aspect-ratio {16:9|9:16|1:1} \
+     --size {1K|2K|4K} \
+     --json
+   ```
 
-```bash
-JOB_ID=$(date +%s)
-echo "$BASE64_DATA" | base64 -D > /tmp/image-gen-${JOB_ID}.jpg
-```
-Then use the Read tool on `/tmp/image-gen-{jobId}.jpg`. The image displays inline in the conversation.
+   If reference images were provided, add `--reference` for each:
+   ```bash
+   listenhub image create \
+     --prompt "{description}" \
+     --model "{model}" \
+     --lang "{lang}" \
+     --aspect-ratio 16:9 \
+     --size 2K \
+     --reference ./sketch.png \
+     --reference ./photo.jpg \
+     --json
+   ```
 
-Present:
-```
-图片已生成！
-```
+   The `--lang` flag provides a language hint for the prompt. Detect from the user's prompt language (e.g., Chinese prompt → `zh`, English prompt → `en`).
 
-**`download` or `both`**: Save to the artifact directory.
+3. **Parse result and present**
 
-```bash
-JOB_ID=$(date +%s)
-DATE=$(date +%Y-%m-%d)
-JOB_DIR=".listenhub/image-gen/${DATE}-${JOB_ID}"
-mkdir -p "$JOB_DIR"
-echo "$BASE64_DATA" | base64 -D > "${JOB_DIR}/${JOB_ID}.jpg"
-```
+   Read `OUTPUT_MODE` from config. Follow `shared/output-mode.md` for behavior.
 
-Present:
-```
-图片已生成！
+   Parse the CLI JSON output to extract the image URL:
+   ```bash
+   IMAGE_URL=$(echo "$RESULT" | jq -r '.imageUrl')
+   ```
 
-已保存到 .listenhub/image-gen/{YYYY-MM-DD}-{jobId}/：
-  {jobId}.jpg
-```
+   **`inline` or `both`**: Download to a temp file, then use the Read tool.
 
-**Base64 decoding** (cross-platform):
+   ```bash
+   JOB_ID=$(date +%s)
+   curl -sS -o /tmp/image-gen-${JOB_ID}.jpg "$IMAGE_URL"
+   ```
+   Then use the Read tool on `/tmp/image-gen-{jobId}.jpg`. The image displays inline in the conversation.
 
-```bash
-# Linux
-echo "$BASE64_DATA" | base64 -d > output.jpg
+   Present:
+   ```
+   图片已生成！
+   ```
 
-# macOS
-echo "$BASE64_DATA" | base64 -D > output.jpg
-# or
-echo "$BASE64_DATA" | base64 --decode > output.jpg
-```
+   **`download` or `both`**: Save to the artifact directory.
 
-**Retry logic**: On 429 (rate limit), wait 15 seconds and retry. Max 3 retries.
+   ```bash
+   JOB_ID=$(date +%s)
+   DATE=$(date +%Y-%m-%d)
+   JOB_DIR=".listenhub/image-gen/${DATE}-${JOB_ID}"
+   mkdir -p "$JOB_DIR"
+   curl -sS -o "${JOB_DIR}/${JOB_ID}.jpg" "$IMAGE_URL"
+   ```
+
+   Present:
+   ```
+   图片已生成！
+
+   已保存到 .listenhub/image-gen/{YYYY-MM-DD}-{jobId}/：
+     {jobId}.jpg
+   ```
 
 ## Prompt Handling
 
@@ -253,12 +255,14 @@ echo "$BASE64_DATA" | base64 --decode > output.jpg
 
 ## API Reference
 
-- Image generation: `shared/api-image.md`
-- Error handling: `shared/common-patterns.md` § Error Handling
+- CLI authentication: `shared/cli-authentication.md`
+- CLI execution patterns: `shared/cli-patterns.md`
+- Config pattern: `shared/config-pattern.md`
+- Output mode: `shared/output-mode.md`
 
 ## Composability
 
-- **Invokes**: nothing (direct API call)
+- **Invokes**: nothing (direct CLI call)
 - **Invoked by**: platform skills for cover images (Phase 2)
 
 ## Example
@@ -273,61 +277,38 @@ echo "$BASE64_DATA" | base64 --decode > output.jpg
 5. No references
 
 ```bash
-RESPONSE=$(curl -sS -X POST "https://api.marswave.ai/openapi/v1/images/generation" \
-  -H "Authorization: Bearer $LISTENHUB_API_KEY" \
-  -H "Content-Type: application/json" \
-  -H "X-Source: skills" \
-  --max-time 600 \
-  -d '{
-    "provider": "google",
-    "model": "gemini-3-pro-image-preview",
-    "prompt": "cyberpunk city at night",
-    "imageConfig": {"imageSize": "2K", "aspectRatio": "16:9"}
-  }')
-
-BASE64_DATA=$(echo "$RESPONSE" | jq -r '.candidates[0].content.parts[0].inlineData.data // .data')
-JOB_ID=$(date +%s)
-DATE=$(date +%Y-%m-%d)
-JOB_DIR=".listenhub/image-gen/${DATE}-${JOB_ID}"
-mkdir -p "$JOB_DIR"
-echo "$BASE64_DATA" | base64 -D > "${JOB_DIR}/${JOB_ID}.jpg"
+listenhub image create \
+  --prompt "cyberpunk city at night" \
+  --model "gemini-3-pro-image-preview" \
+  --lang en \
+  --aspect-ratio 16:9 \
+  --size 2K \
+  --json
 ```
 
-Decode the base64 data per `outputMode` (see `shared/output-mode.md`).
+Parse CLI JSON output per `outputMode` (see `shared/output-mode.md`).
 
-### Example 2 — With Local Reference Image (base64)
+### Example 2 — With Reference Images
 
-**User**: "Generate an image in this style" (provides a local file path)
+**User**: "Generate an image in this style" (provides local files and a URL)
 
 **Agent workflow**:
 1. Ask prompt → "a serene mountain lake at dawn"
 2. Ask model → "pro"
 3. Ask resolution → "2K"
 4. Ask ratio → "16:9"
-5. References → local file → `/path/to/style-reference.png`
+5. References → `/path/to/style-reference.png`, `https://example.com/photo.jpg`
 
 ```bash
-# Encode local reference image
-BASE64_REF=$(base64 -i /path/to/style-reference.png)
-
-RESPONSE=$(curl -sS -X POST "https://api.marswave.ai/openapi/v1/images/generation" \
-  -H "Authorization: Bearer $LISTENHUB_API_KEY" \
-  -H "Content-Type: application/json" \
-  --max-time 600 \
-  -d "{
-    \"provider\": \"google\",
-    \"model\": \"gemini-3-pro-image-preview\",
-    \"prompt\": \"a serene mountain lake at dawn\",
-    \"imageConfig\": {\"imageSize\": \"2K\", \"aspectRatio\": \"16:9\"},
-    \"referenceImages\": [{\"inlineData\": {\"data\": \"$BASE64_REF\", \"mimeType\": \"image/png\"}}]
-  }")
-
-BASE64_DATA=$(echo "$RESPONSE" | jq -r '.candidates[0].content.parts[0].inlineData.data // .data')
-JOB_ID=$(date +%s)
-DATE=$(date +%Y-%m-%d)
-JOB_DIR=".listenhub/image-gen/${DATE}-${JOB_ID}"
-mkdir -p "$JOB_DIR"
-echo "$BASE64_DATA" | base64 -D > "${JOB_DIR}/${JOB_ID}.jpg"
+listenhub image create \
+  --prompt "a serene mountain lake at dawn" \
+  --model "gemini-3-pro-image-preview" \
+  --lang en \
+  --aspect-ratio 16:9 \
+  --size 2K \
+  --reference /path/to/style-reference.png \
+  --reference https://example.com/photo.jpg \
+  --json
 ```
 
-Decode the base64 data per `outputMode` (see `shared/output-mode.md`).
+Parse CLI JSON output per `outputMode` (see `shared/output-mode.md`).
