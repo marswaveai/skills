@@ -376,6 +376,7 @@ python3 SKILL_DIR/scripts/process_avatar.py \
   --name "{cola_name}" \
   --output "~/.cola/avatar" \
   --direct \
+  --regen-happy \
   --wuxing "{wuxing}" \
   --rarity "{rarity}" \
   --meme-confused "{confused_image_path}" \
@@ -473,6 +474,18 @@ rm -rf ~/.cola/avatar/*
 python3 SKILL_DIR/scripts/process_avatar.py \
   --base "~/.cola/avatar/base_image.png" \
   --sad "{new_sad_image_path}" \
+  --name "{cola_name}" \
+  --output "~/.cola/avatar" \
+  --direct \
+  --wuxing "{wuxing}" \
+  --rarity "{rarity}"
+```
+
+**重新生成 happy 表情时**，需要额外传 `--regen-happy`（否则脚本会跳过 happy 以避免覆盖）：
+```bash
+python3 SKILL_DIR/scripts/process_avatar.py \
+  --base "{new_happy_image_path}" \
+  --regen-happy \
   --name "{cola_name}" \
   --output "~/.cola/avatar" \
   --direct \

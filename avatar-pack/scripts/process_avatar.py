@@ -1149,6 +1149,8 @@ def main():
     parser.add_argument('--meme-confused', help='Path to confused pose image for meme')
     parser.add_argument('--meme-annoyed', help='Path to annoyed pose image for meme')
     parser.add_argument('--meme-cracked', help='Path to distressed pose image for cracked meme')
+    parser.add_argument('--regen-happy', action='store_true',
+                        help='Regenerate happy.gif during expression-only regen')
     parser.add_argument('--locale', default='zh',
                         help='Locale for meme text: zh or en')
     args = parser.parse_args()
@@ -1202,13 +1204,16 @@ def main():
         print(f'\nProfile card done! Output: {output_dir}')
         return
 
-    # Process expression images — skip any not provided (supports single-expression regen)
+    # Process expression images — skip any not provided
     images = {
-        'happy': args.base,
         'sad': args.sad,
         'angry': args.angry,
         'thinking': args.thinking,
     }
+    # Full generation always includes happy.
+    # Expression-only regen includes happy only when explicitly requested.
+    if not is_expression_only or args.regen_happy:
+        images['happy'] = args.base
 
     available = {}
     for emotion, path in images.items():
@@ -1217,11 +1222,14 @@ def main():
         elif path:
             print(f'Warning: {emotion} image not found: {path}, skipping', file=sys.stderr)
 
-    if not available:
-        print('Error: no expression images found', file=sys.stderr)
+    # Meme requests are independent from expression generation
+    has_meme_input = any([args.meme_confused, args.meme_annoyed, args.meme_cracked])
+
+    if not available and not has_meme_input:
+        print('Error: no expression or meme images found', file=sys.stderr)
         sys.exit(1)
 
-    # Generate GIFs
+    # Generate GIFs only when expression inputs exist
     for emotion, input_path in available.items():
         output_path = os.path.join(output_dir, f'{emotion}.gif')
         print(f'Generating {emotion}.gif → {output_path}')
