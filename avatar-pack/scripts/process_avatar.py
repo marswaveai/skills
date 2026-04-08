@@ -589,11 +589,10 @@ def save_base_image(input_path, output_path, name=None):
     img = remove_background(img)
 
     # Save original-resolution copy (background removed, before fit_to_canvas)
-    # Only save if not already present — prevents overwriting 1K original with a smaller regen input
+    # Callers control when this function runs; when called, always refresh original.
     base, ext = os.path.splitext(output_path)
     original_path = f'{base}_original{ext}'
-    if not os.path.exists(original_path):
-        img.save(original_path, 'PNG')
+    img.save(original_path, 'PNG')
 
     canvas, _, _, _, _ = fit_to_canvas(img, OUTPUT_SIZE)
 
