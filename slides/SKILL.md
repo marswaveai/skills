@@ -174,7 +174,7 @@ Wait for explicit confirmation before running any CLI command.
 
 ## Workflow
 
-1. **Submit (background)**: Run the CLI command with `run_in_background: true` and `timeout: 360000`:
+1. **Submit (background)**: Run the CLI command with `run_in_background: true` and `timeout: 660000`:
 
    **Without narration (default):**
    ```bash
@@ -183,6 +183,7 @@ Wait for explicit confirmation before running any CLI command.
      --lang {en|zh|ja} \
      --image-size 2K \
      --aspect-ratio 16:9 \
+     --timeout 600 \
      --json
    ```
 
@@ -195,6 +196,7 @@ Wait for explicit confirmation before running any CLI command.
      --aspect-ratio 16:9 \
      --no-skip-audio \
      --speaker "{name}" \
+     --timeout 600 \
      --json
    ```
 
@@ -311,6 +313,7 @@ listenhub slides create \
   --lang zh \
   --image-size 2K \
   --aspect-ratio 16:9 \
+  --timeout 600 \
   --json
 ```
 
@@ -333,6 +336,7 @@ listenhub slides create \
   --aspect-ratio 16:9 \
   --no-skip-audio \
   --speaker "Mars" \
+  --timeout 600 \
   --json
 ```
 

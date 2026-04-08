@@ -51,8 +51,8 @@ The `.status` field will be one of: `processing`, `completed`, `failed`.
 |-------------|----------------|
 | podcast | 300s |
 | tts | 300s |
-| explainer | 300s |
-| slides | 300s |
+| explainer | 600s |
+| slides | 600s |
 | image | 120s |
 | music | 600s |
 

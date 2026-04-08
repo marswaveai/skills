@@ -21,7 +21,14 @@ if ! command -v listenhub &>/dev/null; then
   # Stop here — tell user their Node.js/npm setup needs attention
 fi
 
-# 3. Check auth
+# 3. Check for updates (skip if just installed)
+CURRENT_V=$(listenhub --version 2>/dev/null)
+LATEST_V=$(npm view @marswave/listenhub-cli version 2>/dev/null)
+if [ -n "$CURRENT_V" ] && [ -n "$LATEST_V" ] && [ "$CURRENT_V" != "$LATEST_V" ]; then
+  npm install -g @marswave/listenhub-cli
+fi
+
+# 4. Check auth
 AUTH=$(listenhub auth status --json 2>/dev/null)
 AUTHED=$(echo "$AUTH" | jq -r '.authenticated // false')
 ```
@@ -46,6 +53,10 @@ if [ "$AUTHED" != "true" ]; then
   AUTHED=$(echo "$AUTH" | jq -r '.authenticated // false')
 fi
 ```
+
+### If update check is slow
+
+The `npm view` call is typically fast (< 2s). If it fails (network issues, npm registry down), silently skip the update and proceed with the installed version. Never block the user on a version check failure.
 
 ## Security
 

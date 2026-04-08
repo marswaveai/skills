@@ -186,6 +186,7 @@ listenhub explainer create \
   --lang {en|zh|ja} \
   --speaker "{name}" \
   --speaker-id "{id}" \
+  --timeout 600 \
   --json
 ```
 
@@ -305,6 +306,7 @@ listenhub explainer create \
   --lang en \
   --speaker "Mars" \
   --speaker-id "cozy-man-english" \
+  --timeout 600 \
   --json
 ```
 
