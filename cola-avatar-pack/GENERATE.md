@@ -53,17 +53,79 @@
 
 ## 前置条件
 
-```bash
-python3 -c "from PIL import Image; print('Pillow OK')"
-```
-如果不可用：`pip3 install Pillow`
+按顺序检查，每步验证通过后再继续下一步。
+
+### 1. ColaOS 环境
 
 ```bash
-rembg --help >/dev/null 2>&1 && echo "rembg OK" || echo "rembg MISSING"
+test -d ~/.cola && echo "COLA_OK" || echo "COLA_MISSING"
 ```
-如果不可用：`pip3 install rembg[cli]`。rembg 用于去除生图背景，process_avatar.py 在检测到输入图无透明通道时会自动调用。
+
+如果 `COLA_MISSING`：停止。告知用户：
+- 中文："这个技能仅适用于 ColaOS 平台，当前环境不支持。"
+- English: "This skill requires ColaOS and is not available in the current environment."
+
+### 2. Python 3
+
+```bash
+python3 --version >/dev/null 2>&1 && echo "python3 OK" || echo "python3 MISSING"
+```
+
+如果 `python3 MISSING`：尝试安装。可检查的路径和方式包括但不限于：
+- 系统自带：`/usr/bin/python3 --version`
+- Homebrew：`brew install python3`
+- 其他适合当前系统的方式
+
+安装后验证：`python3 --version`。如果仍然失败，标记 `DEGRADED_MODE=true`，继续流程（后续 Phase 4/6 走降级路径）。
+
+### 3. Pillow
+
+```bash
+python3 -c "from PIL import Image; print('Pillow OK')" 2>/dev/null || echo "Pillow MISSING"
+```
+
+如果 `Pillow MISSING`（且 python3 可用）：尝试安装 Pillow。安装后验证。如果仍然失败，标记 `DEGRADED_MODE=true`。
+
+### 4. rembg（可选增强）
+
+```bash
+python3 -c "import rembg; print('rembg OK')" 2>/dev/null || echo "rembg MISSING"
+```
+
+如果 `rembg MISSING`：尝试安装 rembg。安装后验证。**安装失败不影响流程**——脚本会自动回退到 flood-fill 去背景。
+
+### 5. 定位 SKILL_DIR
 
 找到本 skill 目录：优先搜索 `~/.cola/skills/cola-avatar-pack/SKILL.md`，找不到再搜 `~/.claude/skills/cola-avatar-pack/SKILL.md`。取其父目录为 SKILL_DIR。
+
+### 降级模式说明
+
+当 `DEGRADED_MODE=true` 时（python3 或 Pillow 不可用），Phase 4 和 Phase 6 跳过 `process_avatar.py`，直接使用 listenhub 原图：
+
+**输出差异：**
+- 基础形象：listenhub 原图直接保存，可能带背景，无双尺寸，无水印
+- Profile card：无法生成，直接展示 base image 原图
+- 表情：静态 PNG 替代 GIF，无动画效果
+- 梗图：只有 AI 生成的姿势图，无裂缝/问号/涂鸦叠加
+
+**话术调整：** 降级模式下不提"GIF"和"动画"，改用"表情图"。
+
+**avatar.json 字段：** 降级模式下 files 中表情写 `.png` 而非 `.gif`，不写 `@2x` 字段。示例：
+```json
+{
+  "degraded": true,
+  "files": {
+    "avatar": "base_image.png",
+    "happy": "happy.png",
+    "sad": "sad.png",
+    "angry": "angry.png",
+    "thinking": "thinking.png",
+    "meme_confused": "meme_confused.png",
+    "meme_annoyed": "meme_annoyed.png",
+    "meme_cracked": "meme_cracked.png"
+  }
+}
+```
 
 ---
 
@@ -240,6 +302,8 @@ ratio: 1:1
 
 **`--base` = `base_image_path`（Phase 3 中 listenhub 返回的 URL）。** 原图没有水印，profile card 不应有水印（底部已有 ColaOS 品牌标识）。
 
+#### 正常模式（python3 + Pillow 可用）
+
 ```bash
 python3 SKILL_DIR/scripts/process_avatar.py \
   --base "{base_image_path}" \
@@ -253,6 +317,20 @@ python3 SKILL_DIR/scripts/process_avatar.py \
 ```
 
 用 send_file 发送 profile_card.png（无 caption）。
+
+#### 降级模式（DEGRADED_MODE=true）
+
+跳过 process_avatar.py。直接下载 listenhub 原图保存：
+```bash
+mkdir -p ~/.cola/avatar
+curl -sL "{base_image_path}" -o ~/.cola/avatar/base_image.png
+cp ~/.cola/avatar/base_image.png ~/.cola/avatar/base_image_original.png
+```
+
+用 send_file 发送 base_image.png（无 caption）作为 profile card 的替代展示。
+
+#### 两种模式共同步骤
+
 然后按「严格输出规则 #5」中的确认话术发送（按 Cola 语言）。
 
 如果稀有度不是 common，紧接着加一句：
@@ -297,6 +375,14 @@ python3 SKILL_DIR/scripts/process_avatar.py \
 ### Phase 5：生成 3 个表情 + 3 个梗图（共 6 次 listenhub 调用）
 
 #### 5.0 参数校验
+
+**前置检查：基础形象是否存在。** Phase 5-7 依赖 base_image 作为 reference_images 和 happy 表情来源。如果从未生成过自画像，必须先走完整流程。
+
+```bash
+test -f ~/.cola/avatar/base_image_original.png && test -f ~/.cola/avatar/base_image.png && echo "BASE_OK" || echo "BASE_MISSING"
+```
+
+如果 `BASE_MISSING`：**停止 Phase 5，从 Phase 1 开始执行完整生成流程。** 不需要提示用户——直接进入 Phase 1→2→3→4→等用户确认→5→6→7。
 
 Phase 5-7 依赖以下参数。**如果是从 Phase 4 连续执行的，这些参数已在内存中，直接复用。** 如果是单独执行 Phase 5-7（如补生表情），则必须按以下优先级获取每个参数：
 
@@ -367,6 +453,8 @@ happy 表情已由 Phase 3 基础形象生成（base_image 即 happy），此处
 
 ### Phase 6：处理图片 + 生成 GIF + 梗图
 
+#### 正常模式（python3 + Pillow 可用）
+
 ```bash
 python3 SKILL_DIR/scripts/process_avatar.py \
   --base "{base_image_path}" \
@@ -385,13 +473,29 @@ python3 SKILL_DIR/scripts/process_avatar.py \
   --locale "{locale}"
 ```
 
+#### 降级模式（DEGRADED_MODE=true）
+
+跳过 process_avatar.py。直接下载 listenhub 原图保存为静态 PNG：
+```bash
+curl -sL "{sad_image_path}" -o ~/.cola/avatar/sad.png
+curl -sL "{angry_image_path}" -o ~/.cola/avatar/angry.png
+curl -sL "{thinking_image_path}" -o ~/.cola/avatar/thinking.png
+curl -sL "{confused_image_path}" -o ~/.cola/avatar/meme_confused.png
+curl -sL "{annoyed_image_path}" -o ~/.cola/avatar/meme_annoyed.png
+curl -sL "{cracked_image_path}" -o ~/.cola/avatar/meme_cracked.png
+cp ~/.cola/avatar/base_image.png ~/.cola/avatar/happy.png
+```
+
+注意：降级模式下 happy 复用 base_image.png（和正常模式一致：base_image 即 happy），表情为静态 PNG 无 GIF 动画，梗图无裂缝/问号/涂鸦叠加。
+
 ### Phase 7：持久化 + 展示
 
 1. **更新** `~/.cola/avatar/avatar.json`（Phase 4 已写入初始版本，此处补全 files 列表）：
    - `process_avatar.py` 只负责产出图片文件，不负责读写 `avatar.json`；该 JSON 由外层流程维护
    - 读取现有 avatar.json
    - 将表情和梗图文件名追加到 `files` 字段中
-   - 最终 files 应包含：
+
+   **正常模式 files：**
 ```json
 {
   "files": {
@@ -417,16 +521,42 @@ python3 SKILL_DIR/scripts/process_avatar.py \
 }
 ```
 
-2. **分两组发送**（无 caption，发不带 @2x 的 128px 版本）：
-   - 先 send_file 逐个发送 4 个表情 GIF：happy.gif → sad.gif → angry.gif → thinking.gif
+   **降级模式 files：**
+```json
+{
+  "degraded": true,
+  "files": {
+    "avatar": "base_image.png",
+    "happy": "happy.png",
+    "sad": "sad.png",
+    "angry": "angry.png",
+    "thinking": "thinking.png",
+    "meme_confused": "meme_confused.png",
+    "meme_annoyed": "meme_annoyed.png",
+    "meme_cracked": "meme_cracked.png"
+  }
+}
+```
+
+2. **分两组发送**（无 caption）：
+   - 正常模式：发不带 @2x 的 128px 版本（.gif）
+   - 降级模式：发 listenhub 原图（.png）
+   - 先 send_file 逐个发送 4 个表情：happy → sad → angry → thinking
    - 一句过渡（按 Cola 语言）：
      - 中文："还有几张梗图贴纸～"
      - English: "And some meme stickers~"
-   - 再 send_file 逐个发送 3 个梗图 PNG：meme_confused.png → meme_annoyed.png → meme_cracked.png
+   - 再 send_file 逐个发送 3 个梗图：meme_confused → meme_annoyed → meme_cracked
 
-3. 按「严格输出规则 #5」中的完成话术发送（按 Cola 语言）。
+3. 完成话术（按 Cola 语言）：
+   - **正常模式**：按「严格输出规则 #5」中的完成话术发送。
+   - **降级模式**：
+     - 中文："表情图生成完毕！以后聊天时我会用这些表情来表达情绪～"
+     - English: "Expression images done! I'll use these to express myself in our chats~"
+     - （不提 @2x 高清版和右键保存，因为降级模式无双尺寸输出）
 
-4. 写入 memory：`Avatar 表情 GIF 和梗图贴纸已生成，存储在 ~/.cola/avatar/。使用规则见 SKILL.md「主动使用表情」。`
+4. 写入 memory：
+   - 正常模式：`Avatar 表情 GIF 和梗图贴纸已生成，存储在 ~/.cola/avatar/。使用规则见 SKILL.md「主动使用表情」。`
+   - 降级模式：`Avatar 表情图（静态 PNG，降级模式）已生成，存储在 ~/.cola/avatar/。使用规则见 SKILL.md「主动使用表情」。Python 环境修复后可重新生成以获得 GIF 动画和 profile card。`
 
 ---
 
