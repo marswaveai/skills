@@ -387,6 +387,7 @@ python3 SKILL_DIR/scripts/process_avatar.py \
 ### Phase 7：持久化 + 展示
 
 1. **更新** `~/.cola/avatar/avatar.json`（Phase 4 已写入初始版本，此处补全 files 列表）：
+   - `process_avatar.py` 只负责产出图片文件，不负责读写 `avatar.json`；该 JSON 由外层流程维护
    - 读取现有 avatar.json
    - 将表情和梗图文件名追加到 `files` 字段中
    - 最终 files 应包含：

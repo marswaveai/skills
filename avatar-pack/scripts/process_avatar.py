@@ -52,6 +52,8 @@ def _try_rembg(img):
     import subprocess, tempfile, shutil
     if not shutil.which('rembg'):
         return None
+    tmp_in = None
+    tmp_out = None
     try:
         with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as f_in:
             tmp_in = f_in.name
@@ -69,6 +71,8 @@ def _try_rembg(img):
         pass
     finally:
         for p in [tmp_in, tmp_out]:
+            if not p:
+                continue
             try:
                 os.unlink(p)
             except Exception:
@@ -1145,7 +1149,7 @@ def main():
         card_output = os.path.join(output_dir, 'profile_card.png')
         print(f'Generating profile card → {card_output}')
         generate_profile_card(
-            args.base, args.name, args.line1, args.line2 or '', card_output,
+            base_output, args.name, args.line1, args.line2 or '', card_output,
             wuxing=args.wuxing, rarity=args.rarity
         )
 
