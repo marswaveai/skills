@@ -1185,8 +1185,8 @@ def main():
         if val:
             setattr(args, attr.replace('-', '_'), os.path.expanduser(val))
 
-    # Validate --name: letters, digits, CJK, spaces, hyphens, underscores, dots; max 64 chars
-    if not re.match(r'^[\w\s\-.\u4e00-\u9fff\u3400-\u4dbf]{1,64}$', args.name):
+    # Validate --name: letters, digits, CJK, literal spaces, hyphens, underscores, dots; max 64 chars
+    if not re.match(r'^[\w \-.\u4e00-\u9fff\u3400-\u4dbf]{1,64}$', args.name):
         print(f'Error: invalid name "{args.name}" — '
               'only letters, digits, CJK, spaces, hyphens, underscores, dots allowed (max 64 chars)',
               file=sys.stderr)

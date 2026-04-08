@@ -533,7 +533,7 @@ cp ~/.cola/avatar/base_image.png ~/.cola/avatar/happy.png
 1. **更新** `~/.cola/avatar/avatar.json`（Phase 4 已写入初始版本，此处补全 files 列表）：
    - `process_avatar.py` 只负责产出图片文件，不负责读写 `avatar.json`；该 JSON 由外层流程维护
    - 读取现有 avatar.json
-   - **重建 `files` 字段**（用下方完整模板覆盖，而非追加到已有 files 中，避免初始 JSON 留下不存在的文件键）
+   - **重建 `files` 字段：以下方模板为参考，但仅写入实际存在的文件。** 写入前对每个文件执行 `test -f ~/.cola/avatar/{filename}`，不存在则不写入该键。这确保 avatar.json 作为 source of truth 不会声明不存在的文件。
 
    **正常模式 files：**
 ```json
