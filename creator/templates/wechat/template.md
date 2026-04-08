@@ -51,7 +51,7 @@ For each planned illustration, call the image generation API:
 - **Model**: `gemini-3-pro-image-preview`
 - **Cover**: aspect ratio `3:2`, size `2K`
 - **Body images**: aspect ratio `3:2` or `16:9`, size `2K`
-- **Timeout**: `--max-time 600` on curl (per `shared/api-image.md`)
+- **Timeout**: `--timeout 600` (use `listenhub image create --json`)
 
 Save images to `{output}/images/cover.jpg`, `{output}/images/section-1.jpg`, etc.
 
