@@ -34,6 +34,16 @@ Available presets and topic-matching hints (used by SKILL.md Step 3b for orderin
 
 Read the full preset file to get Color Palette, Typography, Decorations, and Prompt Fragment for use in Step 5.
 
+### 3.5. Load Writing Context
+
+Before writing, read and internalize:
+- `../../writing-engine/forbidden-words.md` — 禁用词表
+- `../../writing-engine/rhetoric.md` — 修辞技巧库
+- `style.md` — 小红书风格规则
+- `content-prototypes.md` — 使用 Step 3a 中用户选定的内容原型
+
+Apply the prototype's narrative structure when planning content.
+
 ### 4. Generate Content Plan
 
 Based on material:
@@ -50,6 +60,23 @@ Include:
 - Short punchy paragraphs
 - Strategic emoji
 - 3-5 hashtags at the end
+
+### 5.5. Self-Review Loop
+
+Execute the L1-L4 quality review per `../../writing-engine/quality-review.md`.
+
+1. Run L1 (forbidden words scan against `../../writing-engine/forbidden-words.md`). Auto-fix any hits.
+2. Run L2 (style consistency against `style.md` § Review Thresholds). Auto-fix any failures.
+3. Run L3 (content quality, including L3-5 prototype-specific checks from `content-prototypes.md`). Auto-fix any failures.
+4. Run L4 (aliveness review). Auto-fix any failures.
+
+If any layer fails, auto-fix and re-run from L1. Maximum 3 full iterations.
+If all layers pass: proceed silently to the next step.
+If cap hit: show user the cap-hit report per `../../writing-engine/quality-review.md` and await decision.
+
+**Mode-dependent placement:**
+- If mode is `"long-text"` only or `"both"`: self-review applies here (after Write Long Text).
+- If mode is `"cards"` only: self-review applies to card copy text after Step 6 (Design Card Prompts).
 
 ### 6. Design Card Prompts (if mode includes cards)
 

@@ -7,6 +7,16 @@
 If input is a URL, material has already been extracted by the dispatcher (content-parser).
 If input is text/topic, use it directly.
 
+### 1.5. Load Writing Context
+
+Before writing, read and internalize:
+- `../../writing-engine/forbidden-words.md` — 禁用词表
+- `../../writing-engine/rhetoric.md` — 修辞技巧库
+- `style.md` — 公众号风格规则
+- `article-prototypes.md` — 使用 Step 3a 中用户选定的文章原型的叙事结构
+
+Apply the prototype's narrative arc when generating the outline.
+
 ### 2. Generate Outline
 
 Based on the material and `style.md`, generate:
@@ -21,6 +31,19 @@ Write the full article section by section, following `style.md` for tone, struct
 Apply any user style directives from `.listenhub/creator/styles/wechat.md` (if exists) and `sessionStyle` (from style reference) on top of the baseline style. `sessionStyle` takes priority over the user style file, which takes priority over `style.md`.
 
 Write the complete article as `article.md` in the output folder.
+
+### 3.5. Self-Review Loop
+
+Execute the L1-L4 quality review per `../../writing-engine/quality-review.md`.
+
+1. Run L1 (forbidden words scan against `../../writing-engine/forbidden-words.md`). Auto-fix any hits.
+2. Run L2 (style consistency against `style.md` § Review Thresholds). Auto-fix any failures.
+3. Run L3 (content quality, including L3-5 prototype-specific checks from `article-prototypes.md`). Auto-fix any failures.
+4. Run L4 (aliveness review). Auto-fix any failures.
+
+If any layer fails, auto-fix and re-run from L1. Maximum 3 full iterations.
+If all layers pass: proceed silently to Step 4.
+If cap hit: show user the cap-hit report per `../../writing-engine/quality-review.md` and await decision.
 
 ### 4. Select Illustration Preset
 
