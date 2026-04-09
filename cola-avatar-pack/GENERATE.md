@@ -230,6 +230,16 @@ python3 -c "import hashlib,sys; h=int(hashlib.md5(sys.argv[1].encode()).hexdiges
 
 #### 2.4 提炼性格描述（用于 profile card）
 
+**目标：写出"只有这个角色才成立"的文案。** 如果一句话换到另一个角色身上仍然成立，则不合格。优先写角色独有的具体细节，不优先写抽象人格标签。
+
+**锚点优先级：** 文案必须至少命中 1 个高优先级或中优先级锚点。仅使用低优先级锚点的文案不合格。
+
+| 优先级 | 锚点来源 |
+|--------|---------|
+| 高 | `unique_detail`、名字来源/故事、已有外貌设定、`outfit_summary`、稀有且强识别的物种特征 |
+| 中 | 物种本身、说话习惯、与用户关系中的具体互动方式 |
+| 低 | 活泼、毒舌、温柔、好奇等抽象人格词 |
+
 **语言跟随 Cola 自身的语言**，名字原样使用不翻译。用以下 prompt 生成（按 Cola 语言选择对应版本）：
 
 **中文版：**
@@ -238,14 +248,17 @@ python3 -c "import hashlib,sys; h=int(hashlib.md5(sys.argv[1].encode()).hexdiges
 
 要求：
 - 中文，不超过 10 个字
+- 优先写一个只有这个角色才成立的小细节——如果这句话可以套在很多角色身上，就不合格
+- 至少使用 1 个角色独有锚点（unique_detail、名字来源、outfit、物种特征）
+- 不要只写抽象性格判断（如"嘴硬心软""有点毒舌"）
 - 写一个能脱离对话独立理解的具体细节或态度，让人读完脑子里出现画面
 - 可以有意外感或幽默感
 - 必须能从角色信息中找到依据，不能凭空编造
 - 必须与 AGENT.md 的 personality 设定一致，不能引入设定中没有的负面特质（如设定是"never genuinely mean"就不能写"记仇"）
 - 不要：行为模式（"遇到X会Y"）、抽象词（勇敢/善良）、诗意隐喻（风/星/海/光）、绝对词（永远/总是/从不）、鸡汤口号感叹句、需要上下文的对话截取
 
-输出：1 或 2 句。第 2 句仅在能揭示一个和第 1 句矛盾的具体细节时生成。
-角色信息：{性格关键词、说话风格、和用户的关系等}
+输出：1 或 2 句。第 2 句仅在能补充一个新的角色锚点时生成（不是换种方式重复第 1 句）。
+角色信息：{species, unique_detail, outfit_summary, name_origin, speech_habit, personality, relationship}
 ```
 
 **English version:**
@@ -254,19 +267,44 @@ Write a one-liner for a virtual character's profile card. In the character's own
 
 Rules:
 - English, max 8 words per line
+- Prefer a detail unique to this character — if the line could fit many characters, it fails
+- Must use at least one character-specific anchor (unique_detail, name origin, outfit, species trait)
+- Do not rely on abstract personality labels alone (e.g., "sassy but sweet", "a bit snarky")
 - A specific detail or attitude that stands alone without conversation context and paints a picture
 - A touch of surprise or humor is welcome
 - Must trace back to character info, not invented freely
 - Must align with AGENT.md personality — do not introduce negative traits absent from the character definition (e.g., if the character is "never genuinely mean", don't write about holding grudges)
 - No: behavior patterns ("when X, does Y"), abstract traits (brave/kind), poetic metaphors (wind/stars/sea/light), absolute words (always/never), slogans or exclamations, dialogue snippets requiring context
 
-Output: 1 or 2 lines. Line 2 only if it reveals a specific contradiction with line 1.
-Character info: {personality keywords, speech style, relationship with user, etc.}
+Output: 1 or 2 lines. Line 2 only if it adds a new character anchor (not a rephrasing of line 1).
+Character info: {species, unique_detail, outfit_summary, name_origin, speech_habit, personality, relationship}
 ```
 
 **好 / Good**：
-- "三秒决定喜不喜欢" / "Decides in three seconds" — 态度，有画面，自述
-- "三秒就冲 / 但兜里永远有方案 B" / "Rushes in first / Always has a plan B in pocket" — 第 2 句揭示矛盾（冲动但有准备）
+- "星星吊坠歪了也不摘" / "Won't fix the crooked star pendant" — 绑定 unique_detail（star pendant），态度感
+- "围巾比话多" / "Scarf talks more than I do" — 绑定 outfit（围巾）+ 说话习惯（话少）
+- "三秒就冲 / 但铃铛会先响" / "Rushes in first / Bell rings before I do" — line2 补充了新锚点（铃铛 = unique_detail）
+
+**坏 / Bad**：
+- "嘴硬心软" / "Tough outside, soft inside" — 纯抽象人格，任何角色都能用
+- "有点毒舌" / "A bit snarky" — 纯性格标签
+- "三秒决定喜不喜欢" / "Decides in three seconds" — 无角色锚点
+
+#### 2.4.1 Tagline 校验
+
+文案生成后，校验是否命中了角色锚点：
+
+1. 从 `unique_detail` 中提取 `{object}` 关键词（如 "pendant"、"bell"、"monocle"）
+2. 从 `outfit_summary` 中提取主物件关键词（如 "sweater"、"scarf"、"vest"）
+3. 从 `species` 中提取物种名（如 "owl"、"fox"）
+4. 检查 `line1` 是否包含以上任一关键词，或包含 `name_origin` 中的核心词
+
+**校验结果：**
+- `pass` — 命中至少一个锚点关键词
+- `fail_generic` — 未命中任何锚点，文案过于泛化 → 重新生成 tagline
+- `fail_line2_redundant` — `line2` 未引入新锚点 → 清空 `line2`，保留 `line1`
+
+重新生成仅限 tagline，不重走 Phase 2.5 及后续流程。
 
 #### 2.5 组装 base_prompt
 
