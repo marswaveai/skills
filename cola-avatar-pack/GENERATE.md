@@ -303,7 +303,7 @@ negative_prompt = "multiple characters, background elements, text, watermark,
 signature, soft brush strokes, realistic proportions, side view, 3D rendering,
 blurry edges, gradient shading, photo-realistic, grid lines, graph paper,
 ruled background, checkerboard pattern, transparency grid, gray background,
-gradient background, paper texture"
+gradient background, paper texture, desaturated colors, muted palette, washed-out colors"
 ```
 
 组装后的 `base_prompt` 总词数限制为 **65-95**，仅允许英文、数字、标点。

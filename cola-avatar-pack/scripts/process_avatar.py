@@ -937,13 +937,13 @@ def generate_meme_cracked(input_path, output_path, locale='zh'):
 
 CARD_BG = (255, 255, 255)
 
-# Five-element color mapping
+# Five-element color mapping — brightened to reduce gray/muted card appearance
 WUXING_COLORS = {
-    'wood': {'primary': (45, 90, 39), 'light': (70, 130, 90)},
-    'fire': {'primary': (196, 30, 58), 'light': (213, 80, 80)},
-    'metal': {'primary': (140, 120, 75), 'light': (170, 155, 120)},
-    'water': {'primary': (27, 58, 92), 'light': (90, 127, 166)},
-    'earth': {'primary': (150, 110, 8), 'light': (196, 150, 58)},
+    'wood': {'primary': (60, 120, 50), 'light': (90, 160, 110)},
+    'fire': {'primary': (210, 45, 65), 'light': (225, 95, 90)},
+    'metal': {'primary': (175, 150, 90), 'light': (195, 180, 140)},
+    'water': {'primary': (40, 80, 130), 'light': (110, 150, 190)},
+    'earth': {'primary': (180, 135, 20), 'light': (215, 175, 70)},
 }
 
 # Rarity → number of filled diamonds (out of 5)
@@ -1173,7 +1173,7 @@ def generate_profile_card(avatar_path, name, line1, line2, output_path, wuxing='
         return y
 
     # Line 1 & 2: unified neutral gray, same font size for readability
-    desc_color = (90, 90, 90)
+    desc_color = (110, 110, 115)
     desc_font = load_font(16 * scale)
     line1_end_y = draw_centered_text_wrapped(draw, line1, name_y + 64 * scale, desc_font, desc_color, text_max_w)
 
