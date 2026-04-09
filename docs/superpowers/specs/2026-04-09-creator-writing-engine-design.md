@@ -71,28 +71,30 @@ creator/
 
 ## 3. Pipeline Modifications
 
-### Current Pipeline (8 steps)
+This section describes the conceptual pipeline. Section 6 maps these onto exact SKILL.md step numbers.
+
+### Current Conceptual Pipeline (per-platform template)
 
 ```
-Prepare Material → Generate Outline → Write Article → Select Preset → Plan Illustrations → Generate Images → Insert Images → Write meta.json
+Prepare Material → Generate Outline → Write Content → Select Preset → Plan Illustrations → Generate Images → Insert Images → Write meta.json
 ```
 
-### New Pipeline (11 steps)
+### New Conceptual Pipeline
 
 ```
 Prepare Material → [Topic Assistance] → [Prototype Classification] → Generate Outline → Write Content → [Self-Review Loop] → Select Preset → Plan Illustrations → Generate Images → Insert Images → Write meta.json
 ```
 
-Three new steps marked with `[]`:
+Three new steps marked with `[]`. All three are pre-confirmation interactive steps (require user input via AskUserQuestion), except the Self-Review Loop which runs silently during pipeline execution.
 
-### Step 2 (New): Topic Assistance
+### Topic Assistance (maps to SKILL.md Step 2.5)
 
 **Triggers when**: User input is a topic/keywords (not existing material/URL).
 **Skips when**: User provides a URL, file, or substantial text.
 
 Process:
 1. Apply the platform's `methodology.md` topic selection framework
-2. Evaluate using the three-circle Venn model: creator's expertise ∩ reader interest ∩ unique angle
+2. Evaluate using the three-circle Venn model: creator's expertise ∩ reader interest ∩ current timing/relevance (adapted from khazix's "当下的时间节点")
 3. Run HKR quality filter:
    - **H (Happy)**: Interesting enough? Creates curiosity?
    - **K (Knowledge)**: Has information value? Reader learns something?
@@ -100,18 +102,25 @@ Process:
 4. S-tier topics have all three. Passing requires at least two. If topic scores only one or zero, proactively suggest 2-3 alternative angles to the user.
 5. If topic is vague, ask user for more specifics: key points, personal experiences, what excites or frustrates them about the topic.
 
-### Step 3 (New): Prototype Classification
+### Prototype Classification (maps to SKILL.md Step 3a)
 
-**Applies to all platforms** (different prototype sets per platform).
+**Applies to all platforms** (different prototype sets per platform). Happens before the confirmation gate since it requires user interaction.
 
 Process:
 1. Read platform's `*-prototypes.md`
-2. Based on material and topic, auto-match the best-fit prototype
+2. Auto-match the best-fit prototype based on material/topic using matching heuristics (see below)
 3. Present the recommended prototype with rationale to user via AskUserQuestion
 4. User confirms or selects a different prototype
 5. The selected prototype determines the narrative structure used in writing
 
-### Step 5.5 (New): Self-Review Loop
+**Matching heuristics** (WeChat article prototypes as example — each platform defines its own):
+- **调查实验型**: user mentions testing, trying, buying, or doing something hands-on
+- **产品体验型**: user provides a specific product/tool to review or demo
+- **现象解读型**: user describes a trend, observation, or "why is X happening"
+- **工具分享型**: user has a specific tool/prompt to recommend
+- **方法论分享型**: user wants to share accumulated knowledge, tips, or "N lessons learned"
+
+### Self-Review Loop (runs inside SKILL.md Step 5, after writing)
 
 After writing is complete, automatically execute the L1→L4 quality review:
 
@@ -134,7 +143,19 @@ L4: "Aliveness" Review (temperature, uniqueness, voice/posture, flow)
 
 **Iteration cap**: Maximum 3 full iterations. If L4 still fails after 3 rounds, output the best version with a quality report, let user decide whether to accept.
 
-**The review does NOT produce a visible report to the user.** The loop runs silently. The user receives the final, quality-passed article. If the cap is hit, only then does the user see the report.
+**The review does NOT produce a visible report to the user.** The loop runs silently. The user receives the final, quality-passed article. If the cap is hit, only then does the user see a brief report in this format:
+
+```
+⚠️ 质量审查未完全通过（3轮迭代后）
+
+未通过项：
+- L4-1 温度感：第3-4段情绪表达偏知识性描述
+- L3-3 文化升维：未找到自然的文化/哲学连接点
+
+已输出当前最佳版本。你可以：
+1. 接受现状，继续生成配图
+2. 手动修改上述段落后继续
+```
 
 ---
 
@@ -208,6 +229,17 @@ The L1-L4 quality pyramid, directly adopted from khazix-writer with the followin
 - The iteration logic (auto-fix → re-run) is defined here
 - The iteration cap (3 rounds) is defined here
 - Output format (silent pass or quality report on cap-hit) is defined here
+- Each platform's `style.md` includes a "Review Thresholds" section with adjusted numeric values
+
+**Platform-specific threshold overrides**:
+
+| Check | WeChat (long-form) | Xiaohongshu (short-form) | Narration (spoken) |
+|-------|--------------------|--------------------------|--------------------|
+| L2-2 single-sentence paragraphs min | 3 | 2 | N/A (no paragraphs) |
+| L2-3 colloquial expressions min | 8-10 different | 4-6 different | 8+ different |
+| L2-3 emotional punctuation | required (at least 1) | optional | optional |
+| L3-3 cultural elevation | required | optional (skip OK) | optional (skip OK) |
+| L3-5 prototype-specific | per article-prototypes.md | per content-prototypes.md | per script-prototypes.md |
 
 **L1 — Hard Rules (Automated Scan)**:
 Checks against `forbidden-words.md`. Binary pass/fail. Zero tolerance.
@@ -316,11 +348,11 @@ Full khazix style ruleset for long-form articles:
 Each prototype includes: core narrative arc, paragraph allocation guidance, typical opening approach, specific L3-5 review criteria.
 
 **`methodology.md`** (~80 lines):
-- Three-circle Venn topic selection: creator's expertise ∩ reader interest ∩ unique angle
+- Three-circle Venn topic selection: creator's expertise ∩ reader interest ∩ current timing/relevance (from khazix's "你的专业领域 + 读者的普遍兴趣 + 当下的时间节点")
 - HKR quality filter (Happy/Knowledge/Resonance)
 - Role-based empathy check (busy user / playful friend / anxious learner)
 - Topic sources: Twitter, Reddit, Xiaohongshu, Jike, Weibo/Douyin/Bilibili, reader communities
-- 4 business categories with example titles: LLM tech, AIGC art, internet culture
+- 3 business categories with example titles: LLM tech, AIGC art, internet culture
 - Content type taxonomy: product review, tutorial, phenomenon analysis, opinion, AI experiments
 
 **`references/style-examples.md`** (~300 lines):
@@ -340,7 +372,7 @@ Adapted from khazix-writer's `style_examples.md`:
 
 ### 5.2 Xiaohongshu (小红书)
 
-**`style.md`** (rewrite ~120 lines):
+**`style.md`** (complete rewrite from scratch ~120 lines, not a patch on existing):
 khazix style adapted for short-form content:
 - Same core values (curiosity, sincerity, speak human)
 - Compressed rhythm: denser information per sentence, shorter paragraphs (1-2 sentences)
@@ -364,7 +396,7 @@ Each includes: narrative structure, card density recommendation, typical hook pa
 
 **`methodology.md`** (~50 lines):
 - Xiaohongshu-specific topic selection: trending searches, comment section demand mining, seasonal content
-- Adapted HKR filter (H is weighted higher on Xiaohongshu — visual appeal matters more)
+- Adapted HKR filter: H (Happy/curiosity) still applies but Xiaohongshu also requires visual hook appeal as a separate factor — topics must be visually representable in card format
 - Title engineering: numbers, emotional hooks, "绝绝子" "一定要看" patterns
 
 **`references/style-examples.md`** (~100 lines):
@@ -374,7 +406,7 @@ Each includes: narrative structure, card density recommendation, typical hook pa
 
 ### 5.3 Narration (口播)
 
-**`style.md`** (rewrite ~120 lines):
+**`style.md`** (complete rewrite from scratch ~120 lines, not a patch on existing):
 khazix style adapted for spoken word:
 - Same core values
 - More filler words and natural hesitation OK (but cleaned up, not sloppy)
@@ -410,31 +442,29 @@ Each includes: pacing guide, beat structure, typical opening hooks.
 
 ## 6. SKILL.md Modifications
 
-The main `SKILL.md` is modified to integrate the new steps into the interaction flow:
+The main `SKILL.md` is modified to integrate the new steps into the interaction flow. All new interactive steps happen before the confirmation gate (Step 4).
 
-### Between Step 1 (Understand Input) and Step 2 (Template Matching)
+### Step 2.5 (New): Topic Assistance
 
-No change — template matching stays at Step 2.
-
-### After Step 2 (Template Matching) — New: Step 2.5 Topic Assistance
-
-Insert after template matching, before style extraction:
+Inserted after Step 2 (Template Matching), before Step 3 (Style Extraction):
 
 - If input is topic/keywords (not URL/file/text), run the platform's `methodology.md` topic assistance
 - If input is existing material, skip this step
+- Uses the three-circle Venn model and HKR filter as defined in Section 3
 
-### After Step 2.5 — Existing Step 3 (Style Extraction)
+### Existing Step 3 (Style Extraction)
 
 No change to the style extraction step.
 
-### New: Step 3a Prototype Classification
+### Step 3a (New): Prototype Classification
 
-Between style extraction and preset selection:
+Inserted between Step 3 (Style Extraction) and Step 3b (Preset Selection). Before the confirmation gate since it requires user interaction.
 
 1. Read the platform's prototype file
-2. Auto-match prototype based on material/topic
+2. Auto-match prototype based on material/topic using the matching heuristics defined in Section 3
 3. Present recommendation to user via AskUserQuestion with rationale
 4. User confirms or overrides
+5. The selected prototype is displayed in the Step 4 confirmation summary
 
 ### Existing Step 3b (Preset Selection)
 
@@ -444,9 +474,9 @@ No change.
 
 The writing step in each platform's `template.md` is modified:
 
-1. **Before writing**: Load the prototype's narrative structure
-2. **During writing**: Apply style hierarchy (session > persisted > platform style.md) PLUS `writing-engine/` rules (forbidden words, rhetorical techniques)
-3. **After writing**: Run self-review loop (quality-review.md L1→L4, max 3 iterations, silent pass or report on cap-hit)
+1. **Before writing**: Load the prototype's narrative structure from `*-prototypes.md`
+2. **During writing**: Apply style hierarchy (session > persisted > platform style.md) PLUS `writing-engine/` rules (forbidden words, rhetorical techniques). Each platform's template.md includes explicit instructions like: "Before writing, read and apply `../../writing-engine/forbidden-words.md` and `../../writing-engine/rhetoric.md`. After writing, execute the self-review loop per `../../writing-engine/quality-review.md`."
+3. **After writing**: Run self-review loop (quality-review.md L1→L4, max 3 iterations, silent pass or cap-hit report). Load review files layer by layer: `forbidden-words.md` for L1, add `style.md` for L2, add `*-prototypes.md` for L3, holistic read for L4 — to manage context pressure.
 4. **Then continue** to illustrations/images as before
 
 ### Other Steps
@@ -490,7 +520,7 @@ khazix-writer was designed for WeChat long-form. Not everything transfers direct
 - `creator/templates/xiaohongshu/template.md` — update to reference writing-engine, add self-review step
 - `creator/templates/xiaohongshu/style.md` — rewrite with adapted khazix style
 - `creator/templates/narration/template.md` — update to reference writing-engine, add self-review step
-- `creator/templates/narration/style.md` — rewrite with adapted khazix style
+- `creator/templates/narration/style.md` — rewrite with adapted khazix style. **Note**: current style.md recommends `——` for asides (line 19) which directly conflicts with the forbidden punctuation rule. Must be replaced with `...` or comma in the rewrite.
 
 ### Files created (new)
 - `creator/writing-engine/quality-review.md`
@@ -511,6 +541,7 @@ khazix-writer was designed for WeChat long-form. Not everything transfers direct
 - All preset files (`presets/*.md`)
 - `shared/` utilities
 - Other skills (content-parser, image-gen, tts, asr)
+- Other template directories not listed above (e.g., any future platform templates)
 
 ### Backward Compatibility
 - Existing user style files (`.listenhub/creator/styles/*.md`) continue to work unchanged
