@@ -193,10 +193,15 @@ python3 -c "import hashlib,sys; h=int(hashlib.md5(sys.argv[1].encode()).hexdiges
 2. 名字来源/故事 → 推导物种方向
 3. 性格 + 说话风格 → 从对应稀有度的物种池中自由推导
 
+**物种选择原则：非猫优先。** 默认从非猫科物种中选择。仅在以下三种情况允许优先选猫科：
+1. 名字包含明确猫科词汇（如 "Kitty"、"Meow"、"小橘"、"Neko"、"咪咪"）或猫品种名（如 "Ragdoll"、"布偶"）
+2. 已有外貌设定为猫
+3. 用户明确要求猫
+
 **普通物种池（common）**——现实中存在的物种，以下为参考，鼓励发散：
-- 活泼 → 猫、狐狸、松鼠
+- 活泼 → 狐狸、松鼠、柴犬
 - 安静 → 猫头鹰、水母、蘑菇
-- 毒舌 → 黑猫、蛇、乌鸦
+- 毒舌 → 蛇、乌鸦、蜥蜴
 - 温柔 → 兔子、小鹿、水獭
 - 调皮 → 浣熊、猴子、鹦鹉
 - 好奇 → 小狐狸、变色龙、章鱼
@@ -265,12 +270,31 @@ Character info: {personality keywords, speech style, relationship with user, etc
 
 #### 2.5 组装 base_prompt
 
+**槽位模板。** 每个 slot 使用固定句式，不允许自由散写。按以下骨架填充，可微调措辞但不可改变结构：
+
+```
+[species]:       "{size} {shape} {species_name} with {head_feature} and {body_feature}"
+[wuxing_colors]: "{wuxing_adj} {wuxing_hue} body, {accent_material} accents on {accent_location}"
+[outfit]:        "{material} {garment} with {one_detail}"
+[unique_detail]: "{adjective} {object} on {location}"
+```
+
+示例：
+- [species]: "small round owl with large head and stubby wings"
+- [wuxing_colors]: "warm antique gold body, brushed bronze accents on ears"
+- [outfit]: "cream knit sweater with one wooden button"
+- [unique_detail]: "tiny star-shaped pendant on neck"
+
+每个 slot 5-15 个英文单词，具体到颜色和形状。
+
+**组装模板：**
+
 ```
 base_prompt = "pixel art character, 32x32 pixel grid style,
 chibi proportions where head is 60 percent of total height,
 large expressive eyes taking 20 percent of face width,
 no gradients, no anti-aliasing, clean hard pixel edges,
-transparent background, clean dark pixel outline,
+plain solid white background, clean dark pixel outline,
 limited 12-color palette,
 [species], [wuxing_colors], [outfit], [unique_detail],
 front facing, centered, single character, retro game sprite style"
@@ -278,14 +302,24 @@ front facing, centered, single character, retro game sprite style"
 negative_prompt = "multiple characters, background elements, text, watermark,
 signature, soft brush strokes, realistic proportions, side view, 3D rendering,
 blurry edges, gradient shading, photo-realistic, grid lines, graph paper,
-ruled background, checkerboard pattern"
+ruled background, checkerboard pattern, transparency grid, gray background,
+gradient background, paper texture"
 ```
 
-每个 slot 用 5-15 个英文单词描述，具体到颜色和形状：
-- [species]: 物种 + 体型，如 "small round owl with large head and stubby wings"
-- [wuxing_colors]: 五行色应用到身体/服饰，参考 Phase 2.1 配色表的 prompt 示例列
-- [outfit]: 性格映射的服饰，如 "cream knit sweater with one wooden button"
-- [unique_detail]: 人设独特细节，如 "tiny star-shaped pendant on neck"
+组装后的 `base_prompt` 总词数限制为 **65-95**，仅允许英文、数字、标点。
+
+#### 2.6 Prompt 校验
+
+组装完成后，逐项校验：
+1. **无中文** — base_prompt 不得包含任何中文字符
+2. **词数范围** — 65-95 个英文单词（以空格分词计数）
+3. **无重复** — 不得出现重复的形容词或重复的短语（3 词以上完全相同）
+
+校验失败时仅允许重填对应 slot，不允许整段 prompt 重写。
+
+#### 2.7 Prompt 冻结
+
+Phase 4 写入 `avatar.json` 后，`base_prompt` 和 `negative_prompt` 即为冻结状态。Phase 5 及后续所有表情图和梗图生成时，必须从 `avatar.json` 逐字读取 `base_prompt`，不得重新组装、改写或"优化"。
 
 后续所有表情图完整复用此 prompt。
 
@@ -363,11 +397,16 @@ cp ~/.cola/avatar/base_image.png ~/.cola/avatar/base_image_original.png
 **正常模式：**
 ```json
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "name": "{cola_name}",
   "created_at": "{YYYY-MM-DD}",
   "base_prompt": "{base_prompt}",
   "negative_prompt": "{negative_prompt}",
+  "species": "{species_name}",
+  "species_rationale": "{为什么选这个物种的一句话说明}",
+  "palette_summary": "{五行配色的简要描述}",
+  "outfit_summary": "{服饰的简要描述}",
+  "detail_summary": "{独特细节的简要描述}",
   "wuxing": "{wuxing}",
   "rarity": "{rarity}",
   "locale": "{locale}",
@@ -382,10 +421,12 @@ cp ~/.cola/avatar/base_image.png ~/.cola/avatar/base_image_original.png
 }
 ```
 
+> `species`、`species_rationale`、`palette_summary`、`outfit_summary`、`detail_summary` 仅用于可观测性和排障，不参与后续 prompt 重写。读取旧版 avatar.json（`schema_version: 1` 或字段缺失）时兼容处理，缺失字段视为空。
+
 **降级模式：**
 ```json
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "degraded": true,
   "name": "{cola_name}",
   "created_at": "{YYYY-MM-DD}",
@@ -418,7 +459,7 @@ test -f ~/.cola/avatar/base_image_original.png && test -f ~/.cola/avatar/base_im
 
 Phase 5-7 依赖以下参数。**如果是从 Phase 4 连续执行的，这些参数已在内存中，直接复用。** 如果是单独执行 Phase 5-7（如补生表情），则必须按以下优先级获取每个参数：
 
-1. **avatar.json 存在** → 从 `~/.cola/avatar/avatar.json` 读取
+1. **avatar.json 存在** → 从 `~/.cola/avatar/avatar.json` 读取（**base_prompt 必须逐字读取，不得重新组装或"优化"**——见 Phase 2.7 冻结规则）
 2. **avatar.json 不存在** → 回退到 Phase 1-2 的计算逻辑重新推导：
    - `name`：从 memory 中读取 Cola 名字
    - `wuxing`：从 memory 中读取生日 → 年份尾数 → 查 Phase 2.1 五行表
@@ -466,22 +507,39 @@ happy 表情已由 Phase 3 基础形象生成（base_image 即 happy），此处
 
 ### Phase 5.5：生图质量校验
 
-6 张图全部返回后，**逐张目视检查**（用 read 或 send_file 查看），对照 base_image 判断：
+6 张图全部返回后，**使用脚本检测背景质量**，不再依赖 LLM 目视检查。
+
+**背景检测（正常模式，python3 可用）：**
+
+对每张图执行：
+```bash
+python3 SKILL_DIR/scripts/process_avatar.py --check-bg "{image_path}"
+```
+
+脚本输出 JSON：`{"background_type": "...", "confidence": 0.0-1.0, "reason": "..."}`
+- 退出码 `0`：背景可接受（clean 或 white_remnant），继续
+- 退出码 `1`：背景不可接受（checkerboard/gradient/unknown），需重新生成
+
+**降级模式（python3 不可用）：** 跳过背景检测，直接进入 Phase 6。
+
+**画风和一致性仍需目视确认：**
 
 | 检查项 | 不合格标准 | 处理 |
 |--------|-----------|------|
-| 背景 | 可见网格线、棋盘格、纯色背景残留 | 重新生成该图 |
 | 画风 | 明显偏离像素风（变成 anime/写实/柔化笔触）| 重新生成该图 |
-| 服饰配色 | 衣服/配饰的主色与 base_image 明显不同（如黑夹克变白、橙T恤变灰）| 重新生成该图 |
-| 比例 | 头身比与 base_image 不一致（如头变小了）| 重新生成该图 |
+| 服饰配色 | 衣服/配饰的主色与 base_image 明显不同 | 重新生成该图 |
+| 比例 | 头身比与 base_image 不一致 | 重新生成该图 |
 
 **重新生成规则：**
 - 每张最多重试 2 次（共 3 次机会）
 - 重试时做以下调整：
-  1. 将 prompt 中的 `transparent background` 替换为 `solid white background`（模型对纯色背景更稳定，脚本的 `remove_background()` 会自动去背）
+  1. 在 prompt 末尾追加 `pure white background, no patterns`
   2. 在 prompt 末尾追加 `maintain exact same outfit colors and style as reference image`
-  3. negative_prompt 中已包含 `grid lines, graph paper`（Phase 2.5 模板）
-- 如果 3 次都不合格，使用最好的一张继续
+  3. negative_prompt 已包含 `grid lines, graph paper, checkerboard pattern, transparency grid`（Phase 2.5 模板）
+
+**失败策略分级：**
+- `base_image` 或 `profile card` 相关输入的背景检测失败 3 次：**停止整个流程**，告知用户生图质量不达标。
+- 单个表情或梗图失败 3 次：**跳过该项**，保留已成功产物。在 `avatar.json` 的 `files` 中不写入对应键。
 
 ### Phase 6：处理图片 + 生成 GIF + 梗图
 
@@ -578,14 +636,18 @@ cp ~/.cola/avatar/base_image.png ~/.cola/avatar/happy.png
 }
 ```
 
-2. **分两组发送**（无 caption）：
+2. **按 avatar.json 中 `files` 实际存在的键发送**（无 caption）：
+   - 读取 avatar.json 的 `files` 字段，**只发送其中有记录且文件实际存在的项**
    - 正常模式：发不带 @2x 的 128px 版本（.gif）
    - 降级模式：发 listenhub 原图（.png）
-   - 先 send_file 逐个发送 4 个表情：happy → sad → angry → thinking
-   - 一句过渡（按 Cola 语言）：
+   - 先 send_file 逐个发送表情（按 happy → sad → angry → thinking 顺序，跳过 files 中不存在的键）
+   - 如果至少有一个梗图存在，一句过渡（按 Cola 语言）：
      - 中文："还有几张梗图贴纸～"
      - English: "And some meme stickers~"
-   - 再 send_file 逐个发送 3 个梗图：meme_confused → meme_annoyed → meme_cracked
+   - 再 send_file 逐个发送梗图（按 meme_confused → meme_annoyed → meme_cracked 顺序，跳过不存在的键）
+   - **如果有项被跳过**（Phase 5.5 中失败后未写入 files），在最后补一句说明（按 Cola 语言）：
+     - 中文："有几个表情没能生成成功，之后可以单独重新生成哦"
+     - English: "A few expressions didn't generate successfully — I can redo them later"
 
 3. 完成话术（按 Cola 语言）：
    - **正常模式**：按「严格输出规则 #5」中的完成话术发送。

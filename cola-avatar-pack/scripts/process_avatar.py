@@ -114,12 +114,20 @@ def remove_background(img):
         pixels = img.load()
 
         def _is_bg_remnant(r, g, b):
-            """Neutral pixel — likely background remnant.
-            Threshold avg > 55 catches both light and dark checkerboard squares
-            (light ~150, dark ~70) while avoiding character outlines (avg 20-40).
-            Saturation < 30 prevents eroding colored content."""
+            """Neutral pixel — likely background remnant. Two-tier thresholds:
+            - Bright (avg > 180): lenient sat < 40, high-brightness low-sat is almost always bg
+            - Mid (avg > 55): sat < 30, original threshold for checkerboard squares
+            - Dark (avg 35-55): strict sat < 15, protects dark outlines and dark clothing
+            Below avg 35: never treated as background remnant."""
             avg = (r + g + b) / 3
-            return avg > 55 and max(r, g, b) - min(r, g, b) < 30
+            sat = max(r, g, b) - min(r, g, b)
+            if avg > 180:
+                return sat < 40
+            elif avg > 55:
+                return sat < 30
+            elif avg > 35:
+                return sat < 15
+            return False
 
         # Seed: all transparent pixels adjacent to an opaque neutral pixel
         queue = deque()
@@ -159,6 +167,47 @@ def remove_background(img):
             queue.append((x, y - 1))
 
         for x, y in to_clear:
+            r, g, b, a = pixels[x, y]
+            pixels[x, y] = (r, g, b, 0)
+
+        # Stage A.5: border flood-fill supplement.
+        # Catches edge background that rembg missed — seeds from all 4 image
+        # borders where opaque pixels match _is_bg_remnant, floods inward.
+        # Runs after transparent→opaque fill (above) so newly cleared pixels
+        # don't interfere, and before Stage B so island connectivity is accurate.
+        border_queue = deque()
+        visited_border = [[False] * h for _ in range(w)]
+        for x in range(w):
+            for y in [0, h - 1]:
+                r, g, b, a = pixels[x, y]
+                if a >= 128 and _is_bg_remnant(r, g, b):
+                    border_queue.append((x, y))
+        for y in range(h):
+            for x in [0, w - 1]:
+                r, g, b, a = pixels[x, y]
+                if a >= 128 and _is_bg_remnant(r, g, b):
+                    border_queue.append((x, y))
+
+        border_clear = []
+        while border_queue:
+            x, y = border_queue.popleft()
+            if x < 0 or x >= w or y < 0 or y >= h:
+                continue
+            if visited_border[x][y]:
+                continue
+            visited_border[x][y] = True
+            r, g, b, a = pixels[x, y]
+            if a < 128:
+                continue
+            if not _is_bg_remnant(r, g, b):
+                continue
+            border_clear.append((x, y))
+            border_queue.append((x + 1, y))
+            border_queue.append((x - 1, y))
+            border_queue.append((x, y + 1))
+            border_queue.append((x, y - 1))
+
+        for x, y in border_clear:
             r, g, b, a = pixels[x, y]
             pixels[x, y] = (r, g, b, 0)
 
@@ -1145,16 +1194,164 @@ def generate_profile_card(avatar_path, name, line1, line2, output_path, wuxing='
     canvas.save(output_path, 'PNG')
 
 
+def check_background(img_path):
+    """Check if an image's background is acceptable for the avatar pipeline.
+
+    Decision tree:
+    1. Transparency > 30% → clean, pass
+    2. Four corners white (avg > 240) → white_remnant, pass (remove_background can handle)
+    2b. Four corners consistent but not white → unknown, fail
+    3. Checkerboard in border 20px → checkerboard, fail
+    4. Border RGB stddev > 40 → gradient, fail
+    5. Default → unknown, fail (no positive clean signal)
+
+    Returns (exit_code, result_dict). exit_code 0 = acceptable, 1 = not.
+
+    Note on confidence: the confidence field uses different metrics per branch
+    (transparency ratio, corner brightness, flip rate, stddev, etc.) and is
+    intended for logging/debugging only. Do not use it as a threshold for
+    automated decisions — the exit code is the decision signal.
+    """
+    import json
+    import math
+
+    img = Image.open(img_path).convert('RGBA')
+    w, h = img.size
+    pixels = img.load()
+    total = w * h
+
+    # 1. Transparency check
+    transparent_count = sum(1 for y in range(h) for x in range(w) if pixels[x, y][3] < 128)
+    transparency_ratio = transparent_count / total
+    if transparency_ratio > 0.30:
+        return 0, {
+            'background_type': 'clean',
+            'confidence': min(1.0, transparency_ratio),
+            'reason': f'{transparency_ratio:.0%} of pixels already transparent',
+        }
+
+    # 2. Four corners sampling (4x4 block each)
+    sample = 4
+    corner_avgs = []
+    for cx, cy in [(0, 0), (w - sample, 0), (0, h - sample), (w - sample, h - sample)]:
+        block_vals = []
+        for dx in range(sample):
+            for dy in range(sample):
+                x, y = min(cx + dx, w - 1), min(cy + dy, h - 1)
+                r, g, b, a = pixels[x, y]
+                if a >= 128:
+                    block_vals.append((r + g + b) / 3)
+        if block_vals:
+            corner_avgs.append(sum(block_vals) / len(block_vals))
+
+    if corner_avgs and all(avg > 240 for avg in corner_avgs):
+        return 0, {
+            'background_type': 'white_remnant',
+            'confidence': min(corner_avgs) / 255,
+            'reason': 'four corners are white/near-white, remove_background will handle',
+        }
+
+    # 2b. Corners consistent but not white → opaque non-white background
+    if corner_avgs and len(corner_avgs) >= 4:
+        corner_mean = sum(corner_avgs) / len(corner_avgs)
+        corner_spread = max(corner_avgs) - min(corner_avgs)
+        if corner_spread < 30:
+            return 1, {
+                'background_type': 'unknown',
+                'confidence': 1.0 - (corner_spread / 60),
+                'reason': f'four corners are consistent (spread={corner_spread:.0f}) '
+                          f'but not white (avg={corner_mean:.0f})',
+            }
+
+    # 3. Checkerboard detection in border 20px band
+    border_band = min(20, w // 4, h // 4)
+    block_size = 8
+    bright_dark_flips = 0
+    total_blocks = 0
+    for y in range(0, border_band, block_size):
+        prev_bright = None
+        for x in range(0, w, block_size):
+            block_sum = 0
+            block_count = 0
+            for by in range(min(block_size, h - y)):
+                for bx in range(min(block_size, w - x)):
+                    r, g, b, a = pixels[x + bx, y + by]
+                    if a >= 128:
+                        block_sum += (r + g + b) / 3
+                        block_count += 1
+            if block_count > 0:
+                block_avg = block_sum / block_count
+                is_bright = block_avg > 128
+                total_blocks += 1
+                if prev_bright is not None and is_bright != prev_bright:
+                    bright_dark_flips += 1
+                prev_bright = is_bright
+
+    if total_blocks > 4 and bright_dark_flips / total_blocks > 0.6:
+        return 1, {
+            'background_type': 'checkerboard',
+            'confidence': bright_dark_flips / total_blocks,
+            'reason': f'alternating bright/dark blocks detected in border ({bright_dark_flips}/{total_blocks} flips)',
+        }
+
+    # 4. Border RGB stddev check (4px edge band)
+    edge_band = 4
+    edge_vals = []
+    for x in range(w):
+        for y in range(edge_band):
+            r, g, b, a = pixels[x, y]
+            if a >= 128:
+                edge_vals.append((r + g + b) / 3)
+        for y in range(max(0, h - edge_band), h):
+            r, g, b, a = pixels[x, y]
+            if a >= 128:
+                edge_vals.append((r + g + b) / 3)
+    for y in range(h):
+        for x in range(edge_band):
+            r, g, b, a = pixels[x, y]
+            if a >= 128:
+                edge_vals.append((r + g + b) / 3)
+        for x in range(max(0, w - edge_band), w):
+            r, g, b, a = pixels[x, y]
+            if a >= 128:
+                edge_vals.append((r + g + b) / 3)
+
+    if edge_vals:
+        mean = sum(edge_vals) / len(edge_vals)
+        variance = sum((v - mean) ** 2 for v in edge_vals) / len(edge_vals)
+        stddev = math.sqrt(variance)
+        if stddev > 40:
+            return 1, {
+                'background_type': 'gradient',
+                'confidence': min(1.0, stddev / 80),
+                'reason': f'border RGB stddev={stddev:.1f} exceeds threshold 40',
+            }
+
+    # 5. Default: fail — no positive evidence of clean background.
+    # Only transparency (step 1) and white corners (step 2) are positive signals.
+    # Reaching here means the image has an opaque, non-white, non-checkerboard,
+    # non-gradient background we can't confidently classify. Fail safe.
+    non_white_border = sum(1 for v in edge_vals if v < 240) if edge_vals else 0
+    total_edge = max(len(edge_vals), 1)
+    return 1, {
+        'background_type': 'unknown',
+        'confidence': non_white_border / total_edge,
+        'reason': 'no positive clean signal (not transparent, not white corners)',
+    }
+
+
 def main():
     parser = argparse.ArgumentParser(description='Cola Avatar Pack Processor')
-    parser.add_argument('--base', required=True, help='Path to base/happy image')
+    parser.add_argument('--check-bg', metavar='IMAGE',
+                        help='Check background quality of an image and exit (JSON output)')
+    parser.add_argument('--base', help='Path to base/happy image')
     parser.add_argument('--sad', help='Path to sad image')
     parser.add_argument('--angry', help='Path to angry image')
     parser.add_argument('--thinking', help='Path to thinking image')
-    parser.add_argument('--name', required=True, help='Cola name')
+    parser.add_argument('--name', help='Cola name')
     parser.add_argument('--line1', help='Profile tagline for card')
     parser.add_argument('--line2', help='Secondary tagline for card')
-    parser.add_argument('--output', required=True, help='Output directory')
+    parser.add_argument('--output', help='Output directory')
     parser.add_argument('--wuxing', default='wood',
                         help='Five-element type: wood/fire/earth/metal/water')
     parser.add_argument('--rarity', default='common',
@@ -1171,6 +1368,25 @@ def main():
     parser.add_argument('--locale', default='zh',
                         help='Locale for meme text: zh or en')
     args = parser.parse_args()
+
+    # --check-bg mode: standalone background check, then exit
+    if args.check_bg:
+        import json
+        bg_path = os.path.expanduser(args.check_bg)
+        if not os.path.exists(bg_path):
+            print(f'Error: file not found: {bg_path}', file=sys.stderr)
+            sys.exit(2)
+        exit_code, result = check_background(bg_path)
+        print(json.dumps(result))
+        sys.exit(exit_code)
+
+    # Normal mode: validate required args
+    if not args.base:
+        parser.error('--base is required (unless using --check-bg)')
+    if not args.name:
+        parser.error('--name is required (unless using --check-bg)')
+    if not args.output:
+        parser.error('--output is required (unless using --check-bg)')
 
     # Expand ~ in file paths
     args.base = os.path.expanduser(args.base)
