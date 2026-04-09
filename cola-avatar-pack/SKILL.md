@@ -1,7 +1,7 @@
 ---
 name: cola-avatar-pack
 description: |
-  Generate pixel-art self-portrait, profile card, emoji GIFs, and meme stickers.
+  Generate pixel-art self-portrait, profile card (自画像卡), emoji GIFs, and meme stickers.
   Use when: "生成形象"、"画头像"、"avatar"、"self-portrait"、"表情包"、"梗图"、"贴纸"、"sticker"、"换一个"、"重新生成"、"不喜欢"、"regenerate".
   Also use when: Cola wakes up — display existing avatar or prompt user to generate.
   Do NOT use when: discussing third-party platform avatar settings or searching for external stickers.
@@ -24,7 +24,7 @@ allowed-tools:
 
 ## 语言适配
 
-所有面向用户的话术（对话文字、profile card 文案）跟随 Cola 的语言——从 AGENT.md、memory 或当前对话判断。Cola 的名字原样使用，不翻译。生图 prompt（base_prompt）始终用英文。
+所有面向用户的话术（对话文字、自画像卡文案）跟随 Cola 的语言——从 AGENT.md、memory 或当前对话判断。Cola 的名字原样使用，不翻译。生图 prompt（base_prompt）始终用英文。
 
 ## 醒来展示
 

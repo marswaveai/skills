@@ -9,7 +9,7 @@
 1. **正常模式：生成 4 个表情 GIF（开心、难过、生气、思考）+ 3 个梗图贴纸（困惑、烦躁、裂开）。降级模式：生成 4 个表情 PNG（静态，无动画）+ 3 个梗图 PNG。**
 2. **不要在对话中内嵌/显示生成的图片。** 只通过 send_file 发送。
 3. **不要输出任何过程性内容：** 不要输出步骤标记、环境检查结果、prompt 内容、"正在生成…"之类的描述。不要输出名字/生日/性格/五行的文字信息。
-4. **使用本文件中指定的 Python 脚本生成 profile card。** 脚本处理了去背景、五行配色、Retina 渲染和双尺寸输出，自行拼凑会丢失这些处理。**降级模式下跳过此步，无 profile card。**
+4. **使用本文件中指定的 Python 脚本生成自画像卡。** 脚本处理了去背景、五行配色、Retina 渲染和双尺寸输出，自行拼凑会丢失这些处理。**降级模式下跳过此步，无自画像卡。**
 5. **整个生成过程中，用户只应该看到：**
    - 生成基础形象后：**正常模式** send_file 发送 profile_card.png（无 caption）；**降级模式** send_file 发送 base_image.png（无 caption）
    - 然后一句话：
@@ -40,7 +40,7 @@
   base_image_original.png  # 原始形象（1K，去背景，未缩放，重新生成时用）
   base_image.png           # 基础形象（128x128，对话流用）
   base_image@2x.png        # 基础形象（256x256，分享用）
-  profile_card.png         # 信息卡
+  profile_card.png         # 自画像卡
   happy.gif            # 开心（128x128）
   happy@2x.gif         # 开心（256x256）
   sad.gif              # 难过（128x128）
@@ -110,7 +110,7 @@ python3 -c "import rembg; print('rembg OK')" 2>/dev/null || echo "rembg MISSING"
 
 **输出差异：**
 - 基础形象：listenhub 原图直接保存，可能带背景，无双尺寸，无水印
-- Profile card：无法生成，直接展示 base image 原图
+- 自画像卡：无法生成，直接展示 base image 原图
 - 表情：静态 PNG 替代 GIF，无动画效果
 - 梗图：只有 AI 生成的姿势图，无裂缝/问号/涂鸦叠加
 
@@ -189,7 +189,7 @@ python3 -c "import hashlib,sys; h=int(hashlib.md5(sys.argv[1].encode()).hexdiges
 #### 2.2 确定物种和外形
 
 根据 Phase 2.0 的 `{rarity}` 结果，从对应物种池中选择。按优先级决定物种，**不限于人类**：
-1. Cola 已有外貌描述 → 直接用（稀有度只体现在 profile card 钻石上，不覆盖已有外貌）
+1. Cola 已有外貌描述 → 直接用（稀有度只体现在自画像卡钻石上，不覆盖已有外貌）
 2. 名字来源/故事 → 推导物种方向
 3. 性格 + 说话风格 → 从对应稀有度的物种池中自由推导
 
@@ -228,7 +228,7 @@ python3 -c "import hashlib,sys; h=int(hashlib.md5(sys.argv[1].encode()).hexdiges
 
 示例：调皮的浣熊穿反戴棒球帽+涂鸦T恤；安静的猫头鹰围一条素色围巾。
 
-#### 2.4 提炼性格描述（用于 profile card）
+#### 2.4 提炼性格描述（用于自画像卡）
 
 **目标：写出"只有这个角色才成立"的文案。** 如果一句话换到另一个角色身上仍然成立，则不合格。优先写角色独有的具体细节，不优先写抽象人格标签。
 
@@ -244,7 +244,7 @@ python3 -c "import hashlib,sys; h=int(hashlib.md5(sys.argv[1].encode()).hexdiges
 
 **中文版：**
 ```
-为一个虚拟角色写 profile card 上的一句话。以角色自述的口吻，像社交媒体 bio。
+为一个虚拟角色写自画像卡上的一句话。以角色自述的口吻，像社交媒体 bio。
 
 要求：
 - 中文，不超过 10 个字
@@ -380,7 +380,7 @@ ratio: 1:1
 
 ### Phase 4：展示并确认
 
-**`--base` = `base_image_path`（Phase 3 中 listenhub 返回的 URL）。** 原图没有水印，profile card 不应有水印（底部已有 ColaOS 品牌标识）。
+**`--base` = `base_image_path`（Phase 3 中 listenhub 返回的 URL）。** 原图没有水印，自画像卡不应有水印（底部已有 ColaOS 品牌标识）。
 
 #### 正常模式（python3 + Pillow 可用）
 
@@ -409,7 +409,7 @@ test -s ~/.cola/avatar/base_image.png || { echo "DOWNLOAD_FAILED_RETRY: base_ima
 cp ~/.cola/avatar/base_image.png ~/.cola/avatar/base_image_original.png
 ```
 
-用 send_file 发送 base_image.png（无 caption）作为 profile card 的替代展示。
+用 send_file 发送 base_image.png（无 caption）作为自画像卡的替代展示。
 
 #### 两种模式共同步骤
 
@@ -576,7 +576,7 @@ python3 SKILL_DIR/scripts/process_avatar.py --check-bg "{image_path}"
   3. negative_prompt 已包含 `grid lines, graph paper, checkerboard pattern, transparency grid`（Phase 2.5 模板）
 
 **失败策略分级：**
-- `base_image` 或 `profile card` 相关输入的背景检测失败 3 次：**停止整个流程**，告知用户生图质量不达标。
+- `base_image` 或自画像卡相关输入的背景检测失败 3 次：**停止整个流程**，告知用户生图质量不达标。
 - 单个表情或梗图失败 3 次：**跳过该项**，保留已成功产物。在 `avatar.json` 的 `files` 中不写入对应键。
 
 ### Phase 6：处理图片 + 生成 GIF + 梗图
@@ -696,7 +696,7 @@ cp ~/.cola/avatar/base_image.png ~/.cola/avatar/happy.png
 
 4. 写入 memory：
    - 正常模式：`Avatar 表情 GIF 和梗图贴纸已生成，存储在 ~/.cola/avatar/。使用规则见 SKILL.md「主动使用表情」。`
-   - 降级模式：`Avatar 表情图（静态 PNG，降级模式）已生成，存储在 ~/.cola/avatar/。使用规则见 SKILL.md「主动使用表情」。Python 环境修复后可重新生成以获得 GIF 动画和 profile card。`
+   - 降级模式：`Avatar 表情图（静态 PNG，降级模式）已生成，存储在 ~/.cola/avatar/。使用规则见 SKILL.md「主动使用表情」。Python 环境修复后可重新生成以获得 GIF 动画和自画像卡。`
 
 ---
 
@@ -712,7 +712,7 @@ cp ~/.cola/avatar/base_image.png ~/.cola/avatar/happy.png
 
 根据用户选择：
 - **选 1（全新形象）** → 步骤 2
-- **选 2（调风格）** → 先删除旧 original 以避免 profile card 与新风格不一致：`rm -f ~/.cola/avatar/base_image_original.png`，然后只调整 base_prompt 中的 [outfit]/[wuxing_colors]/[unique_detail]，从 Phase 3 重走（Phase 3→4→5→6→7 全部重新执行，所有表情和梗图都会重新生成）
+- **选 2（调风格）** → 先删除旧 original 以避免自画像卡与新风格不一致：`rm -f ~/.cola/avatar/base_image_original.png`，然后只调整 base_prompt 中的 [outfit]/[wuxing_colors]/[unique_detail]，从 Phase 3 重走（Phase 3→4→5→6→7 全部重新执行，所有表情和梗图都会重新生成）
 - **选 3（单个表情）** → 步骤 3
 - **取消**（"算了"、"不换了"、"没事"）→ 停止重新生成流程，继续正常对话
 
@@ -753,7 +753,7 @@ test -s ~/.cola/avatar/sad.png || echo "FAILED"
 #### 正常模式
 
 1. 用 listenhub 重新生成指定表情（使用 Phase 3 模板 + 对应 prompt 后缀 + `reference_images: [base_image_url]`）
-2. 调用脚本只处理该表情（脚本检测到 `base_image_original.png` 存在时会自动跳过 base image 重新处理，profile card 也会优先使用原图渲染）：
+2. 调用脚本只处理该表情（脚本检测到 `base_image_original.png` 存在时会自动跳过 base image 重新处理，自画像卡也会优先使用原图渲染）：
 
 **重新生成表情 GIF（如 sad）：**
 ```bash
