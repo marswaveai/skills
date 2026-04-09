@@ -265,7 +265,7 @@ Checks content depth and persuasiveness. Contextual pass.
 - L3-2: Knowledge delivery — presented as "happened to remember" not "let me teach you"
 - L3-3: Cultural elevation — at least one connection to larger cultural/philosophical/historical reference, feels natural
 - L3-4: Opposing view & empathy — shows understanding of the other side before presenting own view
-- L3-5: Prototype-specific checks (varies by article/content/script prototype selected in Step 3)
+- L3-5: Prototype-specific checks (varies by article/content/script prototype selected in Step 3a)
 - L3-6: Sequential showcase check — if comparing multiple products/cases, uses one-by-one with commentary, not summary listing
 
 Pass criteria: L3-1 and L3-2 must pass. L3-3 through L3-6 pass for applicable items (some skip depending on content type).
