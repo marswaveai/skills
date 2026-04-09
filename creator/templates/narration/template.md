@@ -6,6 +6,16 @@
 
 Same as other templates — material from dispatcher.
 
+### 1.5. Load Writing Context
+
+Before writing, read and internalize:
+- `../../writing-engine/forbidden-words.md` — 禁用词表
+- `../../writing-engine/rhetoric.md` — 修辞技巧库
+- `style.md` — 口播风格规则
+- `script-prototypes.md` — 使用 Step 3a 中用户选定的脚本原型
+
+Apply the prototype's beat structure when writing the script.
+
 ### 2. Generate Script
 
 Write a spoken-word script following `style.md`:
@@ -16,6 +26,19 @@ Write a spoken-word script following `style.md`:
 Apply any user style directives from `.listenhub/creator/styles/narration.md` (if exists) and `sessionStyle` (from style reference) on top of the baseline style. `sessionStyle` takes priority over the user style file, which takes priority over `style.md`.
 
 Save as `script.md` in the output folder.
+
+### 2.5. Self-Review Loop
+
+Execute the L1-L4 quality review per `../../writing-engine/quality-review.md`.
+
+1. Run L1 (forbidden words scan against `../../writing-engine/forbidden-words.md`). Auto-fix any hits.
+2. Run L2 (style consistency against `style.md` § Review Thresholds). Auto-fix any failures.
+3. Run L3 (content quality, including L3-5 prototype-specific checks from `script-prototypes.md`). Auto-fix any failures.
+4. Run L4 (aliveness review). Auto-fix any failures.
+
+If any layer fails, auto-fix and re-run from L1. Maximum 3 full iterations.
+If all layers pass: proceed silently to Step 3.
+If cap hit: show user the cap-hit report per `../../writing-engine/quality-review.md` and await decision.
 
 ### 3. TTS Audio (Optional)
 

@@ -142,6 +142,29 @@ Options (adapt language to user's input):
 - "Xiaohongshu (小红书)" — Image cards + long text post
 - "Narration script (口播稿)" — Spoken script with optional audio
 
+### Step 2.5: Topic Assistance
+
+This step runs only when the user's input is a topic or keywords (short text <50 chars, no URL/path). Skip if user provided a URL, file, or substantial text.
+
+1. Read the selected platform's `methodology.md`:
+   - WeChat: `creator/templates/wechat/methodology.md`
+   - Xiaohongshu: `creator/templates/xiaohongshu/methodology.md`
+   - Narration: `creator/templates/narration/methodology.md`
+
+2. Evaluate the topic using the three-circle Venn model:
+   - 用户的专业领域 (creator's expertise)
+   - 读者的普遍兴趣 (reader interest)
+   - 当下的时间节点 (current timing/relevance)
+
+3. Run HKR quality filter:
+   - **H (Happy)**: 足够有趣、有悬念？
+   - **K (Knowledge)**: 有信息量？看完能学到新东西？
+   - **R (Resonance)**: 能戳中情绪？让人"对对对我也这么想"？
+
+4. If topic scores ≥2 of 3 HKR criteria: proceed with the topic.
+5. If topic scores <2: proactively suggest 2-3 alternative angles to the user via AskUserQuestion.
+6. If topic is vague: ask for more specifics — key points, personal experiences, what excites or frustrates them.
+
 ### Step 3: Style Extraction (if style reference provided)
 
 This step runs only when the user provided a style reference in Step 1. If no style reference was detected, skip to Step 3b.
@@ -185,6 +208,22 @@ If yes → write to `.listenhub/creator/styles/{platform}.md`. If no → only ap
 
 **Standalone style learning:** If the user only provided a style reference without material/topic (e.g., "学习一下这篇文章的风格"), run the extraction above, then **persist directly** to `.listenhub/creator/styles/{platform}.md` without asking — the user's intent to save is already explicit. Confirm with a brief message: "已保存到 styles/{platform}.md". Do not proceed to content generation.
 
+### Step 3a: Prototype Classification
+
+Read the selected platform's prototype file:
+- WeChat: `creator/templates/wechat/article-prototypes.md`
+- Xiaohongshu: `creator/templates/xiaohongshu/content-prototypes.md`
+- Narration: `creator/templates/narration/script-prototypes.md`
+
+Based on the user's material/topic, auto-match the best-fit prototype using the matching heuristics table in the prototype file.
+
+Present the recommendation to the user via AskUserQuestion:
+
+Question: "这篇内容最适合哪种写法？" / "Which content prototype fits best?"
+Options: [list all prototypes for the platform, recommended one first with "(Recommended)" suffix]
+
+The selected prototype determines the narrative structure and L3-5 review criteria for writing.
+
 ### Step 3b: Preset Selection (if applicable)
 
 If the selected template uses illustration or card presets **and** the mode requires images, the preset MUST be chosen **before** the confirmation gate so it can be displayed in the summary.
@@ -221,6 +260,7 @@ If API key required and missing: for CLI-based calls, run `listenhub auth login`
   需要 API 调用：{content-parser, image-gen, ...}
   风格偏好：{styles/{platform}.md 已配置 / 使用默认风格}
   配图/卡片预设：{preset label / 不适用}
+  文章/内容原型：{selected prototype name}
   本次风格参考：{M条来自参考文章 / 无}
 
 确认开始？
@@ -274,6 +314,8 @@ Extract content: `MATERIAL=$(echo "$RESULT" | jq -r '.data.data.content')`
 If extraction fails: tell user "URL 解析失败，你可以直接粘贴文字内容给我" and stop.
 
 **Then follow the platform template** — read `template.md` and execute each step. The template specifies the exact writing instructions and API calls. See `creator/templates/{platform}/template.md` for template contents.
+
+**Writing engine integration:** Each platform's `template.md` now includes writing-engine references and a self-review loop. The template handles loading `writing-engine/` files, applying the selected prototype's narrative structure, and running L1-L4 quality review after writing. See each platform's `template.md` for details.
 
 **Style application:** When writing content, apply style directives in this priority order (higher overrides lower):
 1. `sessionStyle` — directives from the current style reference (Step 3), if any
