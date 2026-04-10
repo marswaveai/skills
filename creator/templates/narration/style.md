@@ -1,6 +1,6 @@
 # 口播写作风格
 
-> 基于「数字生命卡兹克」写作体系，适配口播/演讲脚本格式。
+> 适配口播/演讲脚本格式。
 > 通用禁用规则见 `../../writing-engine/forbidden-words.md`
 > 修辞技巧库见 `../../writing-engine/rhetoric.md`
 
