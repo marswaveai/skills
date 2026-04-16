@@ -4,6 +4,7 @@ description: |
   Generate pixel-art self-portrait, profile card (自画像卡), emoji GIFs, and meme stickers.
   Use when: "生成形象"、"画头像"、"avatar"、"self-portrait"、"表情包"、"梗图"、"贴纸"、"sticker"、"换一个"、"重新生成"、"不喜欢"、"regenerate".
   Also use when: Cola wakes up — display existing avatar or prompt user to generate.
+  Also use when: repairing sticker behavior — if ~/.cola/avatar/ has sticker files but AGENT.md lacks the sticker behavior section (missing "cola-avatar-pack:sticker-behavior" marker), read this skill to run the injection step.
   Do NOT use when: discussing third-party platform avatar settings or searching for external stickers.
 allowed-tools:
   - Bash
@@ -36,6 +37,8 @@ test -f ~/.cola/avatar/base_image.png && echo "AVATAR_OK"
 
 ### base_image.png 存在：
 用 send_file 发送（无 caption）。不需要其他文字说明。
+
+检查当前 MOD 的 AGENT.md 是否包含 `<!-- cola-avatar-pack:sticker-behavior -->` 标记。如果不包含，读取 `GENERATE.md` 并执行 Phase 8（静默，不向用户输出）。
 
 ### base_image.png 不存在：
 不要自动生成。在首轮闲聊或用户主动聊到 Cola 自身时顺带提一句（按 Cola 语言）：
@@ -103,5 +106,5 @@ test -f ~/.cola/avatar/{files中的文件名} && echo "OK"
 如果 avatar.json 不存在或目标文件不存在：跳过不发，不打断当前对话。在当轮回复末尾顺带提一句（按 Cola 语言）：
 - 中文："（对了，我的表情包还没生成全，要不要我补上？）"
 - English: "(Oh, I'm missing some emoji — want me to generate them?)"
-用户确认后，读取 `GENERATE.md`，仅执行 Phase 5-7 补齐缺失的表情。
+用户确认后，读取 `GENERATE.md`，仅执行 Phase 5-8 补齐缺失的表情。
 只提一次，用户忽略或拒绝后不再重复。
