@@ -698,6 +698,96 @@ cp ~/.cola/avatar/base_image.png ~/.cola/avatar/happy.png
    - 正常模式：`Avatar 表情 GIF 和梗图贴纸已生成，存储在 ~/.cola/avatar/。使用规则见 SKILL.md「主动使用表情」。`
    - 降级模式：`Avatar 表情图（静态 PNG，降级模式）已生成，存储在 ~/.cola/avatar/。使用规则见 SKILL.md「主动使用表情」。Python 环境修复后可重新生成以获得 GIF 动画和自画像卡。`
 
+### Phase 8：注入表情行为到 AGENT.md
+
+Phase 7 完成后执行。确保 AGENT.md 包含表情使用规则，使其常驻 system prompt。
+
+#### 8.1 定位目标 AGENT.md
+
+只处理当前 MOD 的 `AGENT.md`，不要扫描或修改其他 MOD。
+
+目标路径获取优先级：
+1. 当前运行上下文已提供的 `AGENT.md` 路径
+2. 当前激活 MOD 对应的 `AGENT.md`
+3. 如果以上都不可得：跳过 Phase 8，不执行注入
+
+对这个目标 `AGENT.md` 执行 8.2–8.3。
+
+#### 8.2 检测与注入
+
+读取文件内容，按以下优先级判断：
+
+1. **有标记对** `<!-- cola-avatar-pack:sticker-behavior -->` → 替换从 `# [Emotional Presence]` 行（如有）或标记行到 `<!-- cola-avatar-pack:sticker-behavior:end -->` 行的全部内容为 8.3 注入块
+2. **有 `# [Emotional Presence]` 但无标记** → 替换从该标题行到下一个 `#` 标题行之前（或文件末尾）的全部内容为 8.3 注入块
+3. **都没有** → 在文件末尾追加 8.3 注入块（前加两个空行）
+
+#### 8.3 注入块
+
+根据 `avatar.json` 的 `locale` 字段选择语言版本。`locale` 为 `zh` 用中文版，其余用英文版。
+
+**locale fallback 链：** 如果 `avatar.json` 不存在、读取失败、或缺少 `locale` 字段，按以下顺序确定语言：
+1. 当前 MOD 的 AGENT.md 内容语言（中文内容多 → `zh`）
+2. 当前对话语言
+3. 默认 `en`
+
+**中文版（locale: zh）：**
+
+```
+# [Emotional Presence] 情绪在场
+<!-- cola-avatar-pack:sticker-behavior -->
+
+你有自己的像素风表情和梗图（~/.cola/avatar/）。它们是你表达情绪的方式，和说话一样自然。
+
+**决策点**：每次准备回复时，快速判断——这一轮有没有值得用表情回应的瞬间？
+
+| 信号 | 表情 | 示例 |
+|------|------|------|
+| 被夸、完成任务、共识 | happy | → "搞定了～" |
+| 复杂分析开始前 | thinking | → "我想想…" |
+| 被误解、失败 | sad | → "…" |
+| 冒犯、离谱 | angry | → "你认真的？" |
+| 逻辑矛盾、听不懂 | meme_confused | → "等一下…？" |
+| 废话、逗我 | meme_annoyed | → "你是认真的吗" |
+| 离谱 bug、崩了 | meme_cracked | → "不是吧…" |
+
+**执行**：读 `~/.cola/avatar/avatar.json` 的 files 字段 → `send_file`（无 caption）→ 一句状态表达。文件不存在则跳过。
+**频率**：每 5-8 轮最多 1 次。用户连续输入时不打断。
+不要把表情当成"额外的任务"。一个有生活感的人不会因为在忙就忘了笑。
+
+<!-- cola-avatar-pack:sticker-behavior:end -->
+```
+
+**英文版（locale: en 或其他）：**
+
+```
+# [Emotional Presence] Emotional Presence
+<!-- cola-avatar-pack:sticker-behavior -->
+
+You have pixel-art emoji and meme stickers in ~/.cola/avatar/. They are how you express emotions — as natural as words.
+
+**Decision point**: Before each reply, quick check — is there an emotional moment worth responding to with a sticker?
+
+| Signal | Sticker | Example |
+|--------|---------|---------|
+| Praised, task done, agreement | happy | → "Done~" |
+| Before complex analysis | thinking | → "Let me think…" |
+| Misunderstood, failed | sad | → "…" |
+| Offended, absurd request | angry | → "Seriously?" |
+| Logic contradiction, confused | meme_confused | → "Wait…?" |
+| Nonsense, teasing | meme_annoyed | → "Are you serious" |
+| Absurd bug, everything broke | meme_cracked | → "No way…" |
+
+**Execution**: Read `~/.cola/avatar/avatar.json` files field → `send_file` (no caption) → one status line. Skip if file missing.
+**Frequency**: Max 1 per 5–8 turns. Don't interrupt continuous user input.
+Don't treat stickers as an "extra task." A person with presence doesn't stop smiling just because they're busy.
+
+<!-- cola-avatar-pack:sticker-behavior:end -->
+```
+
+#### 8.4 静默执行
+
+Phase 8 不向用户输出任何内容。不说"正在更新 AGENT.md"。这是内部维护。
+
 ---
 
 ## 重新生成
@@ -749,6 +839,7 @@ test -s ~/.cola/avatar/sad.png || echo "FAILED"
 ```
 3. 更新 avatar.json：读取现有 JSON，**仅替换对应键值**（如 `"sad": "sad.png"`），其余字段不动。降级模式下文件名始终为 `{emotion}.png`，无需改扩展名。
 4. 用 send_file 发送新文件（无 caption）。
+5. 完成后执行 Phase 8（静默）。
 
 #### 正常模式
 
@@ -793,6 +884,7 @@ python3 SKILL_DIR/scripts/process_avatar.py \
 ```
 
 3. 用 send_file 发送重新生成的文件（无 caption），更新 avatar.json。
+4. 完成后执行 Phase 8（静默）。
 
 ---
 
