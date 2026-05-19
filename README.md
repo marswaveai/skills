@@ -49,6 +49,7 @@ Turn ideas into videos, podcasts, and more. Powered by [ListenHub](https://liste
 | `/tts` | "read aloud", "TTS", "朗读" | Text-to-speech and voice narration |
 | `/music` | "music", "音乐" | AI music generation and covers |
 | `/image-gen` | "generate image", "画一张" | AI image generation from text prompts |
+| `/video-gen` | "generate video", "生成视频" | AI video generation (text-to-video, frame animation, reference-guided) |
 | `/content-parser` | "parse this URL", "解析链接" | Extract content from URLs |
 | `/asr` | "transcribe", "语音转文字", "ASR" | Transcribe audio files to text |
 | `/creator` | "创作", "写公众号", "小红书", "口播" | Creator workflow — platform-ready content packages |
@@ -82,6 +83,7 @@ listenhub auth login
 ├── tts/                 # Text-to-speech
 ├── music/               # AI music generation
 ├── image-gen/           # AI image generation
+├── video-gen/           # AI video generation
 ├── content-parser/      # URL content extraction
 ├── asr/                 # Audio transcription
 ├── creator/             # Creator workflow
