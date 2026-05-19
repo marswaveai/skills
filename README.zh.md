@@ -49,6 +49,7 @@ git pull origin main
 | `/tts` | "朗读"、"TTS"、"语音合成" | 文字转语音、配音 |
 | `/music` | "音乐"、"music" | AI 音乐生成、翻唱 |
 | `/image-gen` | "生成图片"、"画一张" | AI 图片生成 |
+| `/video-gen` | "生成视频"、"video generation" | AI 视频生成（文字生成视频、首帧动画、参考素材引导） |
 | `/content-parser` | "解析链接"、"提取内容" | URL 内容提取 |
 | `/asr` | "转录"、"语音转文字"、"ASR" | 音频转文字 |
 | `/creator` | "创作"、"写公众号"、"小红书"、"口播" | 创作者工作流——一键生成平台内容包 |
@@ -82,6 +83,7 @@ listenhub auth login
 ├── tts/                 # 文字转语音
 ├── music/               # AI 音乐生成
 ├── image-gen/           # AI 图片生成
+├── video-gen/           # AI 视频生成
 ├── content-parser/      # URL 内容提取
 ├── asr/                 # 音频转文字
 ├── creator/             # 创作者工作流

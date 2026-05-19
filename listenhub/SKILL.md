@@ -3,9 +3,9 @@ name: listenhub
 description: |
   ListenHub CLI skills router. Routes to the correct skill based on user intent.
   Triggers on: "make a podcast", "explainer video", "read aloud", "TTS",
-  "generate image", "做播客", "解说视频", "朗读", "生成图片", "幻灯片",
-  "slides", "音乐", "music", "generate music", "翻唱", "cover song",
-  "parse URL", "解析链接", "提取内容".
+  "generate image", "generate video", "做播客", "解说视频", "朗读", "生成图片",
+  "生成视频", "幻灯片", "slides", "音乐", "music", "generate music", "翻唱",
+  "cover song", "parse URL", "解析链接", "提取内容".
 metadata:
   openclaw:
     emoji: "🎧"
@@ -27,6 +27,7 @@ This is a router skill. When users trigger a general ListenHub action, this skil
 | Slides / PPT | "slides", "幻灯片", "PPT", "presentation" | `/slides` |
 | TTS / Read aloud | "TTS", "read aloud", "朗读", "配音", "语音合成" | `/tts` |
 | Image generation | "generate image", "画一张", "生成图片", "AI图" | `/image-gen` |
+| Video generation | "video", "视频", "seedance", "生成视频", "text to video", "做视频" | `/video-gen` |
 | Music | "music", "音乐", "生成音乐", "翻唱", "cover" | `/music` |
 | Content extraction | "parse URL", "extract content", "解析链接" | `/content-parser` |
 | Audio transcription | "transcribe", "ASR", "语音转文字" | `/asr` |
@@ -47,6 +48,7 @@ Options:
   - "Explainer Video" — Narrated video with AI visuals
   - "Slides" — Slide deck / presentation
   - "Music" — AI-generated music or cover
+  - "Video" — AI video generation from text or reference materials
 ```
 
 ## Prerequisites

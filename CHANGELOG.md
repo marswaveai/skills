@@ -1,5 +1,16 @@
 # Changelog
 
+## [1.2.0] - 2026-05-20
+
+### New Skill
+
+**Added:**
+- `video-gen/` — AI video generation via SeeDance (text-to-video, first/last frame animation, reference-guided generation with images/video/audio). Requires `listenhub-cli` with `video` subcommand (not yet in published 0.1.0 — skill gates gracefully at runtime).
+
+**Changed:**
+- `listenhub/SKILL.md` — Added video-gen route to router
+- `listenhub-cli/SKILL.md` — Added video-gen route to router
+
 ## [1.1.0] - 2026-04-07
 
 ### New Skill
