@@ -65,6 +65,18 @@ Determine the mode from the user's input **automatically** before asking any que
 
 Follow `shared/cli-authentication.md`. If the CLI is not installed or the user is not logged in, auto-install and auto-login — never ask the user to run commands manually.
 
+Then follow `shared/cli-authentication.md` § Auth Mode Detection to determine `AUTH_MODE` and set:
+
+```bash
+if [ "$AUTH_MODE" = "openapi" ]; then
+  CMD_PREFIX="listenhub openapi tts"
+else
+  CMD_PREFIX="listenhub tts"
+fi
+```
+
+All subsequent CLI calls use `$CMD_PREFIX` instead of hardcoded `listenhub tts`.
+
 ### Step 0: Config Setup
 
 Follow `shared/config-pattern.md` Step 0 (Zero-Question Boot).
@@ -115,7 +127,7 @@ echo "$NEW_CONFIG" > "$CONFIG_PATH"
 CONFIG=$(cat "$CONFIG_PATH")
 ```
 
-### Quick Mode — `listenhub tts create --mode direct`
+### Quick Mode — `$CMD_PREFIX create --mode direct`
 
 **Step 1: Extract text**
 
@@ -155,7 +167,7 @@ Proceed?
 
 For short text, pass inline:
 ```bash
-RESULT=$(listenhub tts create --text "{text}" --mode direct --speaker "{name}" --lang {lang} --json 2>/tmp/lh-err)
+RESULT=$($CMD_PREFIX create --text "{text}" --mode direct --speaker "{name}" --lang {lang} --json 2>/tmp/lh-err)
 EXIT_CODE=$?
 
 if [ $EXIT_CODE -ne 0 ]; then
@@ -178,7 +190,7 @@ cat > /tmp/lh-content.txt << 'ENDCONTENT'
 Long text content goes here...
 ENDCONTENT
 
-RESULT=$(listenhub tts create --text "$(cat /tmp/lh-content.txt)" --mode direct --speaker "{name}" --lang {lang} --json)
+RESULT=$($CMD_PREFIX create --text "$(cat /tmp/lh-content.txt)" --mode direct --speaker "{name}" --lang {lang} --json)
 AUDIO_URL=$(echo "$RESULT" | jq -r '.audioUrl')
 
 rm -f /tmp/lh-content.txt
@@ -216,7 +228,7 @@ Audio generated!
 
 ---
 
-### Script Mode — `listenhub tts create --mode smart`
+### Script Mode — `$CMD_PREFIX create --mode smart`
 
 **Step 1: Get scripts**
 
@@ -268,7 +280,7 @@ Format the script text with speaker markers and submit. For multi-speaker script
 
 **Submit (foreground)** with `--no-wait`:
 ```bash
-RESULT=$(listenhub tts create --text "{formatted script with speaker markers}" --mode smart --speaker "{name1}" --speaker "{name2}" --lang {lang} --no-wait --json)
+RESULT=$($CMD_PREFIX create --text "{formatted script with speaker markers}" --mode smart --speaker "{name1}" --speaker "{name2}" --lang {lang} --no-wait --json)
 ID=$(echo "$RESULT" | jq -r '.id')
 echo "Submitted: $ID"
 ```
@@ -281,7 +293,7 @@ SpeakerB: Second line of dialogue
 ...
 ENDCONTENT
 
-RESULT=$(listenhub tts create --text "$(cat /tmp/lh-content.txt)" --mode smart --speaker "{name1}" --speaker "{name2}" --lang {lang} --no-wait --json)
+RESULT=$($CMD_PREFIX create --text "$(cat /tmp/lh-content.txt)" --mode smart --speaker "{name1}" --speaker "{name2}" --lang {lang} --no-wait --json)
 ID=$(echo "$RESULT" | jq -r '.id')
 
 rm -f /tmp/lh-content.txt
@@ -378,7 +390,7 @@ When saving preferences, merge into `.listenhub/tts/config.json` — do not over
 4. Confirm → user approves
 5. Generate:
    ```bash
-   RESULT=$(listenhub tts create --text "The server will be down for maintenance at midnight." --mode direct --speaker "Mars" --lang en --json)
+   RESULT=$($CMD_PREFIX create --text "The server will be down for maintenance at midnight." --mode direct --speaker "Mars" --lang en --json)
    AUDIO_URL=$(echo "$RESULT" | jq -r '.audioUrl')
    ```
 6. Present: display `audioUrl` as link (inline mode)
@@ -394,7 +406,7 @@ When saving preferences, merge into `.listenhub/tts/config.json` — do not over
 5. Confirm → user approves
 6. Generate:
    ```bash
-   RESULT=$(listenhub tts create --text "A: 欢迎大家
+   RESULT=$($CMD_PREFIX create --text "A: 欢迎大家
    B: 谢谢邀请" --mode smart --speaker "原野" --speaker "高晴" --lang zh --no-wait --json)
    ID=$(echo "$RESULT" | jq -r '.id')
    ```

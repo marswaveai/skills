@@ -45,6 +45,18 @@ Use the AskUserQuestion tool for every multiple-choice step — do NOT print opt
 
 Follow `shared/cli-authentication.md` § Auth Check. If CLI is not installed or not logged in, auto-install and auto-login — never ask the user to run commands manually.
 
+Then follow `shared/cli-authentication.md` § Auth Mode Detection to determine `AUTH_MODE` and set:
+
+```bash
+if [ "$AUTH_MODE" = "openapi" ]; then
+  CMD_PREFIX="listenhub openapi image"
+else
+  CMD_PREFIX="listenhub image"
+fi
+```
+
+All subsequent CLI calls use `$CMD_PREFIX` instead of hardcoded `listenhub image`.
+
 ## Step 0: Config Setup
 
 Follow `shared/config-pattern.md` Step 0 (Zero-Question Boot).
@@ -165,12 +177,12 @@ Wait for explicit confirmation before running the CLI command.
 
 ## Workflow
 
-1. **Build CLI command**: Construct the `listenhub image create` command with all collected parameters.
+1. **Build CLI command**: Construct the `$CMD_PREFIX create` command with all collected parameters.
 
 2. **Execute**: Run the command with `run_in_background: true` and `timeout: 180000`:
 
    ```bash
-   listenhub image create \
+   $CMD_PREFIX create \
      --prompt "{description}" \
      --model "{model}" \
      --lang "{lang}" \
@@ -181,7 +193,7 @@ Wait for explicit confirmation before running the CLI command.
 
    If reference images were provided, add `--reference` for each:
    ```bash
-   listenhub image create \
+   $CMD_PREFIX create \
      --prompt "{description}" \
      --model "{model}" \
      --lang "{lang}" \
@@ -277,7 +289,7 @@ Wait for explicit confirmation before running the CLI command.
 5. No references
 
 ```bash
-listenhub image create \
+$CMD_PREFIX create \
   --prompt "cyberpunk city at night" \
   --model "gemini-3-pro-image-preview" \
   --lang en \
@@ -300,7 +312,7 @@ Parse CLI JSON output per `outputMode` (see `shared/output-mode.md`).
 5. References → `/path/to/style-reference.png`, `https://example.com/photo.jpg`
 
 ```bash
-listenhub image create \
+$CMD_PREFIX create \
   --prompt "a serene mountain lake at dawn" \
   --model "gemini-3-pro-image-preview" \
   --lang en \

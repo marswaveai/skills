@@ -7,32 +7,32 @@ metadata:
       bin: ["listenhub"]
     primaryBin: "listenhub"
 description: |
-  Generate AI videos from text prompts or reference materials (SeeDance).
+  Generate AI videos from text prompts or reference materials.
+  Supports HappyHorse and SeeDance models.
   Triggers on: "生成视频", "做视频", "video generation", "text to video",
-  "seedance", "create video", "视频生成".
+  "create video", "视频生成", "视频编辑", "video edit".
 ---
 
 ## When to Use
 
 - User wants to generate an AI video from a text description
-- User wants to animate a still image (first-frame / last-frame)
-- User has reference materials (images, videos, audio) to guide video generation
-- User says "生成视频", "做视频", "video generation", "text to video", "seedance"
+- User wants to animate a still image (first-frame)
+- User has reference images to guide video generation
+- User wants to edit an existing video (change style, background, etc.)
+- User says "生成视频", "做视频", "video generation", "text to video", "视频编辑"
 
 ## When NOT to Use
 
 - User wants an explainer video with narration and AI visuals (use `/explainer`)
-- User wants to edit or trim an existing video (not supported)
 - User wants to transcribe audio/video to text (use `/asr`)
 - User wants to generate an image (use `/image-gen`)
 
 ## Purpose
 
-Generate AI videos using the ListenHub CLI's SeeDance integration. Three generation modes:
+Generate AI videos using the ListenHub CLI. Supports two model families:
 
-1. **Text-to-video**: Pure text prompt, no reference materials
-2. **Frame mode**: First-frame image (+ optional last-frame) to animate a still into video
-3. **Reference mode**: Reference images, videos, or audio to guide generation style
+- **HappyHorse** (default) — text-to-video, image-to-video, reference-image-to-video, video-edit
+- **SeeDance** — text-to-video, frame mode (first + last frame), reference mode (images, videos, audio)
 
 ## Hard Constraints
 
@@ -40,7 +40,6 @@ Generate AI videos using the ListenHub CLI's SeeDance integration. Three generat
 - Follow `shared/cli-patterns.md` for CLI execution, errors, and interaction patterns
 - Always read config following `shared/config-pattern.md` before any interaction
 - Follow `shared/output-mode.md` for result presentation — `download` mode saves `{slug}.mp4` to cwd with dedupe per `shared/config-pattern.md` § Artifact Naming
-- Frame mode and Reference mode are mutually exclusive — never mix them
 - Always use `--no-wait --json` for video creation — generation takes minutes
 - Never use `eval` to execute CLI commands — always invoke `listenhub video ...` directly with proper quoting
 
@@ -51,6 +50,21 @@ proceeding to the next step. After all parameters are collected, summarize the
 choices and ask the user to confirm. Do NOT call the video generation command
 until the user has explicitly confirmed.
 </HARD-GATE>
+
+## Model Comparison
+
+| Feature | HappyHorse (default) | SeeDance |
+|---------|---------------------|----------|
+| Text-to-video | ✅ | ✅ |
+| Image-to-video (first-frame) | ✅ | ✅ (+ last-frame) |
+| Reference images | ✅ (1–9, with [Image N] prompt syntax) | ✅ |
+| Video edit | ✅ | ❌ |
+| Reference video | ❌ (use video-edit instead) | ✅ |
+| Reference audio | ❌ | ✅ |
+| Resolution | 720p, 1080p | 480p, 720p, 1080p |
+| Duration range | 3–15s | 4–15s |
+| Extra ratios | 4:5, 5:4 | — |
+| Prompt length | ≤2500 中文 / ≤5000 非中文 | ≤500 |
 
 ## Step -1: CLI Auth Check + Video Command Gate
 
@@ -71,6 +85,41 @@ If `VIDEO_COMMAND_UNAVAILABLE`: stop and tell the user:
 
 > video-gen 需要 listenhub-cli 的最新版本，当前已安装版本不包含 video 命令，请等待新版发布。
 
+### Auth Mode Detection
+
+The CLI supports two auth modes. Detect which one is active:
+
+```bash
+# Check if OpenAPI key is configured
+OPENAPI_STATUS=$(listenhub openapi config show --json 2>/dev/null)
+HAS_OPENAPI=$(echo "$OPENAPI_STATUS" | jq -r '.source // empty')
+
+# Check if internal auth is active
+AUTH=$(listenhub auth status --json 2>/dev/null)
+HAS_INTERNAL=$(echo "$AUTH" | jq -r '.authenticated // false')
+```
+
+**Priority:** If both are configured, prefer internal auth (richer features). Set a session variable:
+
+```bash
+if [ "$HAS_INTERNAL" = "true" ]; then
+  CMD_PREFIX="listenhub video"
+elif [ -n "$HAS_OPENAPI" ]; then
+  CMD_PREFIX="listenhub openapi video"
+else
+  # Neither configured — trigger internal auth login
+  listenhub auth login
+  CMD_PREFIX="listenhub video"
+fi
+```
+
+All subsequent commands use `$CMD_PREFIX` instead of hardcoded `listenhub video`. The flags and JSON output format are identical between the two modes.
+
+**OpenAPI-specific notes:**
+- OpenAPI mode requires API Key (`lh_sk_...`), configured via `listenhub openapi config set-key` or env `LISTENHUB_API_KEY`
+- OpenAPI mode does not support `--audio-setting` flag (video-edit audio control not yet exposed)
+- All media inputs must be **URLs** in OpenAPI mode (no local file upload) — if user provides local paths, inform them: "OpenAPI 模式需要使用公网 URL，请先上传文件后提供链接。"
+
 ## Step 0: Config Setup
 
 Follow `shared/config-pattern.md` Step 0 (Zero-Question Boot).
@@ -84,11 +133,10 @@ CONFIG=$(cat "$CONFIG_PATH")
 ```
 
 Session defaults (not persisted unless user reconfigures):
-- model: `doubao-seedance-2-pro`
-- resolution: `720p`
+- model: `happyhorse`
+- resolution: `1080p`
 - ratio: `16:9`
 - duration: `5`
-- generateAudio: `true`
 
 **Do NOT ask any setup questions.** Proceed directly to the Interaction Flow.
 
@@ -134,20 +182,22 @@ Free text input. Use as-is — do not modify the prompt unless the user asks for
 Question: "你有参考素材想提供吗？"
 Options:
   - "没有，纯文字生成" — Text-to-video mode, skip to Step 4
-  - "有图片，想做首帧/尾帧动画" — Frame mode → Step 3a
-  - "有参考素材（图/视频/音频）" — Reference mode → Step 3b
+  - "有图片，想做首帧动画" — Image-to-video (first-frame) → Step 3a
+  - "有参考图片（风格/角色参考）" — Reference-image mode → Step 3b
+  - "有视频，想编辑/修改" — Video-edit mode → Step 3c
 ```
 
-### Step 3a: Frame Mode Parameters
+### Step 3a: Image-to-Video (First-Frame)
 
 1. **first-frame** (required): Ask for the image path or URL.
-   - Supported formats: jpg, jpeg, png, webp, gif
-   - Local files max 10MB
+   - Supported formats: jpg, jpeg, png, webp
+   - Local files max 20MB
+   - Image: width & height ≥ 300px, ratio between 1:2.5 and 2.5:1
 
-2. **last-frame** (optional): Ask if there is a last-frame image.
+2. **last-frame** (optional, SeeDance only): If model is SeeDance, ask if there is a last-frame image.
 
 ```
-Question: "有尾帧图片吗？"
+Question: "有尾帧图片吗？（仅 SeeDance 支持）"
 Options:
   - "没有，只用首帧" — Skip last-frame
   - "有" — Collect last-frame path/URL
@@ -155,48 +205,70 @@ Options:
 
 After collecting, proceed to Step 4.
 
-### Step 3b: Reference Mode Parameters
+**Note:** HappyHorse i2v mode has no `ratio` parameter — ratio is determined by the input image. SeeDance still accepts `--ratio`.
 
-Collect references in order. Each is optional, but at least one must be provided.
+### Step 3b: Reference-Image Mode
 
-1. **reference-image** (optional, max 9): Ask for image paths/URLs.
-   - Supported formats: jpg, jpeg, png, webp, gif
-   - Max 10MB per file
+Collect reference images (1–9 images required).
 
-2. **reference-video** (optional, max 3): Ask for video paths/URLs.
-   - Supported formats: mp4, mov
-   - Local files max 50MB
-   - For URLs: also ask for `--input-video-duration` (2–15 seconds)
-   - Local files: CLI auto-detects duration — no need to ask
+Ask for image paths/URLs:
+- Supported formats: jpg, jpeg, png, webp
+- Max 20MB per file
+- HappyHorse: short edge ≥ 400px recommended
 
-3. **reference-audio** (optional, max 3): Ask for audio paths/URLs.
-   - Supported formats: mp3, wav
-   - Local files max 20MB
-   - Must be paired with reference-image or reference-video
+**HappyHorse prompt syntax:** When multiple reference images are provided, the user can use `[Image 1]`, `[Image 2]` etc. in the prompt to refer to specific images. Inform the user of this capability.
 
-```
-Question: "要提供哪些参考素材？"
-Options:
-  - "参考图片" — Collect image paths/URLs
-  - "参考视频" — Collect video paths/URLs
-  - "参考音频" — Collect audio paths/URLs (must pair with image or video)
-  - "收集完毕" — Proceed to Step 4
-```
-
-Ask iteratively until the user says "收集完毕" or provides at least one reference.
+**SeeDance additional references** (only if model is SeeDance):
+- reference-video (optional, max 3): mp4, mov, max 50MB
+- reference-audio (optional, max 3): mp3, wav, max 20MB (must pair with image or video)
 
 After collecting, proceed to Step 4.
 
+### Step 3c: Video-Edit Mode (HappyHorse Only)
+
+If model is SeeDance, inform the user: "视频编辑仅 HappyHorse 模型支持，已自动切换。" and set model to `happyhorse`.
+
+1. **video** (required): Ask for the video path or URL.
+   - Supported formats: mp4, mov (H.264 recommended)
+   - Duration: 3–60s (output capped at 15s)
+   - Max 100MB, ≥ 360px short edge, ≤ 4096px long edge
+   - URL only (no base64)
+
+2. **reference-image** (optional, 0–5): Ask if there are reference images for the edit.
+
+3. **audio-setting**:
+```
+Question: "音频如何处理？"
+Options:
+  - "自动（模型决定）" — audio_setting: auto
+  - "保留原声" — audio_setting: origin
+```
+
+After collecting, proceed to Step 4.
+
+**Note:** Video-edit has no `ratio` or `duration` parameters — output matches input video.
+
 ### Step 4: Optional Parameter Adjustment
 
-Read session defaults and present:
+Read session defaults and present. Adjust display based on mode:
 
+**For text-to-video and reference-image modes:**
 ```
-Question: "要调整生成参数吗？当前默认配置：\n  模型: doubao-seedance-2-pro\n  分辨率: 720p\n  比例: 16:9\n  时长: 5 秒\n  生成音频: 是"
+Question: "要调整生成参数吗？当前默认配置：\n  模型: happyhorse\n  分辨率: 1080p\n  比例: 16:9\n  时长: 5 秒"
 Options:
   - "用默认，直接生成" — Proceed to Step 5
   - "我要调整参数" — Ask each parameter below
 ```
+
+**For image-to-video (first-frame) mode:**
+```
+Question: "要调整生成参数吗？当前默认配置：\n  模型: happyhorse\n  分辨率: 1080p\n  时长: 5 秒"
+Options:
+  - "用默认，直接生成" — Proceed to Step 5
+  - "我要调整参数" — Ask each parameter below
+```
+
+**For video-edit mode:** Skip Step 4 entirely — no adjustable generation params (only resolution).
 
 **If adjusting**, ask each parameter one at a time:
 
@@ -204,47 +276,41 @@ Options:
 ```
 Question: "模型？"
 Options:
-  - "doubao-seedance-2-pro（推荐）" — Higher quality, required for 1080p
-  - "doubao-seedance-2-fast" — Faster generation
+  - "happyhorse（推荐）" — Higher quality, video-edit support
+  - "doubao-seedance-2-pro" — SeeDance pro, supports last-frame & audio ref
+  - "doubao-seedance-2-fast" — SeeDance fast
 ```
 
 **Resolution:**
 ```
 Question: "分辨率？"
 Options:
-  - "480p" — Low quality, fastest
-  - "720p（推荐）" — Standard quality
-  - "1080p" — High quality (requires pro model)
+  - "1080p（推荐）" — High quality (default for HappyHorse)
+  - "720p" — Standard quality
+  - "480p" — Low quality (SeeDance only)
 ```
 
-Constraint: if user selects 1080p and model is `fast`, silently upgrade to `pro` and inform: "1080p 需要使用 pro 模型，已自动切换。"
+Constraint: if user selects 480p and model is `happyhorse`, inform "HappyHorse 不支持 480p，已切换为 720p。"
+Constraint: if user selects 1080p and model is `doubao-seedance-2-fast`, silently upgrade to `doubao-seedance-2-pro` and inform "1080p 需要使用 pro 模型，已自动切换。"
 
-**Aspect ratio:**
+**Aspect ratio** (not shown for i2v or video-edit):
 ```
 Question: "画面比例？"
 Options:
   - "16:9" — Landscape, widescreen
   - "9:16" — Portrait, phone screen
   - "1:1" — Square
-  - "Other" — 4:3, 3:4, 21:9
+  - "Other" — 4:3, 3:4, 4:5, 5:4 (4:5/5:4 HappyHorse only)
 ```
 
 **Duration:**
 ```
-Question: "时长（4–15 秒）？"
+Question: "时长？"
 Options:
   - "5 秒（推荐）" — Standard
   - "8 秒" — Medium
   - "10 秒" — Long
-  - "Other" — Custom (4–15)
-```
-
-**Audio:**
-```
-Question: "生成视频配音？"
-Options:
-  - "是（推荐）" — Generate audio with video
-  - "否" — Video only
+  - "Other" — Custom (HappyHorse: 3–15, SeeDance: 4–15)
 ```
 
 **Seed** (optional): Only ask if the user mentions wanting to reproduce a result. Otherwise skip.
@@ -253,31 +319,28 @@ Options:
 
 **Build and run the estimate command** (no `eval` — direct invocation):
 
-For **text-to-video, frame mode, or reference mode without reference-video**:
 ```bash
-ESTIMATE=$(listenhub video estimate \
-  --model "doubao-seedance-2-pro" \
-  --resolution "720p" \
+ESTIMATE=$($CMD_PREFIX estimate \
+  --model "happyhorse" \
+  --resolution "1080p" \
   --duration 5 \
   --ratio "16:9" \
   --json 2>/tmp/lh-err)
 EXIT_CODE=$?
 ```
 
-For **reference mode with reference-video** — need `--has-video-input` and `--input-video-duration`:
-- If user provided a URL: use the `--input-video-duration` value they gave in Step 3b.
-- If user provided a local file: detect duration with ffprobe as best-effort:
+For **video-edit mode** — add `--has-video-input` and `--input-video-duration`:
+- If user provided a URL: ask duration or use ffprobe if local
+- Local files: detect with ffprobe as best-effort:
   ```bash
   INPUT_DUR=$(ffprobe -v error -show_entries format=duration -of csv=p=0 "/path/to/ref.mp4" 2>/dev/null | cut -d. -f1)
   ```
   If ffprobe is unavailable or fails, skip estimate — show "预估不可用" in the summary.
 
 ```bash
-ESTIMATE=$(listenhub video estimate \
-  --model "doubao-seedance-2-pro" \
-  --resolution "720p" \
-  --duration 5 \
-  --ratio "16:9" \
+ESTIMATE=$($CMD_PREFIX estimate \
+  --model "happyhorse" \
+  --resolution "1080p" \
   --has-video-input \
   --input-video-duration "$INPUT_DUR" \
   --json 2>/tmp/lh-err)
@@ -302,13 +365,12 @@ rm -f /tmp/lh-err
 Ready to generate video:
 
   Prompt: {prompt text}
-  模式: {纯文字 / Frame / Reference}
+  模式: {纯文字 / 首帧动画 / 参考图 / 视频编辑}
   模型: {model}
   分辨率: {resolution}
-  比例: {ratio}
-  时长: {duration} 秒
-  音频: {是 / 否}
-  素材: {无 / first-frame: path / references: N 个}
+  比例: {ratio or "跟随输入"}
+  时长: {duration} 秒 {or "跟随输入"}
+  素材: {无 / first-frame: path / references: N 个 / video: path}
   预估费用: {tokens} tokens / {credits} credits    ← or "预估不可用" if estimate failed
 
   确认生成？
@@ -320,23 +382,61 @@ Wait for explicit confirmation before executing.
 
 ### Submit (foreground)
 
-Invoke `listenhub video create` directly — never build a command string with `eval`. Substitute the actual collected values into the command. The examples below show all possible flags; include only the ones relevant to the current mode.
+Invoke `$CMD_PREFIX create` directly — never build a command string with `eval`. Substitute the actual collected values into the command. `$CMD_PREFIX` is either `listenhub video` (internal auth) or `listenhub openapi video` (API Key auth), determined in Step -1.
 
 **Text-to-video:**
 ```bash
-RESULT=$(listenhub video create \
+RESULT=$($CMD_PREFIX create \
   --prompt "用户的视频描述" \
-  --model "doubao-seedance-2-pro" \
-  --resolution "720p" \
+  --model "happyhorse" \
+  --resolution "1080p" \
   --ratio "16:9" \
   --duration 5 \
   --no-wait --json 2>/tmp/lh-err)
 EXIT_CODE=$?
 ```
 
-**Frame mode** (add `--first-frame` and optionally `--last-frame`):
+**Image-to-video (first-frame):**
 ```bash
-RESULT=$(listenhub video create \
+RESULT=$($CMD_PREFIX create \
+  --prompt "用户的视频描述" \
+  --model "happyhorse" \
+  --resolution "1080p" \
+  --duration 5 \
+  --first-frame "/path/to/first.png" \
+  --no-wait --json 2>/tmp/lh-err)
+EXIT_CODE=$?
+```
+
+**Reference-image mode:**
+```bash
+RESULT=$($CMD_PREFIX create \
+  --prompt "[Image 1]中的角色在城市中行走" \
+  --model "happyhorse" \
+  --resolution "1080p" \
+  --ratio "16:9" \
+  --duration 5 \
+  --reference-image "/path/to/ref1.png" \
+  --reference-image "/path/to/ref2.png" \
+  --no-wait --json 2>/tmp/lh-err)
+EXIT_CODE=$?
+```
+
+**Video-edit mode (HappyHorse):**
+```bash
+RESULT=$($CMD_PREFIX create \
+  --prompt "将背景替换为星空" \
+  --model "happyhorse" \
+  --resolution "1080p" \
+  --reference-video "/path/to/input.mp4" \
+  --audio-setting "origin" \
+  --no-wait --json 2>/tmp/lh-err)
+EXIT_CODE=$?
+```
+
+**SeeDance frame mode** (with optional last-frame):
+```bash
+RESULT=$($CMD_PREFIX create \
   --prompt "用户的视频描述" \
   --model "doubao-seedance-2-pro" \
   --resolution "720p" \
@@ -348,10 +448,10 @@ RESULT=$(listenhub video create \
 EXIT_CODE=$?
 ```
 
-**Reference mode** (add `--reference-image`, `--reference-video`, `--reference-audio` as needed):
+**SeeDance reference mode** (images, videos, audio):
 ```bash
-RESULT=$(listenhub video create \
-  --prompt "用户的视频描述" \
+RESULT=$($CMD_PREFIX create \
+  --prompt "保持参考视频的运镜和色调风格" \
   --model "doubao-seedance-2-pro" \
   --resolution "720p" \
   --ratio "16:9" \
@@ -363,8 +463,9 @@ EXIT_CODE=$?
 ```
 
 **Flags only when needed:**
-- `--no-generate-audio` — only if user disabled audio
+- `--no-generate-audio` — only if user disabled audio (SeeDance only)
 - `--seed 12345` — only if user specified a seed
+- `--audio-setting origin` — video-edit mode, keep original audio
 - `--input-video-duration N` — only for reference-video URLs (local files auto-detected by CLI)
 
 **Error check:**
@@ -392,7 +493,7 @@ Run with `run_in_background: true` and `timeout: 1260000` (21 minutes):
 ```bash
 TASK_ID="{taskId from above}"
 for i in $(seq 1 120); do
-  RESULT=$(listenhub video get "$TASK_ID" --json 2>/dev/null)
+  RESULT=$($CMD_PREFIX get "$TASK_ID" --json 2>/dev/null)
   STATUS=$(echo "$RESULT" | jq -r '.status')
   case "$STATUS" in
     success) echo "$RESULT"; exit 0 ;;
@@ -454,7 +555,7 @@ Present:
 
 **On timeout**: Tell the user to check later:
 
-> 生成超时。你可以稍后用 `listenhub video get {taskId} --json` 查询结果。
+> 生成超时。你可以稍后用 `listenhub video get {taskId} --json`（或 `listenhub openapi video get {taskId} --json`）查询结果。
 
 ## Querying Past Tasks
 
@@ -462,10 +563,10 @@ Users can ask to check a previous task or list recent tasks:
 
 ```bash
 # Get a specific task
-listenhub video get "{taskId}" --json
+$CMD_PREFIX get "{taskId}" --json
 
 # List recent tasks
-listenhub video list --json
+$CMD_PREFIX list --json
 ```
 
 Present results using the same format as the success output above.
@@ -478,8 +579,8 @@ Reuse `shared/cli-patterns.md` standard error codes:
 |------|---------|--------|
 | 0 | Success | Parse JSON output |
 | 1 | General error | Display stderr to user |
-| 2 | Auth error | Auto re-login via `listenhub auth login` |
-| 3 | Timeout | Suggest `listenhub video get {taskId}` to check later |
+| 2 | Auth error | Internal: re-login via `listenhub auth login`. OpenAPI: check API Key via `listenhub openapi config show` |
+| 3 | Timeout | Suggest checking task status later |
 
 ## API Reference
 
@@ -487,6 +588,7 @@ Reuse `shared/cli-patterns.md` standard error codes:
 - CLI execution patterns: `shared/cli-patterns.md`
 - Config pattern: `shared/config-pattern.md`
 - Output mode: `shared/output-mode.md`
+- HappyHorse API: `references/happyhorse-api.md`
 
 ## Composability
 
@@ -498,63 +600,76 @@ Reuse `shared/cli-patterns.md` standard error codes:
 
 ## Examples
 
-### Text-to-video
+### Text-to-video (HappyHorse)
 
 > "帮我生成一个视频：赛博朋克城市夜景"
-
-1. Prompt: "赛博朋克城市夜景"
-2. Mode: "没有，纯文字生成"
-3. Parameters: use defaults
-4. Estimate → confirm → execute
 
 ```bash
 listenhub video create \
   --prompt "赛博朋克城市夜景" \
-  --model "doubao-seedance-2-pro" \
-  --resolution "720p" \
+  --model "happyhorse" \
+  --resolution "1080p" \
   --ratio "16:9" \
   --duration 5 \
   --no-wait --json
 ```
 
-### Frame Mode
+### Image-to-video (HappyHorse)
 
 > "把这张图片变成动画视频" + 提供图片路径
-
-1. Prompt: "将静态场景转化为流畅动画"
-2. Mode: "有图片，做首帧动画"
-3. first-frame: `/path/to/scene.png`, no last-frame
-4. Adjust duration to 8s
-5. Estimate → confirm → execute
 
 ```bash
 listenhub video create \
   --prompt "将静态场景转化为流畅动画" \
-  --model "doubao-seedance-2-pro" \
-  --resolution "720p" \
-  --ratio "16:9" \
-  --duration 8 \
+  --model "happyhorse" \
+  --resolution "1080p" \
+  --duration 5 \
   --first-frame "/path/to/scene.png" \
   --no-wait --json
 ```
 
-### Reference Mode
+### Reference-Image Mode (HappyHorse)
 
-> "参考这个视频的风格，生成一个类似的新视频"
-
-1. Prompt: "保持参考视频的运镜和色调风格"
-2. Mode: "有参考素材"
-3. reference-video: `/path/to/ref.mp4` (local file, CLI auto-detects duration)
-4. Parameters: use defaults
-5. Estimate (ffprobe for duration, or skip if unavailable) → confirm → execute
+> "参考这两张图片的风格，生成一段视频"
 
 ```bash
 listenhub video create \
-  --prompt "保持参考视频的运镜和色调风格" \
+  --prompt "[Image 1]中的角色在[Image 2]的场景中漫步" \
+  --model "happyhorse" \
+  --resolution "1080p" \
+  --ratio "16:9" \
+  --duration 5 \
+  --reference-image "/path/to/character.png" \
+  --reference-image "/path/to/scene.png" \
+  --no-wait --json
+```
+
+### Video Edit (HappyHorse)
+
+> "把这个视频的背景换成星空"
+
+```bash
+listenhub video create \
+  --prompt "将背景替换为深邃的星空，保持人物动作不变" \
+  --model "happyhorse" \
+  --resolution "1080p" \
+  --reference-video "/path/to/input.mp4" \
+  --audio-setting "origin" \
+  --no-wait --json
+```
+
+### SeeDance Frame Mode
+
+> "用首帧和尾帧生成过渡动画"
+
+```bash
+listenhub video create \
+  --prompt "从白天自然过渡到夜晚" \
   --model "doubao-seedance-2-pro" \
   --resolution "720p" \
   --ratio "16:9" \
-  --duration 5 \
-  --reference-video "/path/to/ref.mp4" \
+  --duration 8 \
+  --first-frame "/path/to/day.png" \
+  --last-frame "/path/to/night.png" \
   --no-wait --json
 ```

@@ -58,6 +58,54 @@ fi
 
 The `npm view` call is typically fast (< 2s). If it fails (network issues, npm registry down), silently skip the update and proceed with the installed version. Never block the user on a version check failure.
 
+## Auth Mode Detection (Dual-Mode)
+
+The CLI supports two auth modes. After confirming the CLI is installed, detect which is active and set a command prefix for the session:
+
+```bash
+# Check if OpenAPI key is configured
+OPENAPI_STATUS=$(listenhub openapi config show --json 2>/dev/null)
+HAS_OPENAPI=$(echo "$OPENAPI_STATUS" | jq -r '.source // empty')
+
+# Check if internal auth is active
+AUTH=$(listenhub auth status --json 2>/dev/null)
+HAS_INTERNAL=$(echo "$AUTH" | jq -r '.authenticated // false')
+```
+
+**Priority:** If both are configured, prefer internal auth (richer features, local file upload support).
+
+```bash
+if [ "$HAS_INTERNAL" = "true" ]; then
+  AUTH_MODE="internal"
+elif [ -n "$HAS_OPENAPI" ]; then
+  AUTH_MODE="openapi"
+else
+  # Neither configured — trigger internal auth login
+  listenhub auth login
+  AUTH_MODE="internal"
+fi
+```
+
+### Command Prefix Mapping
+
+Each skill maps to different subcommands depending on auth mode:
+
+| Skill | Internal (`AUTH_MODE=internal`) | OpenAPI (`AUTH_MODE=openapi`) |
+|-------|-------------------------------|------------------------------|
+| tts | `listenhub tts` | `listenhub openapi tts` |
+| podcast | `listenhub podcast` | `listenhub openapi podcast` |
+| image | `listenhub image` | `listenhub openapi image` |
+| video | `listenhub video` | `listenhub openapi video` |
+| explainer | `listenhub explainer` | `listenhub openapi storybook` |
+
+Set `CMD_PREFIX` based on `AUTH_MODE` and skill type (see individual skill docs).
+
+### OpenAPI Mode Constraints
+
+- Media inputs must be **public URLs** — no local file upload. If user provides local paths, inform them: "OpenAPI 模式不支持本地文件上传，请先上传到公网后提供 URL。"
+- API Key format: `lh_sk_...`, configured via `listenhub openapi config set-key` or env `LISTENHUB_API_KEY`
+- On auth error (exit code 2): check key with `listenhub openapi config show`
+
 ## Security
 
 - Credentials are stored at `~/.config/listenhub/credentials.json` (file mode `0600`)
