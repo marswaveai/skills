@@ -49,6 +49,18 @@ Use the AskUserQuestion tool for every multiple-choice step — do NOT print opt
 
 Follow `shared/cli-authentication.md` § Auth Check. If the CLI is not installed or the user is not logged in, auto-install and auto-login — never ask the user to run commands manually.
 
+Then follow `shared/cli-authentication.md` § Auth Mode Detection to determine `AUTH_MODE` and set:
+
+```bash
+if [ "$AUTH_MODE" = "openapi" ]; then
+  CMD_PREFIX="listenhub openapi podcast"
+else
+  CMD_PREFIX="listenhub podcast"
+fi
+```
+
+All subsequent CLI calls use `$CMD_PREFIX` instead of hardcoded `listenhub podcast`.
+
 ## Step 0: Config Setup
 
 Follow `shared/config-pattern.md` Step 0 (Zero-Question Boot).
@@ -185,7 +197,7 @@ Wait for explicit confirmation before calling any CLI command. The user can adju
 1. **Submit (background)**: Run the CLI command with `run_in_background: true` and `timeout: 360000`:
 
    ```bash
-   listenhub podcast create \
+   $CMD_PREFIX create \
      --query "{topic}" \
      --source-url "{url}" \
      --source-text "{text}" \
@@ -280,7 +292,7 @@ echo "$NEW_CONFIG" > "$CONFIG_PATH"
 3. Show confirmation summary → user confirms
 
 ```bash
-listenhub podcast create \
+$CMD_PREFIX create \
   --query "The latest AI developments" \
   --mode deep \
   --lang en \

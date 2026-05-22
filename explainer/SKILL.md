@@ -47,7 +47,21 @@ Use the AskUserQuestion tool for every multiple-choice step — do NOT print opt
 
 ## Step -1: CLI Auth Check
 
-Follow `shared/config-pattern.md` § CLI Auth Check. If the CLI is not installed or the user is not logged in, auto-install and auto-login per `shared/cli-authentication.md` — never ask the user to run commands manually.
+Follow `shared/cli-authentication.md` § Auth Check. If the CLI is not installed or the user is not logged in, auto-install and auto-login — never ask the user to run commands manually.
+
+Then follow `shared/cli-authentication.md` § Auth Mode Detection to determine `AUTH_MODE` and set:
+
+```bash
+if [ "$AUTH_MODE" = "openapi" ]; then
+  CMD_PREFIX="listenhub openapi storybook"
+else
+  CMD_PREFIX="listenhub explainer"
+fi
+```
+
+All subsequent CLI calls use `$CMD_PREFIX` instead of hardcoded `listenhub explainer`.
+
+**Note:** The OpenAPI command is `storybook` (not `explainer`) — same backend, different naming.
 
 ## Step 0: Config Setup
 
@@ -180,7 +194,7 @@ Wait for explicit confirmation before running any CLI command.
 Run the CLI command with `run_in_background: true` and `timeout: 660000`. The CLI blocks until generation completes and returns the final result as JSON:
 
 ```bash
-listenhub explainer create \
+$CMD_PREFIX create \
   --query "{topic}" \
   --mode {info|story} \
   --lang {en|zh|ja} \
@@ -300,7 +314,7 @@ echo "$NEW_CONFIG" > "$CONFIG_PATH"
 
 ```bash
 # Run with run_in_background: true, timeout: 660000
-listenhub explainer create \
+$CMD_PREFIX create \
   --query "Introduce Claude Code: what it is, key features, and how to get started" \
   --mode info \
   --lang en \

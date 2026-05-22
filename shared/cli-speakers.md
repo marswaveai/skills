@@ -1,24 +1,31 @@
 # CLI Speakers
 
-Query and use voice speakers via the ListenHub CLI.
+Query and use voice speakers via the ListenHub CLI. Commands work with both auth modes — use `$CMD_PREFIX` from the session's auth mode detection (see `cli-authentication.md` § Auth Mode Detection).
 
 ## Listing Speakers
 
 ```bash
+# Determine speakers command prefix based on auth mode
+if [ "$AUTH_MODE" = "openapi" ]; then
+  SPEAKERS_CMD="listenhub openapi speakers"
+else
+  SPEAKERS_CMD="listenhub speakers"
+fi
+
 # All speakers
-listenhub speakers list --json
+$SPEAKERS_CMD list --json
 
 # Chinese speakers only
-listenhub speakers list --lang zh --json
+$SPEAKERS_CMD list --lang zh --json
 
 # English speakers only
-listenhub speakers list --lang en --json
+$SPEAKERS_CMD list --lang en --json
 ```
 
 ### Parsing the Response
 
 ```bash
-SPEAKERS=$(listenhub speakers list --lang en --json)
+SPEAKERS=$($SPEAKERS_CMD list --lang en --json)
 
 # List all speaker names
 echo "$SPEAKERS" | jq -r '.[].name'
