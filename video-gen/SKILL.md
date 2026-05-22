@@ -85,6 +85,41 @@ If `VIDEO_COMMAND_UNAVAILABLE`: stop and tell the user:
 
 > video-gen 需要 listenhub-cli 的最新版本，当前已安装版本不包含 video 命令，请等待新版发布。
 
+### Auth Mode Detection
+
+The CLI supports two auth modes. Detect which one is active:
+
+```bash
+# Check if OpenAPI key is configured
+OPENAPI_STATUS=$(listenhub openapi config show --json 2>/dev/null)
+HAS_OPENAPI=$(echo "$OPENAPI_STATUS" | jq -r '.source // empty')
+
+# Check if internal auth is active
+AUTH=$(listenhub auth status --json 2>/dev/null)
+HAS_INTERNAL=$(echo "$AUTH" | jq -r '.authenticated // false')
+```
+
+**Priority:** If both are configured, prefer internal auth (richer features). Set a session variable:
+
+```bash
+if [ "$HAS_INTERNAL" = "true" ]; then
+  CMD_PREFIX="listenhub video"
+elif [ -n "$HAS_OPENAPI" ]; then
+  CMD_PREFIX="listenhub openapi video"
+else
+  # Neither configured — trigger internal auth login
+  listenhub auth login
+  CMD_PREFIX="listenhub video"
+fi
+```
+
+All subsequent commands use `$CMD_PREFIX` instead of hardcoded `listenhub video`. The flags and JSON output format are identical between the two modes.
+
+**OpenAPI-specific notes:**
+- OpenAPI mode requires API Key (`lh_sk_...`), configured via `listenhub openapi config set-key` or env `LISTENHUB_API_KEY`
+- OpenAPI mode does not support `--audio-setting` flag (video-edit audio control not yet exposed)
+- All media inputs must be **URLs** in OpenAPI mode (no local file upload) — if user provides local paths, inform them: "OpenAPI 模式需要使用公网 URL，请先上传文件后提供链接。"
+
 ## Step 0: Config Setup
 
 Follow `shared/config-pattern.md` Step 0 (Zero-Question Boot).
@@ -285,7 +320,7 @@ Options:
 **Build and run the estimate command** (no `eval` — direct invocation):
 
 ```bash
-ESTIMATE=$(listenhub video estimate \
+ESTIMATE=$($CMD_PREFIX estimate \
   --model "happyhorse" \
   --resolution "1080p" \
   --duration 5 \
@@ -303,7 +338,7 @@ For **video-edit mode** — add `--has-video-input` and `--input-video-duration`
   If ffprobe is unavailable or fails, skip estimate — show "预估不可用" in the summary.
 
 ```bash
-ESTIMATE=$(listenhub video estimate \
+ESTIMATE=$($CMD_PREFIX estimate \
   --model "happyhorse" \
   --resolution "1080p" \
   --has-video-input \
@@ -347,11 +382,11 @@ Wait for explicit confirmation before executing.
 
 ### Submit (foreground)
 
-Invoke `listenhub video create` directly — never build a command string with `eval`. Substitute the actual collected values into the command.
+Invoke `$CMD_PREFIX create` directly — never build a command string with `eval`. Substitute the actual collected values into the command. `$CMD_PREFIX` is either `listenhub video` (internal auth) or `listenhub openapi video` (API Key auth), determined in Step -1.
 
 **Text-to-video:**
 ```bash
-RESULT=$(listenhub video create \
+RESULT=$($CMD_PREFIX create \
   --prompt "用户的视频描述" \
   --model "happyhorse" \
   --resolution "1080p" \
@@ -363,7 +398,7 @@ EXIT_CODE=$?
 
 **Image-to-video (first-frame):**
 ```bash
-RESULT=$(listenhub video create \
+RESULT=$($CMD_PREFIX create \
   --prompt "用户的视频描述" \
   --model "happyhorse" \
   --resolution "1080p" \
@@ -375,7 +410,7 @@ EXIT_CODE=$?
 
 **Reference-image mode:**
 ```bash
-RESULT=$(listenhub video create \
+RESULT=$($CMD_PREFIX create \
   --prompt "[Image 1]中的角色在城市中行走" \
   --model "happyhorse" \
   --resolution "1080p" \
@@ -389,7 +424,7 @@ EXIT_CODE=$?
 
 **Video-edit mode (HappyHorse):**
 ```bash
-RESULT=$(listenhub video create \
+RESULT=$($CMD_PREFIX create \
   --prompt "将背景替换为星空" \
   --model "happyhorse" \
   --resolution "1080p" \
@@ -401,7 +436,7 @@ EXIT_CODE=$?
 
 **SeeDance frame mode** (with optional last-frame):
 ```bash
-RESULT=$(listenhub video create \
+RESULT=$($CMD_PREFIX create \
   --prompt "用户的视频描述" \
   --model "doubao-seedance-2-pro" \
   --resolution "720p" \
@@ -415,7 +450,7 @@ EXIT_CODE=$?
 
 **SeeDance reference mode** (images, videos, audio):
 ```bash
-RESULT=$(listenhub video create \
+RESULT=$($CMD_PREFIX create \
   --prompt "保持参考视频的运镜和色调风格" \
   --model "doubao-seedance-2-pro" \
   --resolution "720p" \
@@ -458,7 +493,7 @@ Run with `run_in_background: true` and `timeout: 1260000` (21 minutes):
 ```bash
 TASK_ID="{taskId from above}"
 for i in $(seq 1 120); do
-  RESULT=$(listenhub video get "$TASK_ID" --json 2>/dev/null)
+  RESULT=$($CMD_PREFIX get "$TASK_ID" --json 2>/dev/null)
   STATUS=$(echo "$RESULT" | jq -r '.status')
   case "$STATUS" in
     success) echo "$RESULT"; exit 0 ;;
@@ -520,7 +555,7 @@ Present:
 
 **On timeout**: Tell the user to check later:
 
-> 生成超时。你可以稍后用 `listenhub video get {taskId} --json` 查询结果。
+> 生成超时。你可以稍后用 `listenhub video get {taskId} --json`（或 `listenhub openapi video get {taskId} --json`）查询结果。
 
 ## Querying Past Tasks
 
@@ -528,10 +563,10 @@ Users can ask to check a previous task or list recent tasks:
 
 ```bash
 # Get a specific task
-listenhub video get "{taskId}" --json
+$CMD_PREFIX get "{taskId}" --json
 
 # List recent tasks
-listenhub video list --json
+$CMD_PREFIX list --json
 ```
 
 Present results using the same format as the success output above.
@@ -544,8 +579,8 @@ Reuse `shared/cli-patterns.md` standard error codes:
 |------|---------|--------|
 | 0 | Success | Parse JSON output |
 | 1 | General error | Display stderr to user |
-| 2 | Auth error | Auto re-login via `listenhub auth login` |
-| 3 | Timeout | Suggest `listenhub video get {taskId}` to check later |
+| 2 | Auth error | Internal: re-login via `listenhub auth login`. OpenAPI: check API Key via `listenhub openapi config show` |
+| 3 | Timeout | Suggest checking task status later |
 
 ## API Reference
 
