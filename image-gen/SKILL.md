@@ -113,8 +113,8 @@ Ask:
 ```
 Question: "Which model?"
 Options:
-  - "pro (recommended)" — gemini-3-pro-image-preview, higher quality
-  - "flash" — gemini-3.1-flash-image-preview, faster and cheaper, unlocks extreme aspect ratios (1:4, 4:1, 1:8, 8:1)
+  - "pro (recommended)" — gemini-3-pro-image, higher quality
+  - "flash" — gemini-3.1-flash-image, faster and cheaper, unlocks extreme aspect ratios (1:4, 4:1, 1:8, 8:1)
 ```
 
 ### Step 3: Resolution and Aspect Ratio
@@ -291,7 +291,7 @@ Wait for explicit confirmation before running the CLI command.
 ```bash
 $CMD_PREFIX create \
   --prompt "cyberpunk city at night" \
-  --model "gemini-3-pro-image-preview" \
+  --model "gemini-3-pro-image" \
   --lang en \
   --aspect-ratio 16:9 \
   --size 2K \
@@ -314,7 +314,7 @@ Parse CLI JSON output per `outputMode` (see `shared/output-mode.md`).
 ```bash
 $CMD_PREFIX create \
   --prompt "a serene mountain lake at dawn" \
-  --model "gemini-3-pro-image-preview" \
+  --model "gemini-3-pro-image" \
   --lang en \
   --aspect-ratio 16:9 \
   --size 2K \

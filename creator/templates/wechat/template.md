@@ -71,7 +71,7 @@ After writing, identify illustration positions:
 
 For each planned illustration, call the image generation API:
 
-- **Model**: `gemini-3-pro-image-preview`
+- **Model**: `gemini-3-pro-image`
 - **Cover**: aspect ratio `3:2`, size `2K`
 - **Body images**: aspect ratio `3:2` or `16:9`, size `2K`
 - **Timeout**: `--timeout 600` (use `listenhub image create --json`)

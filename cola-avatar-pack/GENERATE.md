@@ -367,7 +367,7 @@ Phase 4 写入 `avatar.json` 后，`base_prompt` 和 `negative_prompt` 即为冻
 
 ```
 action: generate_image
-model: gemini-3-pro-image-preview
+model: gemini-3-pro-image
 size: 1K
 ratio: 1:1
 ```

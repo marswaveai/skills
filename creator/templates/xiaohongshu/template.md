@@ -138,7 +138,7 @@ Save all prompts to `{output}/cards/prompts.json`:
 ### 7. Generate Card Images (if mode includes cards)
 
 For each prompt in `prompts.json`:
-- **Model**: `gemini-3-pro-image-preview`
+- **Model**: `gemini-3-pro-image`
 - **Aspect ratio**: `3:4` (portrait, standard Xiaohongshu card)
 - **Size**: `2K`
 - **Timeout**: `--timeout 600` (use `listenhub image create --json`)
