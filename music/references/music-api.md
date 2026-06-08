@@ -22,7 +22,7 @@ Models apply to the generation commands (`generate`, `remix`, `instrumental`, `s
 | `remix` | async (task) | one input source: `--audio <file>` XOR `--audio-url` XOR `--provider-song-id`; `--lyrics`, `--prompt`; `--model`, `--style`, `--title` | Exactly one input source. `--lyrics` and `--prompt` required | Task → re-created song |
 | `instrumental` | async (task) | `--prompt` XOR `--reference-audio`; `--model`, `--title` | Exactly one of `--prompt` / `--reference-audio` | Task → instrumental track |
 | `soundtrack` | async (task) | `--image` XOR `--video`; `--prompt`, `--model`, `--title` | Exactly one of `--image` / `--video` | Task → music scored to the media |
-| `track` | async (task) | `--audio` XOR `--provider-song-id`; `--generate-type`; `--prompt`; `--lyrics` (when type is Vocals); `--vocal-gender`; `--generate-start` / `--generate-end` (ms); `--model` | Exactly one input source. `--lyrics` only valid when `--generate-type Vocals` | Task → single isolated/generated track |
+| `track` | async (task) | `--audio` XOR `--provider-song-id`; `--generate-type`; `--prompt`; `--lyrics` (when type is Vocals); `--vocal-gender`; `--generate-start` / `--generate-end` (seconds); `--model` | Exactly one input source. `--lyrics` only valid when `--generate-type Vocals` | Task → single isolated/generated track |
 | `extend` | async (task) | `--audio` XOR `--provider-song-id`; `--prompt`, `--model` | One input source | Task → extended (longer) song |
 | `cover` *(deprecated)* | async (task) | `--audio`; `--prompt`, `--style`, `--title`, `--instrumental` | Deprecated — prefer `remix` | Task → cover version |
 | `recognize` | sync | `--audio` | — | Lyrics with line-level timestamps |
@@ -46,7 +46,7 @@ Models apply to the generation commands (`generate`, `remix`, `instrumental`, `s
 | Image (`soundtrack`) | jpg, jpeg, png, webp | 10 MB |
 | Video (`soundtrack`) | mp4, mov, avi, mkv, webm | 10 MB |
 
-Time-range flags (`--generate-start`, `--generate-end`) are in **milliseconds**.
+Time-range flags (`--generate-start`, `--generate-end`) are in **seconds**.
 
 ## Async vs sync
 
@@ -59,4 +59,4 @@ Generated audio and `stem` ZIP URLs are time-limited — download promptly when 
 
 ## Output fields
 
-A completed task's song(s) are in `tracks[]` (each with `audioUrl`, `title`, `duration`, `providerSongId`), and the spent credit is the top-level `creditCost`. Track `duration` (and the sync `recognize` result's `duration`) is reported in **milliseconds** — divide by 1000 for seconds before displaying.
+A completed task's song(s) are in `tracks[]` (each with `audioUrl`, `title`, `duration`, `providerSongId`), and the spent credit is the top-level `creditCost`. Track `duration` (and the sync `recognize` result's `duration`) is reported in **seconds**.

@@ -62,7 +62,7 @@ Models for generation commands: `auto` (default), `mureka-7.6`, `mureka-8`, `mur
 - Never save files to `~/Downloads/` or `.listenhub/` — save artifacts to the current working directory with friendly topic-based names (see `shared/config-pattern.md` § Artifact Naming)
 - No speakers involved — music generation does not use speaker selection
 - File limits (all max 10 MB): audio mp3/m4a (`track` also accepts wav); image jpg/jpeg/png/webp; video mp4/mov/avi/mkv/webm
-- All time-range flags are in **milliseconds** (`--generate-start/--generate-end`)
+- All time-range flags are in **seconds** (`--generate-start/--generate-end`)
 - For async generation commands, use a long timeout: `run_in_background: true` with `timeout: 660000` (600s+). Sync commands (`recognize`, `describe`, `stem`) return immediately
 - `cover` is deprecated — steer users to `remix` unless they explicitly ask for `cover`
 
@@ -164,7 +164,7 @@ if [ "$FILE_SIZE" -gt 10485760 ]; then echo "File exceeds 10 MB limit"; fi
 
 **soundtrack** — exactly one of `--image` / `--video`; optional `--prompt`, `--title`, `--model`.
 
-**track** — exactly one input source `--audio` / `--provider-song-id`; `--generate-type` (one of Vocals|Instrumental|Drums|Bass|Guitar|Keyboard|Percussion|Strings|Synth|FX|Brass|Woodwinds); optional `--prompt`; `--lyrics` only when type is Vocals; `--vocal-gender male|female`; `--generate-start`/`--generate-end` (ms); `--model`.
+**track** — exactly one input source `--audio` / `--provider-song-id`; `--generate-type` (one of Vocals|Instrumental|Drums|Bass|Guitar|Keyboard|Percussion|Strings|Synth|FX|Brass|Woodwinds); optional `--prompt`; `--lyrics` only when type is Vocals; `--vocal-gender male|female`; `--generate-start`/`--generate-end` (seconds); `--model`.
 
 **extend** — one input source `--audio` / `--provider-song-id`; optional `--prompt`, `--model`.
 
@@ -265,7 +265,7 @@ Wait for explicit confirmation before running any CLI command.
      --generate-type "Vocals" \
      --lyrics "{lyrics}" \
      --vocal-gender "female" \
-     --generate-start 0 --generate-end 30000 \
+     --generate-start 0 --generate-end 30 \
      --json
    ```
    (or `--provider-song-id`; `--lyrics` only when `--generate-type Vocals`)
@@ -282,12 +282,13 @@ Wait for explicit confirmation before running any CLI command.
 
 2. Tell the user the task is submitted and that they'll be notified when it finishes. If they only have a `taskId`, they can check with `listenhub music get <taskId> --json` or `listenhub music list --json`.
 
-3. When notified of completion, **present the result**. The CLI JSON is a task object — the song is in `tracks[0]`, credit is `creditCost`, and `duration` is in **milliseconds**. Parse the key fields:
+3. When notified of completion, **present the result**. The CLI JSON is a task object — the song is in `tracks[0]`, credit is `creditCost`, and `duration` is in **seconds**. Parse the key fields:
    ```bash
    AUDIO_URL=$(echo "$RESULT" | jq -r '.tracks[0].audioUrl // empty')
    TITLE=$(echo "$RESULT" | jq -r '[.tracks[0].title, .params.title, "Untitled"] | map(select(. != null and . != "")) | .[0]')
-   DURATION_MS=$(echo "$RESULT" | jq -r '.tracks[0].duration // 0')
-   DURATION=$(printf '%d:%02d' $((DURATION_MS / 1000 / 60)) $((DURATION_MS / 1000 % 60)))  # ms → m:ss
+   # duration is seconds (older pre-rollout Mureka tasks may still be ms → a value ≥ 3600 means ms)
+   DURATION=$(echo "$RESULT" | jq -r '.tracks[0].duration // 0' \
+     | awk '{d=$1; if (d>=3600) d/=1000; printf "%d:%02d", int(d/60), int(d%60)}')
    CREDITS=$(echo "$RESULT" | jq -r '.creditCost // empty')
    ```
 
