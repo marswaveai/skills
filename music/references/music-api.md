@@ -56,3 +56,7 @@ Time-range flags (`--generate-start`, `--generate-end`) are in **milliseconds**.
 ## Output URLs
 
 Generated audio and `stem` ZIP URLs are time-limited — download promptly when in `download` / `both` output mode.
+
+## Output fields
+
+A completed task's song(s) are in `tracks[]` (each with `audioUrl`, `title`, `duration`, `providerSongId`), and the spent credit is the top-level `creditCost`. Track `duration` (and the sync `recognize` result's `duration`) is reported in **milliseconds** — divide by 1000 for seconds before displaying.

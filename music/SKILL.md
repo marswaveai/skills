@@ -282,12 +282,13 @@ Wait for explicit confirmation before running any CLI command.
 
 2. Tell the user the task is submitted and that they'll be notified when it finishes. If they only have a `taskId`, they can check with `listenhub music get <taskId> --json` or `listenhub music list --json`.
 
-3. When notified of completion, **present the result**. Parse the CLI JSON for key fields:
+3. When notified of completion, **present the result**. The CLI JSON is a task object — the song is in `tracks[0]`, credit is `creditCost`, and `duration` is in **milliseconds**. Parse the key fields:
    ```bash
-   AUDIO_URL=$(echo "$RESULT" | jq -r '.audioUrl')
-   TITLE=$(echo "$RESULT" | jq -r '.title // "Untitled"')
-   DURATION=$(echo "$RESULT" | jq -r '.duration // empty')
-   CREDITS=$(echo "$RESULT" | jq -r '.credits // empty')
+   AUDIO_URL=$(echo "$RESULT" | jq -r '.tracks[0].audioUrl // empty')
+   TITLE=$(echo "$RESULT" | jq -r '[.tracks[0].title, .params.title, "Untitled"] | map(select(. != null and . != "")) | .[0]')
+   DURATION_MS=$(echo "$RESULT" | jq -r '.tracks[0].duration // 0')
+   DURATION=$(printf '%d:%02d' $((DURATION_MS / 1000 / 60)) $((DURATION_MS / 1000 % 60)))  # ms → m:ss
+   CREDITS=$(echo "$RESULT" | jq -r '.creditCost // empty')
    ```
 
    Read `OUTPUT_MODE` from config. Follow `shared/output-mode.md` for behavior.
@@ -298,7 +299,7 @@ Wait for explicit confirmation before running any CLI command.
 
    标题：{title}
    在线收听：{audioUrl}
-   时长：{duration}s
+   时长：{duration}
    消耗积分：{credits}
    ```
 
