@@ -4,7 +4,7 @@ description: |
   Generate, remix, extend, edit, and analyze AI music (Mureka). Triggers on:
   "音乐", "music", "生成音乐", "generate music", "翻唱", "cover", "混音", "remix",
   "续写", "extend", "纯音乐", "instrumental", "配乐", "soundtrack", "分轨", "stem",
-  "识别歌词", "recognize lyrics", "克隆人声", "vocal clone", "作曲", "compose",
+  "识别歌词", "recognize lyrics", "作曲", "compose",
   "create a song", "做一首歌".
 metadata:
   openclaw:
@@ -19,10 +19,9 @@ metadata:
 - User wants to generate original AI music from a prompt and/or lyrics
 - User wants to remix / re-create an existing song with new lyrics
 - User wants a pure instrumental, or a soundtrack scored to an image or video
-- User wants to extend a song, rewrite a region, or isolate/generate a single track
+- User wants to extend a song or isolate/generate a single track
 - User wants to analyze audio — recognize lyrics, describe a song, or split stems
-- User wants to clone a vocal for reuse across generations
-- User says "音乐", "music", "生成音乐", "generate music", "翻唱"/"混音"/"remix", "续写"/"extend", "纯音乐"/"instrumental", "配乐"/"soundtrack", "分轨"/"stem", "识别歌词", "克隆人声"/"vocal clone", "作曲", "compose", "create a song", or "做一首歌"
+- User says "音乐", "music", "生成音乐", "generate music", "翻唱"/"混音"/"remix", "续写"/"extend", "纯音乐"/"instrumental", "配乐"/"soundtrack", "分轨"/"stem", "识别歌词", "作曲", "compose", "create a song", or "做一首歌"
 
 ## When NOT to Use
 
@@ -42,16 +41,14 @@ Full ListenHub music toolkit, powered by the **Mureka** provider via the `listen
 3. **instrumental** — a pure instrumental from a prompt, or guided by a reference audio.
 4. **soundtrack** — music scored to an image or a video.
 5. **track** — isolate or generate a single instrument/vocal track from a song.
-6. **region-edit** — rewrite a time region of a song with new lyrics.
-7. **extend** — make a song longer.
-8. **cover** *(deprecated)* — older cover flow; prefer **remix**.
+6. **extend** — make a song longer.
+7. **cover** *(deprecated)* — older cover flow; prefer **remix**.
 
 **Analysis (sync — return results immediately):**
 
-9. **recognize** — lyrics with line-level timestamps.
-10. **describe** — description, tags, genres, instruments.
-11. **stem** — split a song into separated stems (ZIP download URLs).
-12. **vocal-clone** — turn a vocal sample into a reusable Vocal ID for `generate --vocal-id`.
+8. **recognize** — lyrics with line-level timestamps.
+9. **describe** — description, tags, genres, instruments.
+10. **stem** — split a song into separated stems (ZIP download URLs).
 
 **Task management:** `list` (recent tasks) and `get <taskId>` (status/result of one task).
 
@@ -64,9 +61,9 @@ Models for generation commands: `auto` (default), `mureka-7.6`, `mureka-8`, `mur
 - Always follow `shared/cli-authentication.md` for auth checks
 - Never save files to `~/Downloads/` or `.listenhub/` — save artifacts to the current working directory with friendly topic-based names (see `shared/config-pattern.md` § Artifact Naming)
 - No speakers involved — music generation does not use speaker selection
-- File limits (all max 10 MB): audio mp3/m4a (`track` and `region-edit` also accept wav); image jpg/jpeg/png/webp; video mp4/mov/avi/mkv/webm
-- All time-range flags are in **milliseconds** (`--generate-start/--generate-end`, `--edit-start/--edit-end`)
-- For async generation commands, use a long timeout: `run_in_background: true` with `timeout: 660000` (600s+). Sync commands (`recognize`, `describe`, `stem`, `vocal-clone`) return immediately
+- File limits (all max 10 MB): audio mp3/m4a (`track` also accepts wav); image jpg/jpeg/png/webp; video mp4/mov/avi/mkv/webm
+- All time-range flags are in **milliseconds** (`--generate-start/--generate-end`)
+- For async generation commands, use a long timeout: `run_in_background: true` with `timeout: 660000` (600s+). Sync commands (`recognize`, `describe`, `stem`) return immediately
 - `cover` is deprecated — steer users to `remix` unless they explicitly ask for `cover`
 
 <HARD-GATE>
@@ -139,10 +136,10 @@ Options:
   - "混音 (Remix)" — 基于已有歌曲 + 新歌词重新创作
   - "纯音乐 (Instrumental)" — 生成无人声的器乐
   - "配乐 (Soundtrack)" — 为图片或视频配乐
-  - "其他" — 续写 / 区域改写 / 单轨 / 识别歌词 / 描述 / 分轨 / 克隆人声
+  - "其他" — 续写 / 单轨 / 识别歌词 / 描述 / 分轨
 ```
 
-If the user picks "其他", follow up with a second AskUserQuestion listing: 续写 (Extend)、区域改写 (Region edit)、单轨 (Track)、识别歌词 (Recognize)、描述 (Describe)、分轨 (Stem)、克隆人声 (Vocal clone).
+If the user picks "其他", follow up with a second AskUserQuestion listing: 续写 (Extend)、单轨 (Track)、识别歌词 (Recognize)、描述 (Describe)、分轨 (Stem).
 
 `get <taskId>` and `list` are not interactive flows — run them directly when the user asks about a task's status.
 
@@ -159,7 +156,7 @@ FILE_SIZE=$(stat -f%z "{path}" 2>/dev/null || stat -c%s "{path}" 2>/dev/null)
 if [ "$FILE_SIZE" -gt 10485760 ]; then echo "File exceeds 10 MB limit"; fi
 ```
 
-**generate** — `--prompt` and/or `--lyrics` (at least one); optional `--style`, `--title`, `--model`, `--instrumental`, `--vocal-id` (from a prior vocal-clone).
+**generate** — `--prompt` and/or `--lyrics` (at least one); optional `--style`, `--title`, `--model`, `--instrumental`, `--vocal-id`.
 
 **remix** — exactly one input source: `--audio` (file) / `--audio-url` / `--provider-song-id`; plus `--lyrics` and `--prompt` (both required); optional `--style`, `--title`, `--model`.
 
@@ -169,11 +166,9 @@ if [ "$FILE_SIZE" -gt 10485760 ]; then echo "File exceeds 10 MB limit"; fi
 
 **track** — exactly one input source `--audio` / `--provider-song-id`; `--generate-type` (one of Vocals|Instrumental|Drums|Bass|Guitar|Keyboard|Percussion|Strings|Synth|FX|Brass|Woodwinds); optional `--prompt`; `--lyrics` only when type is Vocals; `--vocal-gender male|female`; `--generate-start`/`--generate-end` (ms); `--model`.
 
-**region-edit** — one input source `--audio` / `--provider-song-id`; `--lyrics`; `--edit-start` (ms, ≥ 12000); `--edit-end` (ms, with `edit-end − edit-start ≥ 3000`); `--model`.
-
 **extend** — one input source `--audio` / `--provider-song-id`; optional `--prompt`, `--model`.
 
-**recognize** / **describe** / **stem** / **vocal-clone** — `--audio` only. `stem` also takes `--model audio-separation-1|audio-separation-2`.
+**recognize** / **describe** / **stem** — `--audio` only. `stem` also takes `--model audio-separation-1|audio-separation-2`.
 
 For multi-choice fields (model, generate-type, vocal-gender, instrumental yes/no) use the AskUserQuestion tool. Free-text fields (prompt, lyrics, style, title) accept plain text.
 
@@ -208,7 +203,7 @@ Summarize the capability and every collected parameter, then ask the user to con
   确认？
 ```
 
-For analysis capabilities (recognize / describe / stem / vocal-clone) the summary is just the capability + the input audio (+ separation model for stem); these run synchronously, so confirmation can be lightweight.
+For analysis capabilities (recognize / describe / stem) the summary is just the capability + the input audio (+ separation model for stem); these run synchronously, so confirmation can be lightweight.
 
 Wait for explicit confirmation before running any CLI command.
 
@@ -216,7 +211,7 @@ Wait for explicit confirmation before running any CLI command.
 
 ### Async generation commands
 
-`generate`, `remix`, `instrumental`, `soundtrack`, `track`, `region-edit`, `extend`, `cover`.
+`generate`, `remix`, `instrumental`, `soundtrack`, `track`, `extend`, `cover`.
 
 1. **Submit (background)** with `run_in_background: true` and `timeout: 660000`. Always pass `--json`. Include only the flags the user provided; omit the rest.
 
@@ -275,15 +270,6 @@ Wait for explicit confirmation before running any CLI command.
    ```
    (or `--provider-song-id`; `--lyrics` only when `--generate-type Vocals`)
 
-   **region-edit:**
-   ```bash
-   listenhub music region-edit \
-     --audio "{path}" \
-     --lyrics "{new lyrics for the region}" \
-     --edit-start 12000 --edit-end 24000 \
-     --json
-   ```
-
    **extend:**
    ```bash
    listenhub music extend \
@@ -332,7 +318,7 @@ Wait for explicit confirmation before running any CLI command.
 
 ### Sync analysis commands
 
-`recognize`, `describe`, `stem`, `vocal-clone` return results in the same call — run them in the foreground (no background, no long timeout) and present immediately.
+`recognize`, `describe`, `stem` return results in the same call — run them in the foreground (no background, no long timeout) and present immediately.
 
    **recognize** (lyrics + timestamps):
    ```bash
@@ -349,12 +335,6 @@ Wait for explicit confirmation before running any CLI command.
    listenhub music stem --audio "{path}" --model "audio-separation-2" --json
    ```
    In `download`/`both` mode, download the ZIP URL(s) promptly to cwd.
-
-   **vocal-clone** (reusable Vocal ID):
-   ```bash
-   listenhub music vocal-clone --audio "{path}" --json
-   ```
-   Surface the returned Vocal ID and tell the user they can reuse it via `listenhub music generate --vocal-id <id>`.
 
 ### Task management
 
@@ -484,19 +464,4 @@ listenhub music recognize --audio "song.mp3" --json
 
 ```bash
 listenhub music stem --audio "track.mp3" --model "audio-separation-2" --json
-```
-
-**Clone a vocal, then reuse it:**
-
-> "用 my-voice.mp3 克隆一个人声，然后给我做一首歌"
-
-1. vocal-clone (sync) → get a Vocal ID
-2. generate with `--vocal-id`
-
-```bash
-VOCAL_ID=$(listenhub music vocal-clone --audio "my-voice.mp3" --json | jq -r '.vocalId')
-listenhub music generate \
-  --prompt "upbeat pop song about friendship" \
-  --vocal-id "$VOCAL_ID" \
-  --json
 ```
