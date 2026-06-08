@@ -5,6 +5,8 @@ description: |
   Triggers on: "make a podcast", "explainer video", "read aloud", "TTS",
   "generate image", "generate video", "做播客", "解说视频", "朗读", "生成图片",
   "生成视频", "幻灯片", "slides", "音乐", "music", "generate music", "翻唱",
+  "混音", "remix", "续写", "extend", "纯音乐", "instrumental", "配乐",
+  "soundtrack", "分轨", "stem", "识别歌词", "克隆人声", "vocal clone",
   "cover song", "parse URL", "解析链接", "提取内容".
 metadata:
   openclaw:
@@ -28,7 +30,7 @@ This is a router skill. When users trigger a general ListenHub action, this skil
 | TTS / Read aloud | "TTS", "read aloud", "朗读", "配音", "语音合成" | `/tts` |
 | Image generation | "generate image", "画一张", "生成图片", "AI图" | `/image-gen` |
 | Video generation | "video", "视频", "seedance", "生成视频", "text to video", "做视频" | `/video-gen` |
-| Music | "music", "音乐", "生成音乐", "翻唱", "cover" | `/music` |
+| Music | "music", "音乐", "生成音乐", "翻唱", "混音", "remix", "续写", "extend", "纯音乐", "instrumental", "配乐", "soundtrack", "分轨", "stem", "识别歌词", "克隆人声", "vocal clone" | `/music` |
 | Content extraction | "parse URL", "extract content", "解析链接" | `/content-parser` |
 | Audio transcription | "transcribe", "ASR", "语音转文字" | `/asr` |
 | Creator workflow | "创作", "写公众号", "小红书", "口播" | `/creator` |
@@ -47,7 +49,7 @@ Options:
   - "Podcast" — Audio discussion on a topic
   - "Explainer Video" — Narrated video with AI visuals
   - "Slides" — Slide deck / presentation
-  - "Music" — AI-generated music or cover
+  - "Music" — AI music: generate, remix, instrumental, soundtrack, stem, vocal clone
   - "Video" — AI video generation from text or reference materials
 ```
 

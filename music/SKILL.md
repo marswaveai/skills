@@ -1,8 +1,10 @@
 ---
 name: music
 description: |
-  Generate AI music or create covers from reference audio. Triggers on: "音乐",
-  "music", "生成音乐", "generate music", "翻唱", "cover", "作曲", "compose",
+  Generate, remix, extend, edit, and analyze AI music (Mureka). Triggers on:
+  "音乐", "music", "生成音乐", "generate music", "翻唱", "cover", "混音", "remix",
+  "续写", "extend", "纯音乐", "instrumental", "配乐", "soundtrack", "分轨", "stem",
+  "识别歌词", "recognize lyrics", "作曲", "compose",
   "create a song", "做一首歌".
 metadata:
   openclaw:
@@ -14,23 +16,43 @@ metadata:
 
 ## When to Use
 
-- User wants to generate original AI music from a prompt
-- User wants to create a cover from reference audio
-- User says "音乐", "music", "生成音乐", "generate music", "翻唱", "cover", "作曲", "compose", "create a song", or "做一首歌"
+- User wants to generate original AI music from a prompt and/or lyrics
+- User wants to remix / re-create an existing song with new lyrics
+- User wants a pure instrumental, or a soundtrack scored to an image or video
+- User wants to extend a song or isolate/generate a single track
+- User wants to analyze audio — recognize lyrics, describe a song, or split stems
+- User says "音乐", "music", "生成音乐", "generate music", "翻唱"/"混音"/"remix", "续写"/"extend", "纯音乐"/"instrumental", "配乐"/"soundtrack", "分轨"/"stem", "识别歌词", "作曲", "compose", "create a song", or "做一首歌"
 
 ## When NOT to Use
 
 - User wants text-to-speech reading (use `/speech`)
 - User wants a podcast discussion (use `/podcast`)
 - User wants an explainer video with narration (use `/explainer`)
-- User wants to transcribe audio to text (use `/asr`)
+- User wants to transcribe spoken audio to text — not song lyrics (use `/asr`)
 
 ## Purpose
 
-Generate original AI music from text prompts, or create cover versions from reference audio. Two modes:
+Full ListenHub music toolkit, powered by the **Mureka** provider via the `listenhub music` CLI. Capabilities:
 
-1. **Generate** (original): Create a new song from a text prompt, with optional style, title, and instrumental-only options.
-2. **Cover**: Transform a reference audio file into a new version, with optional style modifications.
+**Generation (async — return a task to poll):**
+
+1. **generate** — text and/or lyrics → a new song. Optional style, title, instrumental, and a cloned `--vocal-id`.
+2. **remix** — an existing song + new lyrics → a re-creation. Input is one of an audio file, an audio URL, or a provider song ID.
+3. **instrumental** — a pure instrumental from a prompt, or guided by a reference audio.
+4. **soundtrack** — music scored to an image or a video.
+5. **track** — isolate or generate a single instrument/vocal track from a song.
+6. **extend** — make a song longer.
+7. **cover** *(deprecated)* — older cover flow; prefer **remix**.
+
+**Analysis (sync — return results immediately):**
+
+8. **recognize** — lyrics with line-level timestamps.
+9. **describe** — description, tags, genres, instruments.
+10. **stem** — split a song into separated stems (ZIP download URLs).
+
+**Task management:** `list` (recent tasks) and `get <taskId>` (status/result of one task).
+
+Models for generation commands: `auto` (default), `mureka-7.6`, `mureka-8`, `mureka-9`, `mureka-o2`. See `references/music-api.md` for the full per-command parameter reference.
 
 ## Hard Constraints
 
@@ -39,8 +61,10 @@ Generate original AI music from text prompts, or create cover versions from refe
 - Always follow `shared/cli-authentication.md` for auth checks
 - Never save files to `~/Downloads/` or `.listenhub/` — save artifacts to the current working directory with friendly topic-based names (see `shared/config-pattern.md` § Artifact Naming)
 - No speakers involved — music generation does not use speaker selection
-- Audio file constraints for cover mode: mp3, wav, flac, m4a, ogg, aac; max 20MB
-- Long timeout: 600s default. Use `run_in_background: true` with `timeout: 660000`
+- File limits (all max 10 MB): audio mp3/m4a (`track` also accepts wav); image jpg/jpeg/png/webp; video mp4/mov/avi/mkv/webm
+- All time-range flags are in **seconds** (`--generate-start/--generate-end`)
+- For async generation commands, use a long timeout: `run_in_background: true` with `timeout: 660000` (600s+). Sync commands (`recognize`, `describe`, `stem`) return immediately
+- `cover` is deprecated — steer users to `remix` unless they explicitly ask for `cover`
 
 <HARD-GATE>
 Use the AskUserQuestion tool for every multiple-choice step — do NOT print options as plain text. Ask one question at a time. Wait for the user's answer before proceeding to the next step. After all parameters are collected, summarize the choices and ask the user to confirm. Do NOT call any CLI command until the user has explicitly confirmed.
@@ -101,166 +125,182 @@ CONFIG=$(cat "$CONFIG_PATH")
 
 ## Interaction Flow
 
-### Step 1: Mode
+### Step 1: Capability
 
-Ask the user which mode they want, unless the intent is already clear from their message (e.g., "翻唱" or "cover" implies cover mode; "作曲" or "compose" implies generate mode).
+Pick the capability. Skip the question if the user's intent is already clear (e.g., "翻唱"/"混音"/"remix" → remix; "作曲"/"compose"/"做一首歌" → generate; "纯音乐"/"instrumental" → instrumental; "续写"/"extend" → extend; "分轨"/"stem" → stem; "识别歌词" → recognize).
 
 ```
-Question: "选择音乐生成模式："
+Question: "想做什么？"
 Options:
-  - "原创 (Generate)" — 从文字描述生成全新歌曲
-  - "翻唱 (Cover)" — 基于参考音频生成新版本
+  - "原创 (Generate)" — 用文字 / 歌词生成全新歌曲
+  - "混音 (Remix)" — 基于已有歌曲 + 新歌词重新创作
+  - "纯音乐 (Instrumental)" — 生成无人声的器乐
+  - "配乐 (Soundtrack)" — 为图片或视频配乐
+  - "其他" — 续写 / 单轨 / 识别歌词 / 描述 / 分轨
 ```
 
-### Step 2a: Prompt (generate mode)
+If the user picks "其他", follow up with a second AskUserQuestion listing: 续写 (Extend)、单轨 (Track)、识别歌词 (Recognize)、描述 (Describe)、分轨 (Stem).
 
-If the user chose **Generate**, ask for the song description:
+`get <taskId>` and `list` are not interactive flows — run them directly when the user asks about a task's status.
 
-> "请描述你想要的歌曲（主题、情绪、歌词片段等）："
+### Step 2: Gather inputs (per capability)
 
-Accept free text. This maps to `--prompt`.
+Use the per-capability fields below. Ask for required inputs; offer optional ones. For any audio/image/video file, **validate** before confirming:
 
-### Step 2b: Reference Audio (cover mode)
+- Local path: verify the file exists and the extension matches the allowed list for that command (see Hard Constraints / `references/music-api.md`).
+- URL: accept as-is (the CLI validates).
+- Size: reject local files over 10 MB.
 
-If the user chose **Cover**, ask for the reference audio:
-
-> "请提供参考音频文件路径或 URL："
-
-Accept a local file path or URL. This maps to `--audio`.
-
-**Validate the input:**
-
-- If a local path: verify the file exists and check the extension is one of: `mp3`, `wav`, `flac`, `m4a`, `ogg`, `aac`
-- If a URL: accept as-is (the CLI will validate)
-- Check file size does not exceed 20 MB for local files:
-  ```bash
-  FILE_SIZE=$(stat -f%z "{path}" 2>/dev/null || stat -c%s "{path}" 2>/dev/null)
-  if [ "$FILE_SIZE" -gt 20971520 ]; then
-    echo "File exceeds 20 MB limit"
-  fi
-  ```
-
-If validation fails, inform the user and re-ask.
-
-Optionally, the user may also provide a prompt to guide the cover style.
-
-### Step 3: Style (optional)
-
-Ask for an optional style descriptor:
-
-> "指定音乐风格？（如 pop、rock、jazz、电子、古风等，留空则由 AI 自动选择）"
-
-Accept free text or empty. This maps to `--style`.
-
-### Step 4: Title (optional)
-
-Ask for an optional title:
-
-> "歌曲标题？（留空则自动生成）"
-
-Accept free text or empty. This maps to `--title`.
-
-### Step 5: Instrumental
-
-```
-Question: "是否纯音乐（无人声）？"
-Options:
-  - "否，带人声（默认）"
-  - "是，纯音乐"
+```bash
+FILE_SIZE=$(stat -f%z "{path}" 2>/dev/null || stat -c%s "{path}" 2>/dev/null)
+if [ "$FILE_SIZE" -gt 10485760 ]; then echo "File exceeds 10 MB limit"; fi
 ```
 
-Default is "no" (with vocals). If the user selects "是", add `--instrumental` flag.
+**generate** — `--prompt` and/or `--lyrics` (at least one); optional `--style`, `--title`, `--model`, `--instrumental`, `--vocal-id`.
 
-### Step 6: Confirm & Generate
+**remix** — exactly one input source: `--audio` (file) / `--audio-url` / `--provider-song-id`; plus `--lyrics` and `--prompt` (both required); optional `--style`, `--title`, `--model`.
 
-Summarize all choices:
+**instrumental** — exactly one of `--prompt` / `--reference-audio`; optional `--title`, `--model`.
 
-**Generate mode:**
+**soundtrack** — exactly one of `--image` / `--video`; optional `--prompt`, `--title`, `--model`.
+
+**track** — exactly one input source `--audio` / `--provider-song-id`; `--generate-type` (one of Vocals|Instrumental|Drums|Bass|Guitar|Keyboard|Percussion|Strings|Synth|FX|Brass|Woodwinds); optional `--prompt`; `--lyrics` only when type is Vocals; `--vocal-gender male|female`; `--generate-start`/`--generate-end` (seconds); `--model`.
+
+**extend** — one input source `--audio` / `--provider-song-id`; optional `--prompt`, `--model`.
+
+**recognize** / **describe** / **stem** — `--audio` only. `stem` also takes `--model audio-separation-1|audio-separation-2`.
+
+For multi-choice fields (model, generate-type, vocal-gender, instrumental yes/no) use the AskUserQuestion tool. Free-text fields (prompt, lyrics, style, title) accept plain text.
+
+### Step 3: Confirm
+
+Summarize the capability and every collected parameter, then ask the user to confirm. Examples:
+
+**generate:**
 ```
 准备生成音乐：
+  能力：原创 (Generate)
+  描述：{prompt / 无}
+  歌词：{lyrics / 无}
+  风格：{style / 自动}
+  标题：{title / 自动}
+  模型：{model / auto}
+  人声：{带人声 / 纯音乐}
+  Vocal ID：{vocal-id / 无}
+  确认？
+```
 
-  模式：原创 (Generate)
+**remix:**
+```
+准备混音：
+  能力：混音 (Remix)
+  原曲：{audio / audio-url / provider-song-id}
+  新歌词：{lyrics}
   描述：{prompt}
   风格：{style / 自动}
   标题：{title / 自动}
-  人声：{带人声 / 纯音乐}
-
+  模型：{model / auto}
   确认？
 ```
 
-**Cover mode:**
-```
-准备生成音乐：
-
-  模式：翻唱 (Cover)
-  参考音频：{path-or-url}
-  描述：{prompt / 无}
-  风格：{style / 自动}
-  标题：{title / 自动}
-  人声：{带人声 / 纯音乐}
-
-  确认？
-```
+For analysis capabilities (recognize / describe / stem) the summary is just the capability + the input audio (+ separation model for stem); these run synchronously, so confirmation can be lightweight.
 
 Wait for explicit confirmation before running any CLI command.
 
 ## Workflow
 
-1. **Submit (background)**: Run the CLI command with `run_in_background: true` and `timeout: 660000`:
+### Async generation commands
 
-   **Generate mode:**
+`generate`, `remix`, `instrumental`, `soundtrack`, `track`, `extend`, `cover`.
+
+1. **Submit (background)** with `run_in_background: true` and `timeout: 660000`. Always pass `--json`. Include only the flags the user provided; omit the rest.
+
+   **generate:**
    ```bash
    listenhub music generate \
      --prompt "{prompt}" \
+     --lyrics "{lyrics}" \
+     --model "{model}" \
      --style "{style}" \
      --title "{title}" \
      --instrumental \
+     --vocal-id "{vocal-id}" \
      --json
    ```
 
-   **Cover mode:**
+   **remix:**
    ```bash
-   listenhub music cover \
-     --audio "{path-or-url}" \
+   listenhub music remix \
+     --audio "{path}" \
+     --lyrics "{lyrics}" \
      --prompt "{prompt}" \
      --style "{style}" \
      --title "{title}" \
-     --instrumental \
+     --json
+   ```
+   (use exactly one of `--audio` / `--audio-url` / `--provider-song-id`)
+
+   **instrumental:**
+   ```bash
+   listenhub music instrumental \
+     --prompt "{prompt}" \
+     --model "{model}" \
+     --json
+   ```
+   (or `--reference-audio "{path}"` instead of `--prompt`)
+
+   **soundtrack:**
+   ```bash
+   listenhub music soundtrack \
+     --image "{path}" \
+     --prompt "{prompt}" \
+     --json
+   ```
+   (or `--video "{path}"` instead of `--image`)
+
+   **track:**
+   ```bash
+   listenhub music track \
+     --audio "{path}" \
+     --generate-type "Vocals" \
+     --lyrics "{lyrics}" \
+     --vocal-gender "female" \
+     --generate-start 0 --generate-end 30 \
+     --json
+   ```
+   (or `--provider-song-id`; `--lyrics` only when `--generate-type Vocals`)
+
+   **extend:**
+   ```bash
+   listenhub music extend \
+     --audio "{path}" \
+     --prompt "{how to continue}" \
      --json
    ```
 
-   Flag notes:
-   - `--prompt` — text description of the music (required for generate, optional for cover)
-   - `--audio` — reference audio file path or URL (cover mode only, required)
-   - `--style` — optional style/genre hint; omit if not provided
-   - `--title` — optional track title; omit if not provided
-   - `--instrumental` — add this flag for instrumental-only (no vocals); omit if not selected
-   - Omit `--prompt` in cover mode if not provided
+   The CLI handles polling internally. Generation can take up to ~10 minutes.
 
-   The CLI handles polling internally. Music generation takes up to 10 minutes.
+2. Tell the user the task is submitted and that they'll be notified when it finishes. If they only have a `taskId`, they can check with `listenhub music get <taskId> --json` or `listenhub music list --json`.
 
-2. Tell the user the task is submitted and that they will be notified when it finishes.
-
-3. When notified of completion, **present the result**:
-
-   Parse the CLI JSON output for key fields:
+3. When notified of completion, **present the result**. The CLI JSON is a task object — the song is in `tracks[0]`, credit is `creditCost`, and `duration` is in **seconds**. Parse the key fields:
    ```bash
-   AUDIO_URL=$(echo "$RESULT" | jq -r '.audioUrl')
-   TITLE=$(echo "$RESULT" | jq -r '.title // "Untitled"')
-   DURATION=$(echo "$RESULT" | jq -r '.duration // empty')
-   CREDITS=$(echo "$RESULT" | jq -r '.credits // empty')
+   AUDIO_URL=$(echo "$RESULT" | jq -r '.tracks[0].audioUrl // empty')
+   TITLE=$(echo "$RESULT" | jq -r '[.tracks[0].title, .params.title, "Untitled"] | map(select(. != null and . != "")) | .[0]')
+   # duration is seconds (older pre-rollout Mureka tasks may still be ms → a value ≥ 3600 means ms)
+   DURATION=$(echo "$RESULT" | jq -r '.tracks[0].duration // 0' \
+     | awk '{d=$1; if (d>=3600) d/=1000; printf "%d:%02d", int(d/60), int(d%60)}')
+   CREDITS=$(echo "$RESULT" | jq -r '.creditCost // empty')
    ```
 
    Read `OUTPUT_MODE` from config. Follow `shared/output-mode.md` for behavior.
 
-   **`inline` or `both`**: Display audio URL as a clickable link.
-
+   **`inline` or `both`**: Display the audio URL as a clickable link.
    ```
    音乐已生成！
 
    标题：{title}
    在线收听：{audioUrl}
-   时长：{duration}s
+   时长：{duration}
    消耗积分：{credits}
    ```
 
@@ -273,11 +313,37 @@ Wait for explicit confirmation before running any CLI command.
    while [ -e "$NAME" ]; do NAME="${BASE}-${i}.${EXT}"; i=$((i+1)); done
    curl -sS -o "$NAME" "{audioUrl}"
    ```
-   Present:
    ```
    已保存到当前目录：
      {NAME}
    ```
+
+### Sync analysis commands
+
+`recognize`, `describe`, `stem` return results in the same call — run them in the foreground (no background, no long timeout) and present immediately.
+
+   **recognize** (lyrics + timestamps):
+   ```bash
+   listenhub music recognize --audio "{path}" --json
+   ```
+
+   **describe** (description, tags, genres, instruments):
+   ```bash
+   listenhub music describe --audio "{path}" --json
+   ```
+
+   **stem** (separated stems → ZIP download URLs):
+   ```bash
+   listenhub music stem --audio "{path}" --model "audio-separation-2" --json
+   ```
+   In `download`/`both` mode, download the ZIP URL(s) promptly to cwd.
+
+### Task management
+
+```bash
+listenhub music list --json            # recent tasks
+listenhub music get "{taskId}" --json   # one task's status / result
+```
 
 ### After Successful Generation
 
@@ -295,6 +361,7 @@ fi
 
 ## Resources
 
+- Per-command parameter reference: `references/music-api.md`
 - CLI authentication: `shared/cli-authentication.md`
 - CLI patterns: `shared/cli-patterns.md`
 - Config pattern: `shared/config-pattern.md`
@@ -325,40 +392,78 @@ listenhub music generate \
 
 Wait for CLI to return result, then download `{slug}.mp3` to cwd.
 
-**Cover from file:**
+**Remix an existing song:**
 
-> "用这个音频翻唱一下 demo.mp3，jazz 风格"
+> "用 demo.mp3 重新填词混音，把它做成 city pop 风格"
 
-1. Detect: cover mode ("翻唱")
-2. Validate: `demo.mp3` exists, is a supported format, under 20 MB
-3. Infer: style = "jazz" from user input
-4. Ask: title? instrumental?
-5. Confirm summary → user confirms
+1. Detect: remix capability ("混音")
+2. Validate: `demo.mp3` exists, is mp3/m4a, under 10 MB
+3. Ask: new lyrics (`--lyrics`, required), prompt/direction (`--prompt`, required), style, title
+4. Confirm summary → user confirms
 
 ```bash
-listenhub music cover \
+listenhub music remix \
   --audio "demo.mp3" \
-  --style "jazz" \
+  --lyrics "{new lyrics}" \
+  --prompt "rework as upbeat city pop" \
+  --style "city pop" \
   --json
 ```
 
-Wait for CLI to return result, then download `{slug}.mp3` to cwd.
+Wait for the CLI result, then download `{slug}.mp3` to cwd.
 
 **Generate instrumental:**
 
 > "Create an instrumental electronic track for a game intro"
 
-1. Detect: generate mode ("Create ... track")
-2. Infer: style = "electronic", instrumental = yes
-3. Ask: title?
-4. Confirm summary → user confirms
+1. Detect: instrumental capability ("instrumental")
+2. Infer: prompt = "electronic track for a game intro"
+3. Confirm summary → user confirms
 
 ```bash
-listenhub music generate \
-  --prompt "instrumental electronic track for a game intro" \
-  --style "electronic" \
-  --instrumental \
+listenhub music instrumental \
+  --prompt "electronic track for a game intro" \
   --json
 ```
 
-Wait for CLI to return result, then download `{slug}.mp3` to cwd.
+Wait for the CLI result, then download `{slug}.mp3` to cwd.
+
+**Soundtrack for a video:**
+
+> "给这段 clip.mp4 配一段紧张的背景音乐"
+
+1. Detect: soundtrack capability ("配乐"), input is a video
+2. Validate: `clip.mp4` exists (mp4/mov/avi/mkv/webm), under 10 MB
+3. Infer: prompt = "紧张的背景音乐"
+4. Confirm summary → user confirms
+
+```bash
+listenhub music soundtrack \
+  --video "clip.mp4" \
+  --prompt "tense, suspenseful background score" \
+  --json
+```
+
+**Recognize lyrics (sync):**
+
+> "帮我识别 song.mp3 里的歌词"
+
+1. Detect: recognize capability ("识别歌词")
+2. Validate: `song.mp3` exists, under 10 MB
+3. Run in foreground and show lyrics with timestamps
+
+```bash
+listenhub music recognize --audio "song.mp3" --json
+```
+
+**Split stems (sync):**
+
+> "把 track.mp3 分轨"
+
+1. Detect: stem capability ("分轨")
+2. Ask: separation model (audio-separation-1 / audio-separation-2)
+3. Run in foreground; in download mode, fetch the ZIP URL to cwd
+
+```bash
+listenhub music stem --audio "track.mp3" --model "audio-separation-2" --json
+```

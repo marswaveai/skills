@@ -47,7 +47,7 @@ Turn ideas into videos, podcasts, and more. Powered by [ListenHub](https://liste
 | `/explainer` | "explainer video", "解说视频" | Narrated explainer videos with AI visuals |
 | `/slides` | "slides", "幻灯片" | Create slide decks with AI visuals |
 | `/tts` | "read aloud", "TTS", "朗读" | Text-to-speech and voice narration |
-| `/music` | "music", "音乐" | AI music generation and covers |
+| `/music` | "music", "音乐", "remix", "混音", "stem", "分轨" | AI music: generate, remix, instrumental, soundtrack, extend, stem, recognize |
 | `/image-gen` | "generate image", "画一张" | AI image generation from text prompts |
 | `/video-gen` | "generate video", "生成视频" | AI video generation (text-to-video, frame animation, reference-guided) |
 | `/content-parser` | "parse this URL", "解析链接" | Extract content from URLs |
