@@ -8,9 +8,10 @@ metadata:
     primaryBin: "listenhub"
 description: |
   Generate AI videos from text prompts or reference materials.
-  Supports HappyHorse and SeeDance models.
+  Supports HappyHorse, SeeDance, and PixVerse models.
   Triggers on: "生成视频", "做视频", "video generation", "text to video",
-  "create video", "视频生成", "视频编辑", "video edit".
+  "create video", "视频生成", "视频编辑", "video edit", "pixverse",
+  "口型", "lipsync", "对口型".
 ---
 
 ## When to Use
@@ -19,7 +20,9 @@ description: |
 - User wants to animate a still image (first-frame)
 - User has reference images to guide video generation
 - User wants to edit an existing video (change style, background, etc.)
-- User says "生成视频", "做视频", "video generation", "text to video", "视频编辑"
+- User wants to lip-sync a video to audio or TTS (PixVerse only) — "对口型", "口型同步"
+- User wants a marketing ad / promo mix video (PixVerse agent)
+- User says "生成视频", "做视频", "video generation", "text to video", "视频编辑", "pixverse", "口型"
 
 ## When NOT to Use
 
@@ -29,10 +32,11 @@ description: |
 
 ## Purpose
 
-Generate AI videos using the ListenHub CLI. Supports two model families:
+Generate AI videos using the ListenHub CLI. Supports three model families:
 
 - **HappyHorse** (default) — text-to-video, image-to-video, reference-image-to-video, video-edit
 - **SeeDance** — text-to-video, frame mode (first + last frame), reference mode (images, videos, audio)
+- **PixVerse** — nine atomic capabilities via the Agent API (text_to_video, image_to_video, transition, multi_transition, fusion, restyle, mimic, **lip_sync**, agent). The only family that supports lip sync. OpenAPI-only (URLs required) and uses its own `pixverse` CLI namespace.
 
 ## Hard Constraints
 
@@ -53,18 +57,27 @@ until the user has explicitly confirmed.
 
 ## Model Comparison
 
-| Feature | HappyHorse (default) | SeeDance |
-|---------|---------------------|----------|
-| Text-to-video | ✅ | ✅ |
-| Image-to-video (first-frame) | ✅ | ✅ (+ last-frame) |
-| Reference images | ✅ (1–9, with [Image N] prompt syntax) | ✅ |
-| Video edit | ✅ | ❌ |
-| Reference video | ❌ (use video-edit instead) | ✅ |
-| Reference audio | ❌ | ✅ |
-| Resolution | 720p, 1080p | 480p, 720p, 1080p |
-| Duration range | 3–15s | 4–15s |
-| Extra ratios | 4:5, 5:4 | — |
-| Prompt length | ≤2500 中文 / ≤5000 非中文 | ≤500 |
+| Feature | HappyHorse (default) | SeeDance | PixVerse |
+|---------|---------------------|----------|----------|
+| Text-to-video | ✅ | ✅ | ✅ (`text_to_video`) |
+| Image-to-video (first-frame) | ✅ | ✅ (+ last-frame) | ✅ (`image_to_video`) |
+| Reference images | ✅ (1–9, with [Image N] prompt syntax) | ✅ | ✅ (`fusion`, `@refName` syntax) |
+| Transition (first→last) | ❌ | ✅ (frame mode) | ✅ (`transition` / `multi_transition`) |
+| Video edit | ✅ | ❌ | ❌ |
+| Restyle | ❌ | ❌ | ✅ (`restyle`) |
+| Mimic (motion transfer) | ❌ | ❌ | ✅ (`mimic`, locked 720p) |
+| **Lip sync** | ❌ | ❌ | ✅ (`lip_sync`, audio or TTS) |
+| Marketing agent (ad/promo) | ❌ | ❌ | ✅ (`agent`: ad_master / promo_mix) |
+| Reference video | ❌ (use video-edit instead) | ✅ | ✅ (mimic / lip_sync source) |
+| Reference audio | ❌ | ✅ | ✅ (lip_sync) |
+| Resolution / quality | 720p, 1080p | 480p, 720p, 1080p | 360p, 540p, 720p, 1080p |
+| Duration range | 3–15s | 4–15s | 1–60s (agent: 20/30/60) |
+| Aspect ratios | 16:9, 9:16, 1:1, 4:3, 3:4, 4:5, 5:4 | 16:9, 9:16, 1:1, 4:3, 3:4, 21:9 | 9:16, 16:9, 1:1, 4:3, 3:4 |
+| Prompt length | ≤2500 中文 / ≤5000 非中文 | ≤500 | ≤2048 |
+| Rate limit | 5 RPM | 5 RPM | 5 RPM |
+| CLI namespace | `… video create` | `… video create` | `… video pixverse generate` (OpenAPI only) |
+
+**Lip sync is PixVerse-only** — HappyHorse and SeeDance do not support it. Mimic, restyle, fusion, transition, and the marketing agent are also PixVerse-exclusive.
 
 ## Step -1: CLI Auth Check + Video Command Gate
 
@@ -119,6 +132,7 @@ All subsequent commands use `$CMD_PREFIX` instead of hardcoded `listenhub video`
 - OpenAPI mode requires API Key (`lh_sk_...`), configured via `listenhub openapi config set-key` or env `LISTENHUB_API_KEY`
 - OpenAPI mode does not support `--audio-setting` flag (video-edit audio control not yet exposed)
 - All media inputs must be **URLs** in OpenAPI mode (no local file upload) — if user provides local paths, inform them: "OpenAPI 模式需要使用公网 URL，请先上传文件后提供链接。"
+- **PixVerse is OpenAPI-only** — it lives under `listenhub openapi video pixverse` and has no internal-auth equivalent. If the user wants PixVerse (口型/mimic/restyle/fusion/transition/agent) but only internal auth is configured, prompt them to configure an OpenAPI key first.
 
 ## Step 0: Config Setup
 
@@ -185,7 +199,10 @@ Options:
   - "有图片，想做首帧动画" — Image-to-video (first-frame) → Step 3a
   - "有参考图片（风格/角色参考）" — Reference-image mode → Step 3b
   - "有视频，想编辑/修改" — Video-edit mode → Step 3c
+  - "有视频，想做口型同步" — Lip-sync mode (PixVerse only) → Step 3d
 ```
+
+If the user mentions PixVerse-exclusive capabilities (口型/lip sync, 模仿/mimic, restyle/风格化、融合/fusion、过渡/transition、广告/promo agent), route to PixVerse and pick the matching `--capability` — see Step 4 (PixVerse) and `references/pixverse-api.md`.
 
 ### Step 3a: Image-to-Video (First-Frame)
 
@@ -248,6 +265,33 @@ After collecting, proceed to Step 4.
 
 **Note:** Video-edit has no `ratio` or `duration` parameters — output matches input video.
 
+### Step 3d: Lip-Sync Mode (PixVerse Only)
+
+Lip sync is **only available on PixVerse** (`--capability lip_sync`). If the user is on HappyHorse/SeeDance, inform them: "口型同步仅 PixVerse 模型支持，已自动切换。" and use the PixVerse command template in Step 4.
+
+1. **source video** (required): the video whose lips will be driven. Collect EITHER:
+   - `--source-video-id <id>` — a PixVerse video id, OR
+   - `--source-task-id <id>` — a prior succeeded PixVerse task to reuse.
+
+   (OpenAPI-only; the source must already exist on PixVerse.)
+
+2. **audio source** — ask the user which drive method:
+
+```
+Question: "口型用什么驱动？"
+Options:
+  - "用一段音频文件" — Collect 1 audio URL → --audio <url>
+  - "用文字转语音 (TTS)" — Collect speaker + content → --pixverse-json '{"tts":{...}}'
+```
+
+   - **Audio file:** collect one public audio URL → `--audio <url>` (max 1)，音频时长须落在 5–60s。
+   - **TTS:** collect a speaker id and the text to speak，走嵌套 JSON（**不要**用 `--lip-sync-*` flag，详见 `references/pixverse-api.md` § lip_sync）：
+     - `--pixverse-json '{"tts":{"speakerId":"<id>","content":"<text>"}}'`
+
+   Do NOT mix audio and TTS — pick one（同时给两者会被契约拒绝）。
+
+After collecting, proceed to Step 4 (use the PixVerse `lip_sync` template).
+
 ### Step 4: Optional Parameter Adjustment
 
 Read session defaults and present. Adjust display based on mode:
@@ -279,7 +323,10 @@ Options:
   - "happyhorse（推荐）" — Higher quality, video-edit support
   - "doubao-seedance-2-pro" — SeeDance pro, supports last-frame & audio ref
   - "doubao-seedance-2-fast" — SeeDance fast
+  - "pixverse" — PixVerse: 口型同步/模仿/风格化/融合/过渡/广告 agent (OpenAPI only)
 ```
+
+If the user picks **pixverse**, switch to the PixVerse command templates below — PixVerse uses its own `… video pixverse generate` namespace, an explicit `--capability`, and `--quality`/`--aspect-ratio` instead of `--resolution`/`--ratio`. See "PixVerse Command Templates" and `references/pixverse-api.md`.
 
 **Resolution:**
 ```
@@ -462,6 +509,127 @@ RESULT=$($CMD_PREFIX create \
 EXIT_CODE=$?
 ```
 
+### PixVerse Command Templates
+
+PixVerse uses its own namespace and an explicit `--capability`. It is **OpenAPI-only**, so `$CMD_PREFIX` must be `listenhub openapi video` — invoke `… pixverse generate` (not `… create`). All media inputs are **URLs**. Quality uses `--quality` (360p/540p/720p/1080p) and ratio uses `--aspect-ratio` (9:16/16:9/1:1/4:3/3:4); there is no `--resolution`/`--ratio` here.
+
+**text_to_video:**
+```bash
+RESULT=$(listenhub openapi video pixverse generate \
+  --capability text_to_video \
+  --model pixverse \
+  --prompt "赛博朋克城市夜景" \
+  --quality 720p \
+  --aspect-ratio 16:9 \
+  --duration 5 \
+  --no-wait --json 2>/tmp/lh-err)
+EXIT_CODE=$?
+```
+
+**image_to_video:**
+```bash
+RESULT=$(listenhub openapi video pixverse generate \
+  --capability image_to_video \
+  --model pixverse \
+  --prompt "让画面里的人物自然走动" \
+  --image "https://example.com/scene.png" \
+  --quality 720p \
+  --aspect-ratio 16:9 \
+  --duration 5 \
+  --no-wait --json 2>/tmp/lh-err)
+EXIT_CODE=$?
+```
+
+**lip_sync (audio file):** source video + 1 audio URL.
+```bash
+RESULT=$(listenhub openapi video pixverse generate \
+  --capability lip_sync \
+  --source-video-id "abc123" \
+  --audio "https://example.com/voice.mp3" \
+  --quality 720p \
+  --no-wait --json 2>/tmp/lh-err)
+EXIT_CODE=$?
+```
+
+**lip_sync (TTS):** source video + nested `tts`（do NOT also pass `--audio`）。TTS 必须走 `--pixverse-json` 的嵌套 `tts`，**不要**用 `--lip-sync-tts/--lip-sync-speaker-id/--lip-sync-content`（那三个 flag 映射到 `lipSyncTts*`，校验器/provider 不认，会被拒绝——上游 listenhub-cli #250 的 flag→字段错配）。
+```bash
+RESULT=$(listenhub openapi video pixverse generate \
+  --capability lip_sync \
+  --source-task-id "task_xyz" \
+  --pixverse-json '{"tts":{"speakerId":"speaker_01","content":"大家好，欢迎来到本期节目"}}' \
+  --quality 720p \
+  --no-wait --json 2>/tmp/lh-err)
+EXIT_CODE=$?
+```
+
+**mimic:** 1 image + 1 video, quality **locked to 720p**.
+```bash
+RESULT=$(listenhub openapi video pixverse generate \
+  --capability mimic \
+  --image "https://example.com/subject.png" \
+  --video "https://example.com/motion.mp4" \
+  --quality 720p \
+  --no-wait --json 2>/tmp/lh-err)
+EXIT_CODE=$?
+```
+
+**agent (ad_master / promo_mix):** quality 720p/1080p only, duration 20/30/60 only; `promo_mix` needs ≥4 images.
+```bash
+RESULT=$(listenhub openapi video pixverse generate \
+  --capability agent \
+  --agent-type promo_mix \
+  --prompt "为这款耳机做一支 30 秒带货短片" \
+  --image "https://example.com/p1.png" \
+  --image "https://example.com/p2.png" \
+  --image "https://example.com/p3.png" \
+  --image "https://example.com/p4.png" \
+  --quality 1080p \
+  --duration 30 \
+  --no-wait --json 2>/tmp/lh-err)
+EXIT_CODE=$?
+```
+
+**fusion:** 参考图走嵌套 `imageReferences`（**不要**用 top-level `--image`，否则契约 `any.invalid` 拒绝）；prompt 须为每个 `refName` 写 `@refName`。`type` 取 `subject`/`background`，`refName` 须匹配 `/^[A-Za-z][A-Za-z0-9_]{0,31}$/`。
+```bash
+RESULT=$(listenhub openapi video pixverse generate \
+  --capability fusion \
+  --prompt "让 @cat 在 @city 的街道上奔跑" \
+  --pixverse-json '{"imageReferences":[{"type":"subject","imageUrl":"https://example.com/cat.png","refName":"cat"},{"type":"background","imageUrl":"https://example.com/city.png","refName":"city"}]}' \
+  --quality 720p \
+  --no-wait --json 2>/tmp/lh-err)
+EXIT_CODE=$?
+```
+
+**multi_transition:** 关键帧走嵌套 `multiTransition`（2–7 个 `{imageUrl,duration,prompt}`；**不要**用 top-level `--image`），默认 quality 360p。
+```bash
+RESULT=$(listenhub openapi video pixverse generate \
+  --capability multi_transition \
+  --pixverse-json '{"multiTransition":[{"imageUrl":"https://example.com/k1.png","duration":3,"prompt":"清晨的城市"},{"imageUrl":"https://example.com/k2.png","duration":3,"prompt":"正午的广场"},{"imageUrl":"https://example.com/k3.png","duration":3,"prompt":"夜晚的霓虹"}]}' \
+  --quality 360p \
+  --no-wait --json 2>/tmp/lh-err)
+EXIT_CODE=$?
+```
+
+**PixVerse capability constraints (enforce before submitting):**
+- `mimic` — quality **locked 720p** (other values rejected); needs 1 image + 1 video，运动源视频时长 **5–30s**。
+- `agent` — quality **720p/1080p only**, duration **20/30/60 only**; `promo_mix` requires **≥4 images**.
+- `multi_transition` — 关键帧走 `--pixverse-json` 的 `multiTransition[]`（2–7 个），top-level `--image` **必须为空**；default quality **360p**。
+- `fusion` — 参考图走 `--pixverse-json` 的 `imageReferences[]`（1–8 个），top-level `--image` **必须为空**；prompt 须为每个 `refName` 写 `@refName`。
+- `lip_sync` — source video (`--source-video-id`/`--source-task-id`) + EITHER 1 `--audio`（5–60s）OR nested `tts`（`--pixverse-json '{"tts":{...}}'`，**勿用 `--lip-sync-*` flag**）；二者不能同时给。
+- `restyle` — `--source-video-id` (or `--source-task-id`) + `--restyle-id`.
+
+**PixVerse estimate** (mirror the generate capability + quality/duration):
+```bash
+ESTIMATE=$(listenhub openapi video pixverse estimate \
+  --capability text_to_video \
+  --model pixverse \
+  --quality 720p \
+  --duration 5 \
+  --json 2>/tmp/lh-err)
+EXIT_CODE=$?
+```
+For `agent` add `--agent-type ad_master` (or `promo_mix`).
+
 **Flags only when needed:**
 - `--no-generate-audio` — only if user disabled audio (SeeDance only)
 - `--seed 12345` — only if user specified a seed
@@ -589,6 +757,7 @@ Reuse `shared/cli-patterns.md` standard error codes:
 - Config pattern: `shared/config-pattern.md`
 - Output mode: `shared/output-mode.md`
 - HappyHorse API: `references/happyhorse-api.md`
+- PixVerse API: `references/pixverse-api.md`
 
 ## Composability
 
@@ -671,5 +840,46 @@ listenhub video create \
   --duration 8 \
   --first-frame "/path/to/day.png" \
   --last-frame "/path/to/night.png" \
+  --no-wait --json
+```
+
+### Text-to-video (PixVerse)
+
+> "用 pixverse 生成一个视频：海边日落延时"
+
+```bash
+listenhub openapi video pixverse generate \
+  --capability text_to_video \
+  --model pixverse \
+  --prompt "海边日落延时，云层快速移动" \
+  --quality 720p \
+  --aspect-ratio 16:9 \
+  --duration 5 \
+  --no-wait --json
+```
+
+### Lip-sync (PixVerse, TTS)
+
+> "把这个视频做口型同步，让人物说这段话"
+
+```bash
+listenhub openapi video pixverse generate \
+  --capability lip_sync \
+  --source-video-id "abc123" \
+  --pixverse-json '{"tts":{"speakerId":"speaker_01","content":"大家好，欢迎来到本期节目"}}' \
+  --quality 720p \
+  --no-wait --json
+```
+
+### Lip-sync (PixVerse, audio file)
+
+> "用这段音频给视频对口型"
+
+```bash
+listenhub openapi video pixverse generate \
+  --capability lip_sync \
+  --source-task-id "task_xyz" \
+  --audio "https://example.com/voice.mp3" \
+  --quality 720p \
   --no-wait --json
 ```

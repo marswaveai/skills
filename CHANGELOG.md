@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.3.0] - 2026-06-25
+
+### Enhancement
+
+**Added:**
+- `video-gen/` — PixVerse as a third model family (`listenhub openapi video pixverse generate`). Nine atomic capabilities: text_to_video, image_to_video, transition, multi_transition, fusion, restyle, mimic, lip_sync, agent. Introduces **lip sync** (PixVerse-only, audio or TTS), mimic (locked 720p), the marketing agent (ad_master/promo_mix, 720p/1080p + 20/30/60), and fusion `@refName` prompt syntax.
+- `video-gen/references/pixverse-api.md` — dedicated PixVerse reference (capability list, capability→flag mapping, per-capability parameter tables, constraints, output format).
+- `video-gen/SKILL.md` — Step 3d lip-sync collection block, PixVerse command templates (generate + estimate), PixVerse option in the model picker, PixVerse examples, Lipsync row in the Model Comparison table.
+
+**Changed:**
+- `listenhub/SKILL.md` + `listenhub-cli/SKILL.md` — added `pixverse`, `口型`, `lipsync`, `对口型` trigger words routing to `/video-gen`.
+- `video-gen/SKILL.md` — corrected SeeDance rate limit to 5 RPM (was stale at 2; aligned with HappyHorse via #243).
+
 ## [1.2.0] - 2026-05-20
 
 ### New Skill
