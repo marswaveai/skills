@@ -5,7 +5,8 @@ description: |
   Triggers on: "make a podcast", "explainer video", "read aloud", "TTS",
   "generate image", "generate video", "做播客", "解说视频", "朗读", "生成图片",
   "生成视频", "幻灯片", "slides", "音乐", "music", "generate music", "翻唱",
-  "cover song", "parse URL", "解析链接", "提取内容".
+  "cover song", "pixverse", "口型", "lipsync", "对口型",
+  "parse URL", "解析链接", "提取内容".
 metadata:
   openclaw:
     emoji: "🎧"
@@ -27,7 +28,7 @@ This is a router skill. When users trigger a general ListenHub action, this skil
 | Slides / PPT | "slides", "幻灯片", "PPT", "presentation" | `/slides` |
 | TTS / Read aloud | "TTS", "read aloud", "朗读", "配音", "语音合成" | `/tts` |
 | Image generation | "generate image", "画一张", "生成图片", "AI图" | `/image-gen` |
-| Video generation | "video", "视频", "seedance", "生成视频", "text to video", "做视频" | `/video-gen` |
+| Video generation | "video", "视频", "seedance", "pixverse", "生成视频", "text to video", "做视频", "口型", "lipsync", "对口型" | `/video-gen` |
 | Music | "music", "音乐", "生成音乐", "翻唱", "cover" | `/music` |
 | Content extraction | "parse URL", "extract content", "解析链接" | `/content-parser` |
 | Audio transcription | "transcribe", "ASR", "语音转文字" | `/asr` |
