@@ -99,7 +99,7 @@ fi
 For `http` mode, an OpenAPI API Key is required. Read it from config or env:
 
 ```bash
-API_BASE="https://api.listenhub.ai"   # confirm host with shared/cli-authentication.md
+API_BASE="https://api.marswave.ai/openapi"   # OpenAPI base; see shared/cli-authentication.md
 API_KEY="${LISTENHUB_API_KEY:-$(listenhub openapi config show --json 2>/dev/null | jq -r '.apiKey // empty')}"
 if [ -z "$API_KEY" ]; then
   echo "需要 OpenAPI API Key（lh_sk_...）。请先用 listenhub openapi config set-key 配置，或设置 LISTENHUB_API_KEY 环境变量。"
