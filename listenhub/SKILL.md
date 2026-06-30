@@ -29,7 +29,7 @@ This is a router skill. When users trigger a general ListenHub action, this skil
 | Explainer video | "explainer", "解说视频", "tutorial video" | `/explainer` |
 | Slides / PPT | "slides", "幻灯片", "PPT", "presentation" | `/slides` |
 | TTS / Read aloud | "TTS", "read aloud", "朗读", "配音", "语音合成" | `/tts` |
-| Seed-Audio end-to-end audio | "端到端音频", "seed audio", "图片转音频", "图片生成音频", "多音色对白", "参考音频克隆", "克隆音色", "音效", "生成音效" | `/seed-audio` |
+| ListenHub Voice end-to-end audio | "端到端音频", "语音生成", "图片转音频", "图片生成音频", "多音色对白", "参考音频克隆", "克隆音色", "音效", "生成音效" | `/listenhub-voice` |
 | Image generation | "generate image", "画一张", "生成图片", "AI图" | `/image-gen` |
 | Video generation | "video", "视频", "seedance", "pixverse", "生成视频", "text to video", "做视频", "口型", "lipsync", "对口型" | `/video-gen` |
 | Music | "music", "音乐", "生成音乐", "翻唱", "混音", "remix", "续写", "extend", "纯音乐", "instrumental", "配乐", "soundtrack", "分轨", "stem", "识别歌词", "克隆人声", "vocal clone" | `/music` |
@@ -53,7 +53,7 @@ Options:
   - "Slides" — Slide deck / presentation
   - "Music" — AI music: generate, remix, instrumental, soundtrack, stem, vocal clone
   - "Video" — AI video generation from text or reference materials
-  - "Seed-Audio" — End-to-end audio: sound effects, multi-voice dialogue, reference-audio cloning, image→audio
+  - "ListenHub Voice" — End-to-end audio: sound effects, multi-voice dialogue, reference-audio cloning, image→audio
 ```
 
 ## Prerequisites
