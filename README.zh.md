@@ -43,6 +43,7 @@ git pull origin main
 
 | 技能 | 触发词 | 功能 |
 |------|--------|------|
+| `/listenhub-voice` | "生成音频"、"语音生成"、"端到端音频"、"图片转音频" | 端到端音频：音效、多音色对白、参考音频克隆、图片转音频 |
 | `/podcast` | "做播客"、"podcast" | 生成播客单集（独白、对话、辩论） |
 | `/explainer` | "解说视频"、"explainer video" | 带 AI 配图的解说视频 |
 | `/slides` | "幻灯片"、"slides" | AI 配图的演示文稿 |
@@ -77,6 +78,7 @@ listenhub auth login
 ├── shared/              # 公共基础设施（认证、CLI 模式）
 │
 │   # ListenHub
+├── listenhub-voice/     # 端到端音频生成
 ├── podcast/             # 播客生成
 ├── explainer/           # 解说视频
 ├── slides/              # 演示文稿

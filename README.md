@@ -43,6 +43,7 @@ Turn ideas into videos, podcasts, and more. Powered by [ListenHub](https://liste
 
 | Skill | Trigger | What it does |
 |-------|---------|-------------|
+| `/listenhub-voice` | "生成音频", "语音生成", "端到端音频", "图片转音频" | End-to-end audio: sound effects, multi-voice dialogue, reference-audio cloning, image→audio |
 | `/podcast` | "make a podcast", "播客" | Generate podcast episodes (solo, dialogue, debate) |
 | `/explainer` | "explainer video", "解说视频" | Narrated explainer videos with AI visuals |
 | `/slides` | "slides", "幻灯片" | Create slide decks with AI visuals |
@@ -77,6 +78,7 @@ listenhub auth login
 ├── shared/              # Shared infrastructure (auth, CLI patterns)
 │
 │   # ListenHub
+├── listenhub-voice/     # End-to-end audio generation
 ├── podcast/             # Podcast generation
 ├── explainer/           # Explainer videos
 ├── slides/              # Slide decks
