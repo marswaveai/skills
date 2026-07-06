@@ -102,7 +102,9 @@ Set `CMD_PREFIX` based on `AUTH_MODE` and skill type (see individual skill docs)
 
 ### OpenAPI Mode Constraints
 
-- Media inputs must be **public URLs** — no local file upload. If user provides local paths, inform them: "OpenAPI 模式不支持本地文件上传，请先上传到公网后提供 URL。"
+- Media input support depends on the command. Check the individual skill docs before rejecting local paths.
+- `listenhub openapi video create` supports local image/video/audio paths and uploads them before task creation; PixVerse (`listenhub openapi video pixverse ...`) remains URL/ID based.
+- For commands that still require public URLs, if user provides local paths, inform them: "这个 OpenAPI 命令需要公网 URL，请先上传文件后提供链接。"
 - API Key format: `lh_sk_...`, configured via `listenhub openapi config set-key` or env `LISTENHUB_API_KEY`
 - On auth error (exit code 2): check key with `listenhub openapi config show`
 

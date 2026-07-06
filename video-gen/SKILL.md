@@ -36,7 +36,7 @@ Generate AI videos using the ListenHub CLI. Supports three model families:
 
 - **HappyHorse** (default) — text-to-video, image-to-video, reference-image-to-video, video-edit
 - **SeeDance** — text-to-video, frame mode (first + last frame), reference mode (images, videos, audio)
-- **PixVerse** — nine atomic capabilities via the Agent API (text_to_video, image_to_video, transition, multi_transition, fusion, restyle, mimic, **lip_sync**, agent). The only family that supports lip sync. OpenAPI-only (URLs required) and uses its own `pixverse` CLI namespace.
+- **PixVerse** — nine atomic capabilities via the Agent API (text_to_video, image_to_video, transition, multi_transition, fusion, restyle, mimic, **lip_sync**, agent). The only family that supports lip sync. OpenAPI-only, URL/ID based, and uses its own `pixverse` CLI namespace.
 
 ## Hard Constraints
 
@@ -131,8 +131,10 @@ All subsequent commands use `$CMD_PREFIX` instead of hardcoded `listenhub video`
 **OpenAPI-specific notes:**
 - OpenAPI mode requires API Key (`lh_sk_...`), configured via `listenhub openapi config set-key` or env `LISTENHUB_API_KEY`
 - OpenAPI mode does not support `--audio-setting` flag (video-edit audio control not yet exposed)
-- All media inputs must be **URLs** in OpenAPI mode (no local file upload) — if user provides local paths, inform them: "OpenAPI 模式需要使用公网 URL，请先上传文件后提供链接。"
+- Standard `listenhub openapi video create` accepts local image/video/audio paths or URLs. Local files are uploaded by the CLI before task creation; local images also get width/height/size metadata automatically.
+- Remote Seedance image URLs still need explicit `--*-meta` values because the CLI does not download remote assets to infer dimensions.
 - **PixVerse is OpenAPI-only** — it lives under `listenhub openapi video pixverse` and has no internal-auth equivalent. If the user wants PixVerse (口型/mimic/restyle/fusion/transition/agent) but only internal auth is configured, prompt them to configure an OpenAPI key first.
+- PixVerse media inputs remain URL/ID based. Do not pass local paths to `listenhub openapi video pixverse generate`; ask the user for public URLs or prior PixVerse task/video IDs.
 
 ## Step 0: Config Setup
 
@@ -208,8 +210,9 @@ If the user mentions PixVerse-exclusive capabilities (口型/lip sync, 模仿/mi
 
 1. **first-frame** (required): Ask for the image path or URL.
    - Supported formats: jpg, jpeg, png, webp
-   - Local files max 20MB
+   - Local image files max 10MB
    - Image: width & height ≥ 300px, ratio between 1:2.5 and 2.5:1
+   - Local images: CLI auto-populates Seedance metadata. Remote Seedance image URLs require `--first-frame-meta WIDTHxHEIGHT[:SIZE]`.
 
 2. **last-frame** (optional, SeeDance only): If model is SeeDance, ask if there is a last-frame image.
 
@@ -230,14 +233,16 @@ Collect reference images (1–9 images required).
 
 Ask for image paths/URLs:
 - Supported formats: jpg, jpeg, png, webp
-- Max 20MB per file
+- Local image files max 10MB
 - HappyHorse: short edge ≥ 400px recommended
+- Local images: CLI auto-populates Seedance metadata. Remote Seedance image URLs require matching `--reference-image-meta WIDTHxHEIGHT[:SIZE]` values.
 
 **HappyHorse prompt syntax:** When multiple reference images are provided, the user can use `[Image 1]`, `[Image 2]` etc. in the prompt to refer to specific images. Inform the user of this capability.
 
 **SeeDance additional references** (only if model is SeeDance):
 - reference-video (optional, max 3): mp4, mov, max 50MB
 - reference-audio (optional, max 3): mp3, wav, max 20MB (must pair with image or video)
+- reference-video metadata is required: provide `--reference-video-meta WIDTHxHEIGHT[:DURATION[:FPS[:SIZE]]]` for each video.
 
 After collecting, proceed to Step 4.
 
@@ -377,7 +382,7 @@ EXIT_CODE=$?
 ```
 
 For **video-edit mode** — add `--has-video-input` and `--input-video-duration`:
-- If user provided a URL: ask duration or use ffprobe if local
+- If user provided a URL: ask duration
 - Local files: detect with ffprobe as best-effort:
   ```bash
   INPUT_DUR=$(ffprobe -v error -show_entries format=duration -of csv=p=0 "/path/to/ref.mp4" 2>/dev/null | cut -d. -f1)
@@ -511,7 +516,7 @@ EXIT_CODE=$?
 
 ### PixVerse Command Templates
 
-PixVerse uses its own namespace and an explicit `--capability`. It is **OpenAPI-only**, so `$CMD_PREFIX` must be `listenhub openapi video` — invoke `… pixverse generate` (not `… create`). All media inputs are **URLs**. Quality uses `--quality` (360p/540p/720p/1080p) and ratio uses `--aspect-ratio` (9:16/16:9/1:1/4:3/3:4); there is no `--resolution`/`--ratio` here.
+PixVerse uses its own namespace and an explicit `--capability`. It is **OpenAPI-only**, so `$CMD_PREFIX` must be `listenhub openapi video` — invoke `… pixverse generate` (not `… create`). PixVerse media inputs are public URLs or prior PixVerse task/video IDs; do not pass local file paths here. Quality uses `--quality` (360p/540p/720p/1080p) and ratio uses `--aspect-ratio` (9:16/16:9/1:1/4:3/3:4); there is no `--resolution`/`--ratio` here.
 
 **text_to_video:**
 ```bash
@@ -634,7 +639,7 @@ For `agent` add `--agent-type ad_master` (or `promo_mix`).
 - `--no-generate-audio` — only if user disabled audio (SeeDance only)
 - `--seed 12345` — only if user specified a seed
 - `--audio-setting origin` — video-edit mode, keep original audio
-- `--input-video-duration N` — only for reference-video URLs (local files auto-detected by CLI)
+- `--input-video-duration N` — required with `--reference-video` (2-15s)
 
 **Error check:**
 ```bash
