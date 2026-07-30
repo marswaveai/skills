@@ -27,6 +27,7 @@ This is a router skill. When users trigger a general ListenHub action, this skil
 | Podcast | "podcast", "播客", "debate", "dialogue" | `/podcast` |
 | Explainer video | "explainer", "解说视频", "tutorial video" | `/explainer` |
 | Slides / PPT | "slides", "幻灯片", "PPT", "presentation" | `/slides` |
+| Voice cloning (persistent) | "克隆我的声音", "克隆音色", "声音克隆", "语音克隆", "用我的声音", "自定义音色", "clone my voice", "custom voice" | `/voice-clone` |
 | TTS / Read aloud | "TTS", "read aloud", "朗读", "配音", "语音合成" | `/tts` |
 | Image generation | "generate image", "画一张", "生成图片", "AI图" | `/image-gen` |
 | Video generation | "video", "视频", "seedance", "pixverse", "生成视频", "text to video", "做视频", "口型", "lipsync", "对口型" | `/video-gen` |
@@ -47,6 +48,7 @@ If the intent is ambiguous, ask the user to clarify:
 Question: "What would you like to create?"
 Options:
   - "ListenHub Voice" — End-to-end audio: sound effects, multi-voice dialogue, reference-audio cloning, image→audio
+  - "Voice Cloning" — Clone your own voice into a reusable speaker
   - "Podcast" — Audio discussion on a topic
   - "Explainer Video" — Narrated video with AI visuals
   - "Slides" — Slide deck / presentation

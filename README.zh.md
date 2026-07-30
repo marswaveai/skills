@@ -48,6 +48,7 @@ git pull origin main
 | `/explainer` | "解说视频"、"explainer video" | 带 AI 配图的解说视频 |
 | `/slides` | "幻灯片"、"slides" | AI 配图的演示文稿 |
 | `/tts` | "朗读"、"TTS"、"语音合成" | 文字转语音、配音 |
+| `/voice-clone` | "克隆我的声音"、"克隆音色"、"自定义音色" | 把参考音频克隆成可反复使用的私有音色 |
 | `/music` | "音乐"、"music"、"混音"、"分轨" | AI 音乐：原创、混音、纯音乐、配乐、续写、区域改写、分轨、克隆人声、识别歌词 |
 | `/image-gen` | "生成图片"、"画一张" | AI 图片生成 |
 | `/video-gen` | "生成视频"、"video generation" | AI 视频生成（文字生成视频、首帧动画、参考素材引导） |
@@ -83,6 +84,7 @@ listenhub auth login
 ├── explainer/           # 解说视频
 ├── slides/              # 演示文稿
 ├── tts/                 # 文字转语音
+├── voice-clone/         # 持久化语音克隆
 ├── music/               # AI 音乐生成
 ├── image-gen/           # AI 图片生成
 ├── video-gen/           # AI 视频生成
