@@ -1,5 +1,16 @@
 # Changelog
 
+## [1.4.0] - 2026-07-30
+
+### New Skill
+
+**Added:**
+- `voice-clone/` — Persistent voice cloning: upload 1–6 reference audio files, poll until cloning finishes, preview, then confirm into a reusable private speaker whose ID works in `/tts`, `/podcast`, and every other ListenHub surface. Also covers listing, renaming, and deleting cloned voices with the plan's quota and voice-slot limits. Confirming is gated behind explicit user consent because it can spend 300 credits once the quota is used up; cloning someone else's voice is gated behind a consent check. Requires `listenhub-cli` with the `voice-clone` subcommand.
+
+**Changed:**
+- `listenhub/SKILL.md` + `listenhub-cli/SKILL.md` — added the `/voice-clone` route and the trigger words for it, plus a "Voice Cloning" option in the disambiguation picker.
+- `README.md` + `README.zh.md` — listed the new skill.
+
 ## [1.3.0] - 2026-06-25
 
 ### Enhancement

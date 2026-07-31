@@ -48,6 +48,7 @@ Turn ideas into videos, podcasts, and more. Powered by [ListenHub](https://liste
 | `/explainer` | "explainer video", "解说视频" | Narrated explainer videos with AI visuals |
 | `/slides` | "slides", "幻灯片" | Create slide decks with AI visuals |
 | `/tts` | "read aloud", "TTS", "朗读" | Text-to-speech and voice narration |
+| `/voice-clone` | "克隆我的声音", "clone my voice", "自定义音色" | Clone a voice from reference audio into a reusable private speaker |
 | `/music` | "music", "音乐", "remix", "混音", "stem", "分轨" | AI music: generate, remix, instrumental, soundtrack, extend, stem, recognize |
 | `/image-gen` | "generate image", "画一张" | AI image generation from text prompts |
 | `/video-gen` | "generate video", "生成视频" | AI video generation (text-to-video, frame animation, reference-guided) |
@@ -83,6 +84,7 @@ listenhub auth login
 ├── explainer/           # Explainer videos
 ├── slides/              # Slide decks
 ├── tts/                 # Text-to-speech
+├── voice-clone/         # Persistent voice cloning
 ├── music/               # AI music generation
 ├── image-gen/           # AI image generation
 ├── video-gen/           # AI video generation
