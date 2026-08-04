@@ -1,5 +1,12 @@
 # Changelog
 
+## [Unreleased]
+
+### Enhancement
+
+**Changed:**
+- `podcast/SKILL.md` + `tts/SKILL.md` — support a task-level generation speed via the CLI's `--speed` flag. Continuous `0.5`–`2.0` range with at most two decimals; common values are `0.5 / 0.75 / 1 / 1.25 / 1.5 / 2`. The skills never ask about speed: with no explicit user request they omit the flag and generation stays at `1` (original speed).
+
 ## [1.4.0] - 2026-07-30
 
 ### New Skill
