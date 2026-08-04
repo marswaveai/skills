@@ -172,6 +172,25 @@ Follow `shared/speaker-selection.md`:
 
 For 2-speaker mode (dialogue/debate): use Primary + Secondary defaults for the language.
 
+### Step 5.5: Generation Speed
+
+**Default: 1.0x (original speed). Never ask this question.**
+
+Only set a speed when the user explicitly asks for one — "慢一点"、"快一点"、"1.25 倍速"、
+"read it faster"、"slow it down". Otherwise omit `--speed` entirely so the request keeps
+its historical behaviour.
+
+- Range: any value from `0.5` to `2.0`, at most two decimals — it is a continuous range,
+  not a fixed set of steps.
+- Common values: `0.5`, `0.75`, `1` (default), `1.25`, `1.5`, `2`. Values in between such
+  as `0.85` or `1.35` are equally valid.
+- Meaning: the speaking rate of the generated audio, not a player playback rate. All
+  speakers in one episode share the same task-level speed.
+- Map vague wording conservatively: "慢一点" → `0.85`, "快一点" → `1.25`, "慢很多" → `0.5`,
+  "快很多" → `1.75`. When the user names a number, pass that number through unchanged.
+
+Show the speed in the confirmation summary only when it is not `1`.
+
 ### Step 6: Confirm & Generate
 
 Summarize all choices:
@@ -183,6 +202,7 @@ Ready to generate podcast:
   Mode: {mode}
   Language: {language}
   Speakers: {speaker name(s)}
+  Speed: {speed}x        # omit this line when speed is 1
   References: {yes/no + brief description}
 
   Proceed?
@@ -205,6 +225,7 @@ Wait for explicit confirmation before calling any CLI command. The user can adju
      --lang {en|zh|ja} \
      --speaker "{name}" \
      --speaker "{name2}" \
+     --speed {0.5-2.0} \
      --json
    ```
 
@@ -216,6 +237,7 @@ Wait for explicit confirmation before calling any CLI command. The user can adju
    - `--lang` — language code
    - `--speaker` — repeatable (max 2); use speaker display names
    - `--speaker-id` — alternative to `--speaker`; use speaker IDs instead of names
+   - `--speed` — generation speed multiplier `0.5`–`2.0` (max two decimals, default `1`); omit it unless the user asked for a different speed
    - Omit `--source-url` / `--source-text` if the user provided no references
 
    The CLI handles polling internally and returns the final result when generation completes.

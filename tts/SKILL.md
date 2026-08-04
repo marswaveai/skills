@@ -127,6 +127,23 @@ echo "$NEW_CONFIG" > "$CONFIG_PATH"
 CONFIG=$(cat "$CONFIG_PATH")
 ```
 
+### Generation Speed
+
+**Default: 1.0x (original speed). Never ask about speed.**
+
+Only pass `--speed` when the user explicitly asks for a faster or slower reading —
+"慢一点"、"快一点"、"1.25 倍速"、"read it faster". Otherwise omit the flag.
+
+- Range: any value from `0.5` to `2.0`, at most two decimals — a continuous range, not
+  fixed steps.
+- Common values: `0.5`, `0.75`, `1` (default), `1.25`, `1.5`, `2`; in-between values such
+  as `0.85` or `1.35` work too.
+- Meaning: the speaking rate of the generated audio, not a player playback rate.
+- Map vague wording conservatively: "慢一点" → `0.85`, "快一点" → `1.25`, "慢很多" → `0.5`,
+  "快很多" → `1.75`. A number the user names is passed through unchanged.
+
+Show the speed in the confirmation summary only when it is not `1`.
+
 ### Quick Mode — `$CMD_PREFIX create --mode direct`
 
 **Step 1: Extract text**
@@ -159,6 +176,7 @@ Ready to generate:
 
   Text: "{first 80 chars}..."
   Voice: {voice name}
+  Speed: {speed}x        # omit this line when speed is 1
 
 Proceed?
 ```
@@ -167,7 +185,7 @@ Proceed?
 
 For short text, pass inline:
 ```bash
-RESULT=$($CMD_PREFIX create --text "{text}" --mode direct --speaker "{name}" --lang {lang} --json 2>/tmp/lh-err)
+RESULT=$($CMD_PREFIX create --text "{text}" --mode direct --speaker "{name}" --lang {lang} [--speed {0.5-2.0}] --json 2>/tmp/lh-err)
 EXIT_CODE=$?
 
 if [ $EXIT_CODE -ne 0 ]; then
@@ -190,7 +208,7 @@ cat > /tmp/lh-content.txt << 'ENDCONTENT'
 Long text content goes here...
 ENDCONTENT
 
-RESULT=$($CMD_PREFIX create --text "$(cat /tmp/lh-content.txt)" --mode direct --speaker "{name}" --lang {lang} --json)
+RESULT=$($CMD_PREFIX create --text "$(cat /tmp/lh-content.txt)" --mode direct --speaker "{name}" --lang {lang} [--speed {0.5-2.0}] --json)
 AUDIO_URL=$(echo "$RESULT" | jq -r '.audioUrl')
 
 rm -f /tmp/lh-content.txt
@@ -269,6 +287,7 @@ Ready to generate:
     {name}: {voice}
     {name}: {voice}
   Segments: {count}
+  Speed: {speed}x        # omit this line when speed is 1
   Title: (auto-generated)
 
 Proceed?
@@ -280,7 +299,7 @@ Format the script text with speaker markers and submit. For multi-speaker script
 
 **Submit (foreground)** with `--no-wait`:
 ```bash
-RESULT=$($CMD_PREFIX create --text "{formatted script with speaker markers}" --mode smart --speaker "{name1}" --speaker "{name2}" --lang {lang} --no-wait --json)
+RESULT=$($CMD_PREFIX create --text "{formatted script with speaker markers}" --mode smart --speaker "{name1}" --speaker "{name2}" --lang {lang} [--speed {0.5-2.0}] --no-wait --json)
 ID=$(echo "$RESULT" | jq -r '.id')
 echo "Submitted: $ID"
 ```
@@ -293,7 +312,7 @@ SpeakerB: Second line of dialogue
 ...
 ENDCONTENT
 
-RESULT=$($CMD_PREFIX create --text "$(cat /tmp/lh-content.txt)" --mode smart --speaker "{name1}" --speaker "{name2}" --lang {lang} --no-wait --json)
+RESULT=$($CMD_PREFIX create --text "$(cat /tmp/lh-content.txt)" --mode smart --speaker "{name1}" --speaker "{name2}" --lang {lang} [--speed {0.5-2.0}] --no-wait --json)
 ID=$(echo "$RESULT" | jq -r '.id')
 
 rm -f /tmp/lh-content.txt
