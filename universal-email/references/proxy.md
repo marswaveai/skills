@@ -1,0 +1,81 @@
+# Proxy routing and diagnosis
+
+Use this guide for connection routing and network failures. Keep credentials, account configuration, and mailbox operations in their provider guides.
+
+## Contents
+
+- [Principles](#principles)
+- [Provider guidance](#provider-guidance)
+- [Discover and verify](#discover-and-verify)
+- [Error-to-recovery guidance](#error-to-recovery-guidance)
+- [User-facing response](#user-facing-response)
+
+## Principles
+
+1. Discover the proxy protocol from the current process, operating system, or proxy application. Never infer SOCKS5 or HTTP CONNECT from a port number.
+2. Adapt the diagnosis to the current device. Do not assume that macOS, Windows, shell sessions, and packaged Cola expose proxy settings in the same place.
+3. Keep diagnostic changes local to the Himalaya operation. Do not alter the user's global proxy settings.
+4. Confirm the route and the last completed network stage from Himalaya's own diagnostics. A generic timeout alone does not identify the failed protocol or backend.
+5. When an error matches a known case below, follow its recovery direction before replying. The goal is to help the Agent continue solving the task, not to repeat technical errors to the user.
+6. Do not revoke or regenerate an app password because of a timeout, proxy handshake, DNS, connection, or TLS failure.
+
+## Provider guidance
+
+| Provider | Routing direction |
+| --- | --- |
+| Gmail IMAP/SMTP | Do not assume Gmail always needs a proxy. On many networks the mail hosts (`smtp.gmail.com`, `imap.gmail.com`) are reachable directly even when the Google web domains are not, and a proxy meant for web traffic may connect and then fail to relay raw mail. Treat direct as a first-class route: try both the direct route and the declared proxy, and keep whichever completes the mail stage. Use a proxy only where direct cannot reach the mail hosts. |
+| QQ Mail | Prefer the normal local route. If a global proxy intended for another provider interferes, diagnose a provider-specific bypass rather than changing QQ credentials. |
+| iCloud Mail | Prefer the normal local route. If a global proxy causes timeouts or unreachable errors, diagnose a provider-specific bypass before changing credentials. |
+| Outlook through Microsoft Graph | Treat this as HTTPS traffic. Do not reuse conclusions drawn from IMAP or SMTP ports. |
+| Other IMAP/SMTP | Start from the provider's documented hosts and the device's normal route. Introduce a proxy only when network reachability requires it. |
+
+These are directions, not fixed results. Confirm the route actually selected on the current device.
+
+## Discover and verify
+
+Discover active routing from the environment in which Cola launches Himalaya. If it is incomplete, inspect the current operating system or proxy application's settings with appropriate platform tools. Preserve every endpoint's reported protocol; do not guess or scan common ports.
+
+If several proxy sources exist, determine which one Himalaya actually selected. A higher-priority or stale setting can mask another valid route. Resolve that conflict only for the current Himalaya operation.
+
+Use Himalaya's debug account check to establish:
+
+- whether the selected route is direct, SOCKS5, or HTTP CONNECT;
+- whether the proxy handshake completed;
+- whether TLS completed;
+- whether IMAP and SMTP each responded.
+
+Do not discard diagnostic output before interpreting a timeout. Do not use a direct socket probe as proof of Himalaya connectivity because it may bypass the route used by the CLI. Do not expose proxy credentials, mail credentials, configuration contents, or complete debug logs.
+
+## Error-to-recovery guidance
+
+| Observed error or stage | Meaning | Recovery direction |
+| --- | --- | --- |
+| SOCKS5 handshake ends with `failed to fill whole buffer` | The endpoint did not complete a SOCKS5 handshake. It may actually be an HTTP proxy, or the SOCKS listener may be invalid. | Re-discover the endpoint's declared protocol. If it is HTTP, use it as HTTP CONNECT; if it is SOCKS5, check whether that configured listener is still valid. Do not classify the endpoint from its port. |
+| The proxy connection is refused | The local proxy is stopped or the configured endpoint is stale. | Re-read the device's current proxy settings. Do not guess another port or change mail credentials. |
+| HTTP CONNECT is rejected | The proxy rejected authentication, the destination, or the mail port. | Check the configured proxy or choose another already available route that permits the target traffic. Do not treat this as an email-password failure. |
+| Gmail completes TLS and `CAPABILITY`, then IMAP authentication stalls | The selected Gmail edge route is not completing IMAP authentication; this can happen with either direct DNS or a proxy route. | Keep the account and password unchanged. Retry with the Gmail preset's `imap.googlemail.com` compatibility endpoint, then try another available route only if that endpoint also stalls. Do not misreport this as a missing password. |
+| Gmail completes the proxy handshake and TLS, but never reaches `CAPABILITY` | The proxy is reachable but is not relaying the mail protocol correctly. | Look for another correctly declared route already available on the device, or guide the user to choose a proxy node that supports the affected raw TCP mail traffic. Do not repeat the same unchanged route. |
+| QQ Mail or iCloud Mail becomes unreachable only when proxied | A global proxy is interfering with a provider that normally uses the local route. | Diagnose a provider-specific direct route or bypass using the controls available on the device. Do not disable the user's global proxy or change credentials. |
+| IMAP succeeds but SMTP times out or disconnects | Receiving works; the sending route or SMTP mode is failing. | Preserve the working IMAP setup. Diagnose SMTP separately and consider only alternatives officially supported by that provider. Do not report the whole account as disconnected. |
+| SMTP send stalls through a proxy: the SOCKS or HTTP CONNECT tunnel completes but `smtp.<provider>:465`/`:587` never returns a banner or completes TLS | The proxy node accepts the tunnel but does not relay outbound SMTP ports (a common anti-spam egress block). It is not a Gmail, credential, or Himalaya fault, and IMAP over the same proxy can still work. | First retry that one send on the direct route by clearing the proxy variables for that invocation only (see SKILL.md); on many networks the SMTP host is reachable directly. If direct also cannot reach the SMTP host, guide the user to a proxy node that permits SMTP ports. Switching the tunnel type between SOCKS and HTTP CONNECT does not help when both point at the same node. |
+| SMTP succeeds but saving to Sent fails | Delivery and saving a sender-side copy are separate stages. | Do not resend automatically. Check delivery first, then discover the provider's Sent mailbox behavior. |
+| Direct connection times out before TLS | The current network cannot reach the target directly, or the host is wrong. | Confirm the provider host. For a provider commonly blocked on the current network, discover an available compatible proxy; otherwise continue local network diagnosis. |
+| TLS certificate validation fails | The route may be intercepting TLS, the system clock may be wrong, or the trust store may be invalid. | Use a trusted route and validate the device environment. Never disable certificate verification. |
+| Authentication fails after the server responds | The network route worked; the credential or provider authorization is wrong. | Follow the provider credential guide. Do not continue changing proxies unless the error also shows a network-stage failure. |
+| Only a generic `service unreachable` is returned | The summary hid the failing backend and stage. | Obtain stage-level diagnostics, distinguish IMAP from SMTP, then follow the matching direction in this table. |
+| Only a wrapper timeout is returned | The diagnostic output was insufficient; it does not prove which route or backend failed. | Preserve enough output to identify the selected route and last completed stage, then follow the matching direction. |
+| The observed route differs from the intended route | Another routing source took precedence. The current result does not test the intended route. | Reconcile the conflicting sources for this operation using the controls available on the current device, then verify the selected route again. |
+| Configuration parsing or version validation fails | Himalaya failed before networking. | Follow `configuration.md`; do not change proxy routing. |
+
+## User-facing response
+
+Before replying, follow any safe recovery direction that is still available. Do not expose internal variable names, proxy ports, or protocol jargon unless the user is explicitly troubleshooting those details.
+
+Tell the user only:
+
+- whether receiving and sending were each validated;
+- which stage remains blocked in plain language;
+- what the Agent already tried;
+- the next action the user must take, if any.
+
+Recommend credential revocation only when the secret was actually exposed outside secure input or storage.
