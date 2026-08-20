@@ -43,7 +43,7 @@ Body
 EOF
 ```
 
-Add `--save sent` only after `mailbox list` proves the Sent alias resolves. A send can succeed before saving the sender copy fails; never retry automatically after that ambiguous result.
+To keep a copy in the Sent mailbox, resolve the name first: `--save <mailbox>` is looked up in the account's `[mailbox.alias]` map and otherwise used verbatim, so a literal `sent` silently misses providers whose real mailbox is `Sent Messages` or a localized name. Use `--save sent` only when the account's configuration defines that alias (see `references/configuration.md`); otherwise run `mailbox list` and pass the exact mailbox name. A send can succeed before saving the sender copy fails; never retry automatically after that ambiguous result.
 
 ## Safety
 

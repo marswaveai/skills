@@ -1,8 +1,8 @@
 ---
 name: universal-email
-version: 1.2.9
 description: Use the bundled Himalaya 2 CLI to connect IMAP/SMTP or Microsoft Graph mailboxes and list, search, read, compose, reply, forward, move, delete, flag, and download email. Use when the user asks to connect or operate Gmail, QQ Mail, iCloud Mail, Outlook, or another standard mailbox, or says "连接邮箱"、"绑定邮箱"、"看看我的邮件"、"查邮箱"、"发邮件"、"回复邮件".
 metadata:
+  version: 1.2.9
   requires:
     bins: ["himalaya"]
 ---
@@ -16,13 +16,14 @@ These rules govern everything you SAY. They never change which commands you RUN 
 - **Product words are fine.** 配置、授权、连接、账号、授权码/App 专用密码 — the user should always know which step they are in.
 - **Implementation details never reach the user.** `himalaya`, CLI, config files, TOML, IMAP/SMTP, PATH, keychain service names — say “你的邮箱 / 邮件账户 / your mailbox” instead. If the user explicitly asks how it works, then you may explain.
 - **Narrate by goal, not by tooling.** “正在连接你的邮箱” “正在看你的收件箱”, never “running himalaya account list”.
-- **Ask for the minimum, once.** Ask for the email address; infer the provider from its domain; guide the user to generate the provider's app credential (QQ: 设置→账户→开启 IMAP/SMTP 生成授权码; iCloud/Gmail: App 专用密码, links allowed); collect it once and complete the setup. Do not ask again unless verification actually failed.
-- **Translate errors into next steps.** Never paste raw command output or stack traces. Turn failures into one clear user action (“这个授权码好像不对，去 QQ 邮箱设置里重新生成一个发我”).
+- **Ask for the minimum, once.** Ask for the email address; infer the provider from its domain; guide the user to generate the provider's app credential (QQ: 设置→账户→开启 IMAP/SMTP 生成授权码; iCloud/Gmail: App 专用密码, links allowed). Do not ask again unless verification actually failed.
+- **Credentials never enter the conversation.** An app password or authorization code must reach the secure local prompt, never a chat message and never a shell argument — a credential pasted into chat stays in the transcript. Ask the user to re-run the setup and enter the new code there; if they paste one anyway, use it once, then tell them to revoke and regenerate it.
+- **Translate errors into next steps.** Never paste raw command output or stack traces. Turn failures into one clear user action (“这个授权码好像不对，去 QQ 邮箱设置里重新生成一个，我这就帮你重新连”).
 - **Confirm in user terms.** Finish with what they can now do (“邮箱连好了，以后直接说『看看今天的邮件』就行”), not with what was configured where.
 
 Use the bundled `himalaya` executable. This Skill targets exactly Himalaya `2.0.0` at revision `923414155f4281d681f4ea8631954f406acf51ee`; do not use Himalaya 1.x configuration fields or command examples.
 
-Invoke `himalaya` from `PATH` first. If it is not on `PATH`, use the copy bundled with this Skill at `scripts/bin/<platform>/himalaya` relative to this document (`<platform>` is `darwin-arm64`, `darwin-x64`, or `win32-x64`); do not search the filesystem for other installations. Treat the active configuration of the command you invoke as the source of truth: do not inspect candidate config files to choose one, or add `--config` merely because a file exists. Use `--config` only when the user explicitly requests a separate profile.
+Invoke `himalaya` from `PATH` first, then confirm with `himalaya --version` that it reports `v2.0.0`. If the command is missing **or reports any other version**, use the copy bundled with this Skill at `scripts/bin/<platform>/himalaya` relative to this document (`<platform>` is `darwin-arm64`, `darwin-x64`, or `win32-x64`) and use that path for every later command. An unrelated Himalaya already on the machine must never make this Skill unusable, and never search the filesystem for further installations. Treat the active configuration of the command you invoke as the source of truth: do not inspect candidate config files to choose one, or add `--config` merely because a file exists. Use `--config` only when the user explicitly requests a separate profile.
 
 ## 使用场景
 
@@ -32,7 +33,7 @@ Invoke `himalaya` from `PATH` first. If it is not on `PATH`, use the copy bundle
 
 ## Choose the account
 
-1. Run `himalaya --version` and require `himalaya v2.0.0`.
+1. Confirm the executable you resolved above reports `himalaya v2.0.0`.
 2. Run `himalaya --json account list`.
 3. If the intended account exists, select it with the global `--account <name>` option.
 4. If it does not exist, read the matching provider guide before asking the user for anything:
@@ -98,7 +99,7 @@ himalaya --account <name> message delete --mailbox inbox <message-id>
 
 ## Network and troubleshooting
 
-Himalaya 2 can inherit proxy routing from the current process or operating system and supports SOCKS5 and HTTP CONNECT. Discover the device's actual settings and preserve the reported protocol. Never infer a proxy protocol from a port number.
+Himalaya 2 supports SOCKS5 and HTTP CONNECT, and takes its route **only** from the environment of each invocation. Operating-system proxy settings are a discovery source, not a route: a proxy configured in macOS or Windows settings but absent from the process environment is not used, so reading it and then running the command unchanged tests the direct route while appearing to test the proxy. To exercise a discovered setting, pass it explicitly in that invocation's environment, and preserve the protocol exactly as reported — never infer one from a port number.
 
 Himalaya has no proxy configuration field or CLI flag: the route comes only from the environment of each invocation (`all_proxy` takes precedence over `http_proxy`/`https_proxy`). This is the one lever for per-command route isolation. To force a single command onto the direct route, clear those variables for that invocation only, for example `env -u all_proxy -u http_proxy -u https_proxy himalaya --account <name> ...`, without touching the user's global proxy. Confirm the route actually used from Himalaya's own `dial <host>:<port> ... (source: direct|all_proxy|http_proxy)` debug line rather than assuming it.
 

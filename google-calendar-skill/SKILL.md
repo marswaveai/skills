@@ -1,8 +1,8 @@
 ---
 name: google-calendar
-version: 1.0.1
 description: Use the bundled Google Workspace CLI (gws) to read, create, update, and delete Google Calendar events, list calendars, and show agendas. Use when the user asks to connect or operate Google Calendar, check their schedule, or manage Google Calendar events, or says "谷歌日历"、"Google 日历"、"查下我的日程"、"明天有什么安排".
 metadata:
+  version: 1.0.1
   requires:
     bins: ["gws"]
 ---

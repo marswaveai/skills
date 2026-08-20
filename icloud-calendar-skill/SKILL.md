@@ -1,8 +1,8 @@
 ---
 name: icloud-calendar
-version: 1.0.3
 description: List iCloud calendars and read, create, update, or delete iCloud Calendar events with the icloud-calendar CLI. Use for Apple or iCloud Calendar schedules and event changes, or when the user says "苹果日历"、"iCloud 日历"、"查下我的日程"、"帮我加个日程".
 metadata:
+  version: 1.0.3
   requires:
     bins: ["cola-icloud-calendar"]
 ---
