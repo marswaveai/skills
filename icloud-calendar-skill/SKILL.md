@@ -1,17 +1,34 @@
 ---
 name: icloud-calendar
-description: List iCloud calendars and read, create, update, or delete iCloud Calendar events with the icloud-calendar CLI. Use for Apple or iCloud Calendar schedules and event changes.
+version: 1.0.3
+description: List iCloud calendars and read, create, update, or delete iCloud Calendar events with the icloud-calendar CLI. Use for Apple or iCloud Calendar schedules and event changes, or when the user says "苹果日历"、"iCloud 日历"、"查下我的日程"、"帮我加个日程".
+metadata:
+  requires:
+    bins: ["cola-icloud-calendar"]
 ---
 
 # iCloud Calendar
 
+## Talk like Cola
+
+These rules govern what you SAY to the user. They never change which commands you RUN.
+
+- **Product words are fine.** 配置、授权、连接、账号、日程、App 专用密码 — the user should always know which step they are in.
+- **Implementation details never reach the user.** Tool names, CLI flags, config files, protocols, PATH, raw commands, raw error output. Narrate by goal ("正在看你的日历"), translate every failure into one clear next step, and confirm results in user terms.
+
+## 使用场景
+
+- 查日程:"看看我这周苹果日历上有什么安排"
+- 建与改:"明早 10 点帮我加一个牙医预约""把周五的提醒挪到周六"
+- 首次使用:"连一下我的 iCloud 日历"
+
 ## Before use
 
-Run `cola-icloud-calendar status` first. If it reports that the account is disconnected, explain that iCloud needs the full Apple account email and an app-specific password, then run `cola-icloud-calendar configure`. The CLI opens a local form where the user enters both values; never request the Apple ID login password or place an app-specific password in chat or a shell command. The user can generate an app-specific password at `https://account.apple.com/account/manage` after enabling two-factor authentication.
+Run `cola-icloud-calendar status` first. If it reports that the account is disconnected, tell the user that iCloud needs their full Apple account email and an app-specific password, then run `cola-icloud-calendar configure`: it opens a secure local page where they enter both values. Never ask for the Apple ID login password, and never let an app-specific password appear in chat or in a shell command. An app-specific password is generated at `https://account.apple.com/account/manage` once two-factor authentication is on.
 
-After the form reports success, run `cola-icloud-calendar doctor` once, then continue with the requested calendar operation. `connect` and `configure` open the same secure configuration flow.
+After the page reports success, run `cola-icloud-calendar doctor` once, then continue with the requested calendar operation. `connect` opens the same page as `configure`.
 
-If the command is not found, report that the iCloud Calendar CLI is not installed. Do not describe this as an account problem or a broken connector.
+If `cola-icloud-calendar` is not on `PATH`, use the copy bundled with this Skill at `scripts/bin/<platform>/cola-icloud-calendar` relative to this document (`<platform>` is `darwin-arm64`, `darwin-x64`, or `win32-x64`). Only if that file is also missing, report that the calendar app is not ready yet. Never describe this as an account problem or a broken connector.
 
 ```bash
 cola-icloud-calendar status

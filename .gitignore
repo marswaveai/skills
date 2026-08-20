@@ -26,3 +26,7 @@ __pycache__/
 *.pyc
 
 .worktrees/
+
+# Skill 构建产物不入库,发布时另行分发
+*.zip
+*.zip.sha256

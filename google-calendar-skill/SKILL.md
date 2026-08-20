@@ -1,11 +1,28 @@
 ---
 name: google-calendar
-description: Use the bundled Google Workspace CLI (gws) to read, create, update, and delete Google Calendar events, list calendars, and show agendas. Use when the user asks to connect or operate Google Calendar, check their schedule, or manage Google Calendar events.
+version: 1.0.1
+description: Use the bundled Google Workspace CLI (gws) to read, create, update, and delete Google Calendar events, list calendars, and show agendas. Use when the user asks to connect or operate Google Calendar, check their schedule, or manage Google Calendar events, or says "谷歌日历"、"Google 日历"、"查下我的日程"、"明天有什么安排".
+metadata:
+  requires:
+    bins: ["gws"]
 ---
 
 # Google Calendar (gws)
 
-Use the bundled `gws` executable. This Skill targets exactly `gws 0.22.5`; invoke `gws` from `PATH`.
+Use the bundled `gws` executable. This Skill targets exactly `gws 0.22.5`. Invoke `gws` from `PATH` first; if it is not on `PATH`, use the copy bundled with this Skill at `scripts/bin/<platform>/gws` relative to this document (`<platform>` is `darwin-arm64`, `darwin-x64`, or `win32-x64`); do not search the filesystem for other installations.
+
+## Talk like Cola
+
+These rules govern what you SAY to the user. They never change which commands you RUN.
+
+- **Product words are fine.** 配置、授权、连接、账号、日程、App 专用密码 — the user should always know which step they are in.
+- **Implementation details never reach the user.** Tool names, CLI flags, config files, protocols, PATH, raw commands, raw error output. Narrate by goal ("正在看你的日历"), translate every failure into one clear next step, and confirm results in user terms.
+
+## 使用场景
+
+- 查日程:"看看我明天谷歌日历有哪些安排""这周有没有空的整段下午"
+- 建与改:"帮我在周四下午约一个一小时的评审会,拉上 Alice""把周会挪到十点"
+- 汇总:"把下周的日程整理成一份议程"
 
 This installation is **calendar-only**. Authorization covers Google Calendar and nothing else: other Google services (`gmail`, `drive`, `sheets`, `docs`, `tasks`, …) will fail with permission errors. Do not attempt them, and do not suggest them as available.
 
