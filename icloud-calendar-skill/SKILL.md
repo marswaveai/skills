@@ -2,7 +2,7 @@
 name: icloud-calendar
 description: List iCloud calendars and read, create, update, or delete iCloud Calendar events with the icloud-calendar CLI. Use for Apple or iCloud Calendar schedules and event changes, or when the user says "苹果日历"、"iCloud 日历"、"看看我 iCloud 上的安排".
 metadata:
-  version: 1.0.3
+  version: 1.0.4
   requires:
     bins: ["cola-icloud-calendar"]
 ---
@@ -19,10 +19,10 @@ These rules govern what you SAY to the user. They never change which commands yo
 ## 使用场景
 
 - 查日程:"看看我这周苹果日历上有什么安排"
-
-**When the request names no provider.** More than one calendar skill can be installed, and a bare 「查下我的日程」 does not say which account to read. Use this skill without asking only when it is the only calendar connected, or when the conversation already established that iCloud Calendar is the one in play. Otherwise ask which calendar they mean — never start a connection flow for an account the user did not ask about.
 - 建与改:"明早 10 点帮我加一个牙医预约""把周五的提醒挪到周六"
 - 首次使用:"连一下我的 iCloud 日历"
+
+**When the request names no provider.** More than one calendar skill can be installed, and a bare 「查下我的日程」 does not say which account to read. Use this skill without asking only when it is the only calendar connected, or when the conversation already established that iCloud Calendar is the one in play. Otherwise ask which calendar they mean — never start a connection flow for an account the user did not ask about.
 
 ## Before use
 

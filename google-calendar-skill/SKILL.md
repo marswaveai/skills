@@ -1,6 +1,6 @@
 ---
 name: google-calendar
-description: Use the bundled Google Workspace CLI (gws) to read, create, update, and delete Google Calendar events, list calendars, and show agendas. Use when the user asks to connect or operate Google Calendar, check their schedule, or manage Google Calendar events, or says "谷歌日历"、"Google 日历"、"看看我 Google 日历上的安排".
+description: Use the bundled Google Workspace CLI (gws) to read, create, update, and delete Google Calendar events, list calendars, and show agendas. Use when the user asks to connect or operate Google Calendar, or to manage events on their Google Calendar, or says "谷歌日历"、"Google 日历"、"看看我 Google 日历上的安排".
 metadata:
   version: 1.0.1
   requires:
@@ -34,10 +34,10 @@ These rules govern what you SAY to the user. They never change which commands yo
 ## 使用场景
 
 - 查日程:"看看我明天谷歌日历有哪些安排""这周有没有空的整段下午"
-
-**When the request names no provider.** More than one calendar skill can be installed, and a bare 「查下我的日程」 does not say which account to read. Use this skill without asking only when it is the only calendar connected, or when the conversation already established that Google Calendar is the one in play. Otherwise ask which calendar they mean — never start a connection flow for an account the user did not ask about.
 - 建与改:"帮我在周四下午约一个一小时的评审会,拉上 Alice""把周会挪到十点"
 - 汇总:"把下周的日程整理成一份议程"
+
+**When the request names no provider.** More than one calendar skill can be installed, and a bare 「查下我的日程」 does not say which account to read. Use this skill without asking only when it is the only calendar connected, or when the conversation already established that Google Calendar is the one in play. Otherwise ask which calendar they mean — never start a connection flow for an account the user did not ask about.
 
 This installation is **calendar-only**. Authorization covers Google Calendar and nothing else: other Google services (`gmail`, `drive`, `sheets`, `docs`, `tasks`, …) will fail with permission errors. Do not attempt them, and do not suggest them as available.
 
@@ -62,7 +62,7 @@ Out of scope (will fail; do not call): calendar `acl`, creating/deleting calenda
 ### Show agenda (read-only)
 
 ```bash
-gws calendar +agenda
+gws calendar +agenda --timezone <IANA>
 ```
 
 | Flag | Description |

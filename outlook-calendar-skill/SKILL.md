@@ -2,7 +2,7 @@
 name: outlook-calendar
 description: View, create, update, and delete Outlook or Microsoft 365 calendar events with the cola-outlook-calendar CLI. Use for Outlook Calendar schedules, availability, and event changes, or when the user says "outlook 日历"、"看看我 outlook 上的安排"、"帮我在 outlook 上约个会".
 metadata:
-  version: 1.0.3
+  version: 1.0.4
   requires:
     bins: ["cola-outlook-calendar"]
 ---
@@ -19,10 +19,10 @@ These rules govern what you SAY to the user. They never change which commands yo
 ## 使用场景
 
 - 查日程:"今天/这周 outlook 上有什么安排""下午三点我有空吗"
-
-**When the request names no provider.** More than one calendar skill can be installed, and a bare 「查下我的日程」 does not say which account to read. Use this skill without asking only when it is the only calendar connected, or when the conversation already established that Outlook Calendar is the one in play. Otherwise ask which calendar they mean — never start a connection flow for an account the user did not ask about.
 - 建与改:"帮我在周四下午约一个评审会""把明天的会挪到十点"
 - 首次使用:"连一下我的 outlook 日历"
+
+**When the request names no provider.** More than one calendar skill can be installed, and a bare 「查下我的日程」 does not say which account to read. Use this skill without asking only when it is the only calendar connected, or when the conversation already established that Outlook Calendar is the one in play. Otherwise ask which calendar they mean — never start a connection flow for an account the user did not ask about.
 
 ## Before use
 
