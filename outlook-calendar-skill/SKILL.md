@@ -26,7 +26,16 @@ These rules govern what you SAY to the user. They never change which commands yo
 
 Run `cola-outlook-calendar status` first. If it reports that the account is disconnected, run `cola-outlook-calendar connect`; it opens Microsoft sign-in in the browser. After the user finishes, run `cola-outlook-calendar doctor` once before the requested calendar operation. Never request a password, OAuth token, Client ID, or Client Secret in chat.
 
-If `cola-outlook-calendar` is not on `PATH`, use the copy bundled with this Skill at `scripts/bin/<platform>/cola-outlook-calendar` relative to this document (`<platform>` is `darwin-arm64`, `darwin-x64`, or `win32-x64`). Only if that file is also missing, report that the calendar app is not ready yet. Never describe this as an account problem or a broken connector.
+## Locate the executable
+
+Always use the copy bundled with this Skill; never a `cola-outlook-calendar` that happens to be on `PATH`, which may be an unrelated version. Resolve it once per session:
+
+1. Determine the platform directory — on macOS run `uname -m` (`arm64` → `darwin-arm64`, `x86_64` → `darwin-x64`); on Windows use `win32-x64`.
+2. Resolve `scripts/bin/<platform>/cola-outlook-calendar` against this document's directory and use that absolute path for every command below.
+
+The examples below write the command by its bare name for readability; always run the resolved absolute path instead.
+
+If that file is missing, report that the calendar app is not ready yet — never describe it as an account problem or a broken connector.
 
 ```bash
 cola-outlook-calendar status

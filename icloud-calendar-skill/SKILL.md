@@ -28,7 +28,16 @@ Run `cola-icloud-calendar status` first. If it reports that the account is disco
 
 After the page reports success, run `cola-icloud-calendar doctor` once, then continue with the requested calendar operation. `connect` opens the same page as `configure`.
 
-If `cola-icloud-calendar` is not on `PATH`, use the copy bundled with this Skill at `scripts/bin/<platform>/cola-icloud-calendar` relative to this document (`<platform>` is `darwin-arm64`, `darwin-x64`, or `win32-x64`). Only if that file is also missing, report that the calendar app is not ready yet. Never describe this as an account problem or a broken connector.
+## Locate the executable
+
+Always use the copy bundled with this Skill; never a `cola-icloud-calendar` that happens to be on `PATH`, which may be an unrelated version. Resolve it once per session:
+
+1. Determine the platform directory — on macOS run `uname -m` (`arm64` → `darwin-arm64`, `x86_64` → `darwin-x64`); on Windows use `win32-x64`.
+2. Resolve `scripts/bin/<platform>/cola-icloud-calendar` against this document's directory and use that absolute path for every command below.
+
+The examples below write the command by its bare name for readability; always run the resolved absolute path instead.
+
+If that file is missing, report that the calendar app is not ready yet — never describe it as an account problem or a broken connector.
 
 ```bash
 cola-icloud-calendar status

@@ -23,7 +23,18 @@ These rules govern everything you SAY. They never change which commands you RUN 
 
 Use the bundled `himalaya` executable. This Skill targets exactly Himalaya `2.0.0` at revision `923414155f4281d681f4ea8631954f406acf51ee`; do not use Himalaya 1.x configuration fields or command examples.
 
-Invoke `himalaya` from `PATH` first, then confirm with `himalaya --version` that it reports `v2.0.0`. If the command is missing **or reports any other version**, use the copy bundled with this Skill at `scripts/bin/<platform>/himalaya` relative to this document (`<platform>` is `darwin-arm64`, `darwin-x64`, or `win32-x64`) and use that path for every later command. An unrelated Himalaya already on the machine must never make this Skill unusable, and never search the filesystem for further installations. Treat the active configuration of the command you invoke as the source of truth: do not inspect candidate config files to choose one, or add `--config` merely because a file exists. Use `--config` only when the user explicitly requests a separate profile.
+## Locate the executable
+
+Always use the copy bundled with this Skill; never a `himalaya` that happens to be on `PATH`, which may be an unrelated version. Resolve it once per session:
+
+1. Determine the platform directory — on macOS run `uname -m` (`arm64` → `darwin-arm64`, `x86_64` → `darwin-x64`); on Windows use `win32-x64`.
+2. Resolve `scripts/bin/<platform>/himalaya` against this document's directory and use that absolute path for every command below.
+
+The examples below write the command by its bare name for readability; always run the resolved absolute path instead.
+
+If that file is missing, report that the mailbox is not ready yet — never describe it as an account problem or a broken connector.
+
+Treat the active configuration of the executable you invoke as the source of truth: do not inspect candidate config files to choose one, or add `--config` merely because a file exists. Use `--config` only when the user explicitly requests a separate profile.
 
 ## 使用场景
 
@@ -33,7 +44,7 @@ Invoke `himalaya` from `PATH` first, then confirm with `himalaya --version` that
 
 ## Choose the account
 
-1. Confirm the executable you resolved above reports `himalaya v2.0.0`.
+1. Confirm the resolved executable reports `himalaya v2.0.0`.
 2. Run `himalaya --json account list`.
 3. If the intended account exists, select it with the global `--account <name>` option.
 4. If it does not exist, read the matching provider guide before asking the user for anything:

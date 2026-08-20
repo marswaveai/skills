@@ -9,7 +9,18 @@ metadata:
 
 # Google Calendar (gws)
 
-Use the bundled `gws` executable. This Skill targets exactly `gws 0.22.5`. Invoke `gws` from `PATH` first; if it is not on `PATH`, use the copy bundled with this Skill at `scripts/bin/<platform>/gws` relative to this document (`<platform>` is `darwin-arm64`, `darwin-x64`, or `win32-x64`); do not search the filesystem for other installations.
+This Skill targets exactly `gws 0.22.5`.
+
+## Locate the executable
+
+Always use the copy bundled with this Skill; never a `gws` that happens to be on `PATH`, which may be an unrelated version. Resolve it once per session:
+
+1. Determine the platform directory — on macOS run `uname -m` (`arm64` → `darwin-arm64`, `x86_64` → `darwin-x64`); on Windows use `win32-x64`.
+2. Resolve `scripts/bin/<platform>/gws` against this document's directory and use that absolute path for every command below.
+
+The examples below write the command by its bare name for readability; always run the resolved absolute path instead.
+
+If that file is missing, report that Google Calendar is not ready yet — never describe it as an account problem or a broken connector.
 
 ## Talk like Cola
 
