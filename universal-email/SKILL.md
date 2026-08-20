@@ -119,9 +119,14 @@ Himalaya 2 supports SOCKS5 and HTTP CONNECT, and takes its route **only** from t
 Himalaya has no proxy configuration field or CLI flag: the route comes only from the environment of each invocation (`all_proxy` takes precedence over `http_proxy`/`https_proxy`). This is the one lever for per-command route isolation. To force a single command onto the direct route, clear those variables for that invocation only, without touching the user's global proxy. On macOS use `env -u all_proxy -u http_proxy -u https_proxy <himalaya> --account <name> ...`; in PowerShell, `env` does not exist, so scope the change to the process instead:
 
 ```powershell
+# A child process, so the user's proxy stays intact in this session.
+powershell -NoProfile -Command @'
 $env:all_proxy=''; $env:http_proxy=''; $env:https_proxy=''
 & '<himalaya>' --account <name> ...
-``` Confirm the route actually used from Himalaya's own `dial <host>:<port> ... (source: direct|all_proxy|http_proxy)` debug line rather than assuming it.
+'@
+```
+
+Never assign `$env:` values directly in the working session: they persist, and every later command would silently run without the user's proxy. Confirm the route actually used from Himalaya's own `dial <host>:<port> ... (source: direct|all_proxy|http_proxy)` debug line rather than assuming it.
 
 Read `references/proxy.md` before connecting or diagnosing when any of these conditions applies:
 

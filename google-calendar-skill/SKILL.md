@@ -1,6 +1,6 @@
 ---
 name: google-calendar
-description: Use the bundled Google Workspace CLI (gws) to read, create, update, and delete Google Calendar events, list calendars, and show agendas. Use when the user asks to connect or operate Google Calendar, check their schedule, or manage Google Calendar events, or says "谷歌日历"、"Google 日历"、"查下我的日程"、"明天有什么安排".
+description: Use the bundled Google Workspace CLI (gws) to read, create, update, and delete Google Calendar events, list calendars, and show agendas. Use when the user asks to connect or operate Google Calendar, check their schedule, or manage Google Calendar events, or says "谷歌日历"、"Google 日历"、"看看我 Google 日历上的安排".
 metadata:
   version: 1.0.1
   requires:
@@ -34,6 +34,8 @@ These rules govern what you SAY to the user. They never change which commands yo
 ## 使用场景
 
 - 查日程:"看看我明天谷歌日历有哪些安排""这周有没有空的整段下午"
+
+**When the request names no provider.** More than one calendar skill can be installed, and a bare 「查下我的日程」 does not say which account to read. Use this skill without asking only when it is the only calendar connected, or when the conversation already established that Google Calendar is the one in play. Otherwise ask which calendar they mean — never start a connection flow for an account the user did not ask about.
 - 建与改:"帮我在周四下午约一个一小时的评审会,拉上 Alice""把周会挪到十点"
 - 汇总:"把下周的日程整理成一份议程"
 
@@ -73,9 +75,9 @@ gws calendar +agenda
 | `--timezone <IANA>` | Timezone override (e.g. `Asia/Shanghai`). **Always pass it** — see below |
 
 ```bash
-gws calendar +agenda --today
-gws calendar +agenda --week --format table
-gws calendar +agenda --days 3 --calendar 'Work'
+gws calendar +agenda --today --timezone 'Asia/Shanghai'
+gws calendar +agenda --week --format table --timezone 'Asia/Shanghai'
+gws calendar +agenda --days 3 --calendar 'Work' --timezone 'Asia/Shanghai'
 ```
 
 Read-only — never modifies events. Queries all calendars by default.
@@ -128,9 +130,9 @@ gws calendar <resource> <method> [flags]
 - `instances` — instances of a recurring event
 - `insert` — create an event (prefer `+insert`)
 - `quickAdd` — create an event from a text string
-- `patch` — modify an event; **use this for every edit**
+- `patch` — modify an event; **use this for every edit**. When the event has attendees, add `"sendUpdates":"all"` to `--params` so guests learn about the change — the default notifies nobody, leaving them on the old time
 - `update` — full replacement; it drops attendees, recurrence, reminders, location and description when they are absent from the body, so only use it after fetching the complete event and round-tripping every field
-- `delete` — delete an event
+- `delete` — delete an event. With attendees, pass `"sendUpdates":"all"` too, or guests keep a meeting the organizer already cancelled
 
 ### calendarList (read-only)
 
