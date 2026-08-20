@@ -30,6 +30,8 @@ Always use the copy bundled with this Skill; never a `himalaya` that happens to 
 1. Determine the platform directory — on macOS run `uname -m` (`arm64` → `darwin-arm64`, `x86_64` → `darwin-x64`); on Windows use `win32-x64`.
 2. Resolve `scripts/bin/<platform>/himalaya` against this document's directory and use that absolute path for every command below.
 
+This package ships macOS and Windows builds only. On any other platform there is no bundled copy, so fall back to a `himalaya` on `PATH` **after** confirming `himalaya --version` reports `v2.0.0`; a different version there is unusable and should be reported as such.
+
 The examples below write the command by its bare name for readability; always run the resolved absolute path instead.
 
 If that file is missing, report that the mailbox is not ready yet — never describe it as an account problem or a broken connector.
@@ -112,7 +114,12 @@ himalaya --account <name> message delete --mailbox inbox <message-id>
 
 Himalaya 2 supports SOCKS5 and HTTP CONNECT, and takes its route **only** from the environment of each invocation. Operating-system proxy settings are a discovery source, not a route: a proxy configured in macOS or Windows settings but absent from the process environment is not used, so reading it and then running the command unchanged tests the direct route while appearing to test the proxy. To exercise a discovered setting, pass it explicitly in that invocation's environment, and preserve the protocol exactly as reported — never infer one from a port number.
 
-Himalaya has no proxy configuration field or CLI flag: the route comes only from the environment of each invocation (`all_proxy` takes precedence over `http_proxy`/`https_proxy`). This is the one lever for per-command route isolation. To force a single command onto the direct route, clear those variables for that invocation only, for example `env -u all_proxy -u http_proxy -u https_proxy himalaya --account <name> ...`, without touching the user's global proxy. Confirm the route actually used from Himalaya's own `dial <host>:<port> ... (source: direct|all_proxy|http_proxy)` debug line rather than assuming it.
+Himalaya has no proxy configuration field or CLI flag: the route comes only from the environment of each invocation (`all_proxy` takes precedence over `http_proxy`/`https_proxy`). This is the one lever for per-command route isolation. To force a single command onto the direct route, clear those variables for that invocation only, without touching the user's global proxy. On macOS use `env -u all_proxy -u http_proxy -u https_proxy <himalaya> --account <name> ...`; in PowerShell, `env` does not exist, so scope the change to the process instead:
+
+```powershell
+$env:all_proxy=''; $env:http_proxy=''; $env:https_proxy=''
+& '<himalaya>' --account <name> ...
+``` Confirm the route actually used from Himalaya's own `dial <host>:<port> ... (source: direct|all_proxy|http_proxy)` debug line rather than assuming it.
 
 Read `references/proxy.md` before connecting or diagnosing when any of these conditions applies:
 

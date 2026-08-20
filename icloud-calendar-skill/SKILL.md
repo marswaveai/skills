@@ -35,6 +35,8 @@ Always use the copy bundled with this Skill; never a `cola-icloud-calendar` that
 1. Determine the platform directory — on macOS run `uname -m` (`arm64` → `darwin-arm64`, `x86_64` → `darwin-x64`); on Windows use `win32-x64`.
 2. Resolve `scripts/bin/<platform>/cola-icloud-calendar` against this document's directory and use that absolute path for every command below.
 
+This package ships macOS and Windows builds only; on any other platform report that iCloud Calendar is not available there rather than looking for another installation.
+
 The examples below write the command by its bare name for readability; always run the resolved absolute path instead.
 
 If that file is missing, report that the calendar app is not ready yet — never describe it as an account problem or a broken connector.

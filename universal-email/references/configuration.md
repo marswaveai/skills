@@ -16,7 +16,8 @@ When the native executable has not been given an active configuration, Himalaya 
 
 1. `$XDG_CONFIG_HOME/himalaya/config.toml`
 2. `$HOME/.config/himalaya/config.toml`
-3. `$HOME/.himalayarc`
+
+On Windows the equivalent location is `%APPDATA%\himalaya\config.toml`. The v1-era `~/.himalayarc` is not read by this build — a configuration written there looks saved while `account list` keeps reporting no account.
 
 The global `--config <path>` option explicitly selects another profile. Use it only when the user requests a separate profile; do not use it for ordinary account discovery, validation, or mailbox operations.
 
