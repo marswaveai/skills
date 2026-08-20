@@ -4,7 +4,7 @@ This package targets Himalaya `2.0.0` at revision `923414155f4281d681f4ea8631954
 
 ## Active configuration
 
-For normal operations, run the bundled executable resolved in `SKILL.md` — never a `himalaya` from `PATH` — and pass no `--config`. It may already have an active configuration selected; confirm what it sees with:
+For normal operations, run the executable resolved in `SKILL.md` and pass no `--config`. On macOS and Windows that is always the bundled copy, never a `himalaya` from `PATH`; on platforms this package does not ship a build for, it is the validated `v2.0.0` from `PATH` that `SKILL.md` permits. It may already have an active configuration selected; confirm what it sees with:
 
 ```bash
 himalaya --json account list

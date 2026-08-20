@@ -2,6 +2,8 @@
 
 Use Himalaya 2's built-in composer for ordinary text mail.
 
+The commands below route through SMTP or JMAP. An account on the Microsoft Graph backend cannot send with them — check the backend in `account list` first and see `references/outlook.md`, which sends raw MIME through `msgraph message send` instead.
+
 ## New message
 
 ```bash

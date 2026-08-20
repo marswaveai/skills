@@ -31,7 +31,7 @@ Run `cola-outlook-calendar status` first. If it reports that the account is disc
 Always use the copy bundled with this Skill; never a `cola-outlook-calendar` that happens to be on `PATH`, which may be an unrelated version. Resolve it once per session:
 
 1. Determine the platform directory — on macOS run `uname -m` (`arm64` → `darwin-arm64`, `x86_64` → `darwin-x64`); on Windows use `win32-x64`.
-2. Resolve `scripts/bin/<platform>/cola-outlook-calendar` against this document's directory and use that absolute path for every command below.
+2. Resolve `scripts/bin/<platform>/cola-outlook-calendar` against this document's directory — on Windows the file is `cola-outlook-calendar.exe` — and use that absolute path for every command below.
 
 This package ships macOS and Windows builds only; on any other platform report that Outlook Calendar is not available there rather than looking for another installation.
 

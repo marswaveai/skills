@@ -28,7 +28,7 @@ Use the bundled `himalaya` executable. This Skill targets exactly Himalaya `2.0.
 Always use the copy bundled with this Skill; never a `himalaya` that happens to be on `PATH`, which may be an unrelated version. Resolve it once per session:
 
 1. Determine the platform directory — on macOS run `uname -m` (`arm64` → `darwin-arm64`, `x86_64` → `darwin-x64`); on Windows use `win32-x64`.
-2. Resolve `scripts/bin/<platform>/himalaya` against this document's directory and use that absolute path for every command below.
+2. Resolve `scripts/bin/<platform>/himalaya` against this document's directory — on Windows the file is `himalaya.exe` — and use that absolute path for every command below.
 
 This package ships macOS and Windows builds only. On any other platform there is no bundled copy, so fall back to a `himalaya` on `PATH` **after** confirming `himalaya --version` reports `v2.0.0`; a different version there is unusable and should be reported as such.
 
@@ -78,6 +78,8 @@ IDs are scoped to their mailbox. Re-list after switching mailboxes or after move
 ## Write operations
 
 Show the final recipients, subject, and body to the user and obtain confirmation immediately before sending, replying, forwarding, moving, or deleting.
+
+**Check the backend before writing.** `message compose|reply|forward --send` routes through SMTP or JMAP only, so an account on the Microsoft Graph backend cannot send with it. Read the account's backend from `account list` first; for a Graph account, send through `himalaya msgraph message send` with raw MIME and read `references/outlook.md` before composing.
 
 ```bash
 himalaya --account <name> message compose \

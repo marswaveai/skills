@@ -16,7 +16,7 @@ This Skill targets exactly `gws 0.22.5`.
 Always use the copy bundled with this Skill; never a `gws` that happens to be on `PATH`, which may be an unrelated version. Resolve it once per session:
 
 1. Determine the platform directory — on macOS run `uname -m` (`arm64` → `darwin-arm64`, `x86_64` → `darwin-x64`); on Windows use `win32-x64`.
-2. Resolve `scripts/bin/<platform>/gws` against this document's directory and use that absolute path for every command below.
+2. Resolve `scripts/bin/<platform>/gws` against this document's directory — on Windows the file is `gws.exe` — and use that absolute path for every command below.
 
 This package ships macOS and Windows builds only; on any other platform report that Google Calendar is not available there rather than looking for another installation.
 
@@ -70,7 +70,7 @@ gws calendar +agenda
 | `--week` | Show this week's events |
 | `--days <N>` | Number of days ahead to show |
 | `--calendar <NAME_OR_ID>` | Filter to a specific calendar |
-| `--timezone <IANA>` | Timezone override (e.g. `Asia/Shanghai`); defaults to the Google account timezone |
+| `--timezone <IANA>` | Timezone override (e.g. `Asia/Shanghai`). **Always pass it** — see below |
 
 ```bash
 gws calendar +agenda --today
@@ -79,6 +79,8 @@ gws calendar +agenda --days 3 --calendar 'Work'
 ```
 
 Read-only — never modifies events. Queries all calendars by default.
+
+Always pass `--timezone`. The helper's own default reads the account timezone from `settings`, which this installation's scopes exclude, so it silently falls back to the machine's local timezone — on a machine in a different timezone from the calendar, `--today` and `--week` then query the wrong day boundaries. Ask the user for their timezone, or take it from an event's own timezone, and pass it explicitly.
 
 ### Create an event
 
@@ -94,7 +96,7 @@ gws calendar +insert --summary <TEXT> --start <TIME> --end <TIME>
 | `--calendar` | — | Calendar ID (default: `primary`) |
 | `--location` | — | Event location |
 | `--description` | — | Event description/body |
-| `--attendee` | — | Attendee email (repeatable) |
+| `--attendee` | — | Attendee email (repeatable). Does **not** notify them — see below |
 | `--meet` | — | Add a Google Meet link |
 
 ```bash
@@ -104,6 +106,14 @@ gws calendar +insert --summary 'Review' --start ... --end ... --attendee alice@e
 
 > [!CAUTION]
 > This is a **write** command — confirm with the user before executing.
+
+**Attendees are not notified by `+insert`.** The helper does not set the Calendar API's `sendUpdates` parameter, whose default is to send nothing, so the guest is added to the event but receives no invitation. When the user's intent is to invite someone, create the event through the resource-level command with that parameter instead, then tell the user the invitation went out:
+
+```bash
+gws calendar events insert \
+  --params '{"calendarId":"primary","sendUpdates":"all"}' \
+  --json '{"summary":"Review","start":{"dateTime":"2026-06-17T09:00:00+08:00"},"end":{"dateTime":"2026-06-17T10:00:00+08:00"},"attendees":[{"email":"alice@example.com"}]}'
+```
 
 ## API resources (within scope)
 
@@ -118,7 +128,8 @@ gws calendar <resource> <method> [flags]
 - `instances` — instances of a recurring event
 - `insert` — create an event (prefer `+insert`)
 - `quickAdd` — create an event from a text string
-- `patch` / `update` — modify an event
+- `patch` — modify an event; **use this for every edit**
+- `update` — full replacement; it drops attendees, recurrence, reminders, location and description when they are absent from the body, so only use it after fetching the complete event and round-tripping every field
 - `delete` — delete an event
 
 ### calendarList (read-only)
