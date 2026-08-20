@@ -4,13 +4,13 @@ This package targets Himalaya `2.0.0` at revision `923414155f4281d681f4ea8631954
 
 ## Active configuration
 
-For normal operations, use `himalaya` from `PATH` without `--config`. The executable may already have an active configuration selected. Confirm what it sees with:
+For normal operations, run the bundled executable resolved in `SKILL.md` — never a `himalaya` from `PATH` — and pass no `--config`. It may already have an active configuration selected; confirm what it sees with:
 
 ```bash
 himalaya --json account list
 ```
 
-Do not choose a configuration by scanning files, do not invoke the packaged binary by absolute path, and do not replace the active configuration just because another TOML file exists.
+Do not choose a configuration by scanning files, and do not replace the active configuration just because another TOML file exists.
 
 When the native executable has not been given an active configuration, Himalaya searches:
 
