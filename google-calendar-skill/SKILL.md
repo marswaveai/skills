@@ -1,11 +1,43 @@
 ---
 name: google-calendar
-description: Use the bundled Google Workspace CLI (gws) to read, create, update, and delete Google Calendar events, list calendars, and show agendas. Use when the user asks to connect or operate Google Calendar, check their schedule, or manage Google Calendar events.
+description: Use the bundled Google Workspace CLI (gws) to read, create, update, and delete Google Calendar events, list calendars, and show agendas. Use when the user asks to connect or operate Google Calendar, or to manage events on their Google Calendar, or says "谷歌日历"、"Google 日历"、"看看我 Google 日历上的安排".
+metadata:
+  version: 1.0.1
+  requires:
+    bins: ["gws"]
 ---
 
 # Google Calendar (gws)
 
-Use the bundled `gws` executable. This Skill targets exactly `gws 0.22.5`; invoke `gws` from `PATH`.
+This Skill targets exactly `gws 0.22.5`.
+
+## Locate the executable
+
+Always use the copy bundled with this Skill; never a `gws` that happens to be on `PATH`, which may be an unrelated version. Resolve it once per session:
+
+1. Determine the platform directory — on macOS run `uname -m` (`arm64` → `darwin-arm64`, `x86_64` → `darwin-x64`); on Windows use `win32-x64`.
+2. Resolve `scripts/bin/<platform>/gws` against this document's directory — on Windows the file is `gws.exe` — and use that absolute path for every command below.
+
+This package ships macOS and Windows builds only; on any other platform report that Google Calendar is not available there rather than looking for another installation.
+
+The examples below write the command by its bare name for readability; always run the resolved absolute path instead.
+
+If that file is missing, report that Google Calendar is not ready yet — never describe it as an account problem or a broken connector.
+
+## Talk like Cola
+
+These rules govern what you SAY to the user. They never change which commands you RUN.
+
+- **Product words are fine.** 配置、授权、连接、账号、日程、App 专用密码 — the user should always know which step they are in.
+- **Implementation details never reach the user.** Tool names, CLI flags, config files, protocols, PATH, raw commands, raw error output. Narrate by goal ("正在看你的日历"), translate every failure into one clear next step, and confirm results in user terms.
+
+## 使用场景
+
+- 查日程:"看看我明天谷歌日历有哪些安排""这周有没有空的整段下午"
+- 建与改:"帮我在周四下午约一个一小时的评审会,拉上 Alice""把周会挪到十点"
+- 汇总:"把下周的日程整理成一份议程"
+
+**When the request names no provider.** More than one calendar skill can be installed, and a bare 「查下我的日程」 does not say which account to read. Use this skill without asking only when it is the only calendar connected, or when the conversation already established that Google Calendar is the one in play. Otherwise ask which calendar they mean — never start a connection flow for an account the user did not ask about.
 
 This installation is **calendar-only**. Authorization covers Google Calendar and nothing else: other Google services (`gmail`, `drive`, `sheets`, `docs`, `tasks`, …) will fail with permission errors. Do not attempt them, and do not suggest them as available.
 
@@ -30,7 +62,7 @@ Out of scope (will fail; do not call): calendar `acl`, creating/deleting calenda
 ### Show agenda (read-only)
 
 ```bash
-gws calendar +agenda
+gws calendar +agenda --timezone <IANA>
 ```
 
 | Flag | Description |
@@ -40,15 +72,17 @@ gws calendar +agenda
 | `--week` | Show this week's events |
 | `--days <N>` | Number of days ahead to show |
 | `--calendar <NAME_OR_ID>` | Filter to a specific calendar |
-| `--timezone <IANA>` | Timezone override (e.g. `Asia/Shanghai`); defaults to the Google account timezone |
+| `--timezone <IANA>` | Timezone override (e.g. `Asia/Shanghai`). **Always pass it** — see below |
 
 ```bash
-gws calendar +agenda --today
-gws calendar +agenda --week --format table
-gws calendar +agenda --days 3 --calendar 'Work'
+gws calendar +agenda --today --timezone 'Asia/Shanghai'
+gws calendar +agenda --week --format table --timezone 'Asia/Shanghai'
+gws calendar +agenda --days 3 --calendar 'Work' --timezone 'Asia/Shanghai'
 ```
 
 Read-only — never modifies events. Queries all calendars by default.
+
+Always pass `--timezone`. The helper's own default reads the account timezone from `settings`, which this installation's scopes exclude, so it silently falls back to the machine's local timezone — on a machine in a different timezone from the calendar, `--today` and `--week` then query the wrong day boundaries. Ask the user for their timezone, or take it from an event's own timezone, and pass it explicitly.
 
 ### Create an event
 
@@ -64,7 +98,7 @@ gws calendar +insert --summary <TEXT> --start <TIME> --end <TIME>
 | `--calendar` | — | Calendar ID (default: `primary`) |
 | `--location` | — | Event location |
 | `--description` | — | Event description/body |
-| `--attendee` | — | Attendee email (repeatable) |
+| `--attendee` | — | Attendee email (repeatable). Does **not** notify them — see below |
 | `--meet` | — | Add a Google Meet link |
 
 ```bash
@@ -74,6 +108,22 @@ gws calendar +insert --summary 'Review' --start ... --end ... --attendee alice@e
 
 > [!CAUTION]
 > This is a **write** command — confirm with the user before executing.
+
+**Attendees are not notified by `+insert`.** The helper does not set the Calendar API's `sendUpdates` parameter, whose default is to send nothing, so the guest is added to the event but receives no invitation. When the user's intent is to invite someone, create the event through the resource-level command with that parameter instead, then tell the user the invitation went out:
+
+```bash
+gws calendar events insert \
+  --params '{"calendarId":"primary","sendUpdates":"all"}' \
+  --json '{"summary":"Review","start":{"dateTime":"2026-06-17T09:00:00+08:00"},"end":{"dateTime":"2026-06-17T10:00:00+08:00"},"attendees":[{"email":"alice@example.com"}]}'
+```
+
+`+insert --meet` adds the Meet link automatically, but this resource-level form does not — request the conference explicitly, or the invitation goes out without a way to join:
+
+```bash
+gws calendar events insert \
+  --params '{"calendarId":"primary","sendUpdates":"all","conferenceDataVersion":1}' \
+  --json '{"summary":"Review","start":{"dateTime":"2026-06-17T09:00:00+08:00"},"end":{"dateTime":"2026-06-17T10:00:00+08:00"},"attendees":[{"email":"alice@example.com"}],"conferenceData":{"createRequest":{"requestId":"<unique-string>","conferenceSolutionKey":{"type":"hangoutsMeet"}}}}'
+```
 
 ## API resources (within scope)
 
@@ -88,8 +138,9 @@ gws calendar <resource> <method> [flags]
 - `instances` — instances of a recurring event
 - `insert` — create an event (prefer `+insert`)
 - `quickAdd` — create an event from a text string
-- `patch` / `update` — modify an event
-- `delete` — delete an event
+- `patch` — modify an event; **use this for every edit**. When the event has attendees, add `"sendUpdates":"all"` to `--params` so guests learn about the change — the default notifies nobody, leaving them on the old time
+- `update` — full replacement; it drops attendees, recurrence, reminders, location and description when they are absent from the body, so only use it after fetching the complete event and round-tripping every field
+- `delete` — delete an event. With attendees, pass `"sendUpdates":"all"` too, or guests keep a meeting the organizer already cancelled
 
 ### calendarList (read-only)
 

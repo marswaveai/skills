@@ -20,6 +20,14 @@ Do not ask for the QQ account password. The username is the full email address.
 
 Do not stop at “enable IMAP/SMTP and generate an authorization code.” Always give the next concrete action. In user-facing conversation, describe the goal only as “连接 QQ 邮箱”; never expose internal implementation identifiers. Connecting saves the account configuration and credential on the user's device and does not change mail stored by QQ.
 
+## Required IMAP ID exchange
+
+QQ enforces the RFC 2971 `ID` command before a mailbox can be selected, so set `imap.id.auto = true` for this account. Without it authentication succeeds and then `account check` and every mailbox operation fail — a failure that looks like a wrong authorization code but is not.
+
+```toml
+imap.id.auto = true
+```
+
 ## Validate and troubleshoot
 
 The standard endpoints are `imap.qq.com:993` with TLS and `smtp.qq.com:465` with TLS.

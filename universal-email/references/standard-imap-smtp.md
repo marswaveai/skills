@@ -4,12 +4,13 @@ Use this path when no provider-specific guide matches.
 
 ## What the user needs
 
-Ask for the values supplied by the mailbox provider or organization administrator:
+Ask the user for the non-secret settings supplied by the mailbox provider or organization administrator:
 
 - full email address;
 - IMAP username, host, port, and TLS or STARTTLS mode;
-- SMTP username, host, port, and TLS or STARTTLS mode;
-- password, app password, or authorization code required by that provider.
+- SMTP username, host, port, and TLS or STARTTLS mode.
+
+The provider also requires a password, app password, or authorization code. Tell the user which kind their provider issues and where to generate it, but never ask them to send it in chat: it is entered only at the secure local prompt during setup, and never appears in a command argument.
 
 Do not guess endpoints from the email domain. Do not assume the normal webmail password is accepted. Prefer the provider's official setup documentation and use its credential terminology verbatim.
 

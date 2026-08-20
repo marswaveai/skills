@@ -4,19 +4,20 @@ This package targets Himalaya `2.0.0` at revision `923414155f4281d681f4ea8631954
 
 ## Active configuration
 
-For normal operations, use `himalaya` from `PATH` without `--config`. The executable may already have an active configuration selected. Confirm what it sees with:
+For normal operations, run the executable resolved in `SKILL.md` and pass no `--config`. On macOS and Windows that is always the bundled copy, never a `himalaya` from `PATH`; on platforms this package does not ship a build for, it is the validated `v2.0.0` from `PATH` that `SKILL.md` permits. It may already have an active configuration selected; confirm what it sees with:
 
 ```bash
 himalaya --json account list
 ```
 
-Do not choose a configuration by scanning files, do not invoke the packaged binary by absolute path, and do not replace the active configuration just because another TOML file exists.
+Do not choose a configuration by scanning files, and do not replace the active configuration just because another TOML file exists.
 
 When the native executable has not been given an active configuration, Himalaya searches:
 
 1. `$XDG_CONFIG_HOME/himalaya/config.toml`
 2. `$HOME/.config/himalaya/config.toml`
-3. `$HOME/.himalayarc`
+
+On Windows the equivalent location is `%APPDATA%\himalaya\config.toml`. Write configuration only to these paths: a file placed anywhere else looks saved while `account list` keeps reporting no account.
 
 The global `--config <path>` option explicitly selects another profile. Use it only when the user requests a separate profile; do not use it for ordinary account discovery, validation, or mailbox operations.
 

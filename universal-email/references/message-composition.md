@@ -2,6 +2,8 @@
 
 Use Himalaya 2's built-in composer for ordinary text mail.
 
+The commands below route through SMTP or JMAP. An account on the Microsoft Graph backend cannot send with them — check the backend in `account list` first and see `references/outlook.md`, which sends raw MIME through `msgraph message send` instead.
+
 ## New message
 
 ```bash
@@ -43,7 +45,7 @@ Body
 EOF
 ```
 
-Add `--save sent` only after `mailbox list` proves the Sent alias resolves. A send can succeed before saving the sender copy fails; never retry automatically after that ambiguous result.
+To keep a copy in the Sent mailbox, resolve the name first: `--save <mailbox>` is looked up in the account's `[mailbox.alias]` map and otherwise used verbatim, so a literal `sent` silently misses providers whose real mailbox is `Sent Messages` or a localized name. Use `--save sent` only when the account's configuration defines that alias (see `references/configuration.md`); otherwise run `mailbox list` and pass the exact mailbox name. A send can succeed before saving the sender copy fails; never retry automatically after that ambiguous result.
 
 ## Safety
 
