@@ -52,7 +52,8 @@ cola-outlook-calendar delete --event-id <ID>
 ```
 
 - Prefer explicit RFC3339 offsets, such as `2026-08-13T22:00:00+08:00`. Never infer UTC from a local time.
-- To move an event without changing how long it lasts, pass `--start` alone: the CLI reads the stored duration and derives the new end. Pass both `--start` and `--end` only when the user is also changing the length.
+- To move a timed event without changing how long it lasts, pass `--start` alone: the CLI reads the stored duration and derives the new end. Pass both `--start` and `--end` when the user is also changing the length.
+- All-day events are the exception: the CLI refuses a bare `--start` for them, because Graph requires whole-day boundaries. Pass both values as whole days (`list` reports `isAllDay` so you know which case you are in).
 - `list` follows Graph's pagination, so a busy range comes back complete; a range too large to page through is reported as such rather than silently truncated.
 - Output is JSON. Reuse the returned event `id`; do not repeat list requests for the same result.
 - Do not run `doctor` before every calendar request. Use it after connection or while diagnosing a failure.

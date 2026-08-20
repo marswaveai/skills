@@ -117,6 +117,14 @@ gws calendar events insert \
   --json '{"summary":"Review","start":{"dateTime":"2026-06-17T09:00:00+08:00"},"end":{"dateTime":"2026-06-17T10:00:00+08:00"},"attendees":[{"email":"alice@example.com"}]}'
 ```
 
+`+insert --meet` adds the Meet link automatically, but this resource-level form does not — request the conference explicitly, or the invitation goes out without a way to join:
+
+```bash
+gws calendar events insert \
+  --params '{"calendarId":"primary","sendUpdates":"all","conferenceDataVersion":1}' \
+  --json '{"summary":"Review","start":{"dateTime":"2026-06-17T09:00:00+08:00"},"end":{"dateTime":"2026-06-17T10:00:00+08:00"},"attendees":[{"email":"alice@example.com"}],"conferenceData":{"createRequest":{"requestId":"<unique-string>","conferenceSolutionKey":{"type":"hangoutsMeet"}}}}'
+```
+
 ## API resources (within scope)
 
 ```bash

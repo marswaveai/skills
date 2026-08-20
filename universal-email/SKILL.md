@@ -16,7 +16,7 @@ These rules govern everything you SAY. They never change which commands you RUN 
 - **Product words are fine.** 配置、授权、连接、账号、授权码/App 专用密码 — the user should always know which step they are in.
 - **Implementation details never reach the user.** `himalaya`, CLI, config files, TOML, IMAP/SMTP, PATH, keychain service names — say “你的邮箱 / 邮件账户 / your mailbox” instead. If the user explicitly asks how it works, then you may explain.
 - **Narrate by goal, not by tooling.** “正在连接你的邮箱” “正在看你的收件箱”, never “running himalaya account list”.
-- **Ask for the minimum, once.** Ask for the email address; infer the provider from its domain; guide the user to generate the provider's app credential (QQ: 设置→账户→开启 IMAP/SMTP 生成授权码; iCloud/Gmail: App 专用密码, links allowed). Do not ask again unless verification actually failed.
+- **Ask for the minimum, once.** Ask for the email address. A well-known domain identifies the provider; a company or custom domain does not — it is often hosted on Google Workspace, Microsoft 365 or iCloud, and treating it as a generic mailbox would ask for server settings the user does not have and skip the provider's own sign-in. Check the domain's MX records, or simply ask which service hosts it, before choosing a guide. Then guide the user to generate the provider's app credential (QQ: 设置→账户→开启 IMAP/SMTP 生成授权码; iCloud/Gmail: App 专用密码, links allowed). Do not ask again unless verification actually failed.
 - **Credentials never enter the conversation.** An app password or authorization code must reach the secure local prompt, never a chat message and never a shell argument — a credential pasted into chat stays in the transcript. Ask the user to re-run the setup and enter the new code there; if they paste one anyway, use it once, then tell them to revoke and regenerate it.
 - **Translate errors into next steps.** Never paste raw command output or stack traces. Turn failures into one clear user action (“这个授权码好像不对，去 QQ 邮箱设置里重新生成一个，我这就帮你重新连”).
 - **Confirm in user terms.** Finish with what they can now do (“邮箱连好了，以后直接说『看看今天的邮件』就行”), not with what was configured where.
@@ -116,17 +116,18 @@ himalaya --account <name> message delete --mailbox inbox <message-id>
 
 Himalaya 2 supports SOCKS5 and HTTP CONNECT, and takes its route **only** from the environment of each invocation. Operating-system proxy settings are a discovery source, not a route: a proxy configured in macOS or Windows settings but absent from the process environment is not used, so reading it and then running the command unchanged tests the direct route while appearing to test the proxy. To exercise a discovered setting, pass it explicitly in that invocation's environment, and preserve the protocol exactly as reported — never infer one from a port number.
 
-Himalaya has no proxy configuration field or CLI flag: the route comes only from the environment of each invocation (`all_proxy` takes precedence over `http_proxy`/`https_proxy`). This is the one lever for per-command route isolation. To force a single command onto the direct route, clear those variables for that invocation only, without touching the user's global proxy. On macOS use `env -u all_proxy -u http_proxy -u https_proxy <himalaya> --account <name> ...`; in PowerShell, `env` does not exist, so scope the change to the process instead:
+Himalaya has no proxy configuration field or CLI flag: the route comes only from the environment of each invocation, and this build reads exactly two variables — `all_proxy` first, then `https_proxy`. **`http_proxy` is not consulted at all**, so a proxy supplied only through it is silently ignored and the command runs direct; carry such a value over into `https_proxy` for the invocation. This environment is the one lever for per-command route isolation. To force a single command onto the direct route, clear both variables for that invocation only, without touching the user's global proxy. On macOS use `env -u all_proxy -u https_proxy <himalaya> --account <name> ...`; in PowerShell, `env` does not exist, so scope the change to the process instead:
 
 ```powershell
 # A child process, so the user's proxy stays intact in this session.
 powershell -NoProfile -Command @'
-$env:all_proxy=''; $env:http_proxy=''; $env:https_proxy=''
+Remove-Item Env:all_proxy -ErrorAction SilentlyContinue
+Remove-Item Env:https_proxy -ErrorAction SilentlyContinue
 & '<himalaya>' --account <name> ...
 '@
 ```
 
-Never assign `$env:` values directly in the working session: they persist, and every later command would silently run without the user's proxy. Confirm the route actually used from Himalaya's own `dial <host>:<port> ... (source: direct|all_proxy|http_proxy)` debug line rather than assuming it.
+Never assign `$env:` values directly in the working session: they persist, and every later command would silently run without the user's proxy. Confirm the route actually used from Himalaya's own `dial <host>:<port> ... (source: direct|all_proxy|https_proxy)` debug line rather than assuming it.
 
 Read `references/proxy.md` before connecting or diagnosing when any of these conditions applies:
 
