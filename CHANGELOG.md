@@ -6,6 +6,7 @@
 
 **Changed:**
 - `podcast/SKILL.md` + `tts/SKILL.md` — support a task-level generation speed via the CLI's `--speed` flag. Continuous `0.5`–`2.0` range with at most two decimals; common values are `0.5 / 0.75 / 1 / 1.25 / 1.5 / 2`. The skills never ask about speed: with no explicit user request they omit the flag and generation stays at `1` (original speed).
+- `google-calendar-skill` `1.0.3` — calendar-specific proxy discovery: apply a device HTTP CONNECT proxy to the first `gws` login/API call; do not wait for timeout; mixed SOCKS `all_proxy` is cleared. See `google-calendar-skill/references/proxy.md`.
 
 ## [1.4.0] - 2026-07-30
 
