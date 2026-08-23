@@ -47,13 +47,14 @@ Replace `<gws>` with the resolved bundled absolute path from `SKILL.md`. Replace
 Unix:
 
 ```bash
+proxy='http://HOST:PORT/'
 env -u ALL_PROXY -u all_proxy \
-  HTTPS_PROXY='http://HOST:PORT/' \
-  HTTP_PROXY="$HTTPS_PROXY" \
-  https_proxy="$HTTPS_PROXY" \
-  http_proxy="$HTTPS_PROXY" \
+  HTTPS_PROXY="$proxy" \
+  HTTP_PROXY="$proxy" \
+  https_proxy="$proxy" \
+  http_proxy="$proxy" \
   NO_PROXY='localhost,127.0.0.1,::1' \
-  no_proxy="$NO_PROXY" \
+  no_proxy='localhost,127.0.0.1,::1' \
   <gws> calendar +agenda --today --timezone 'Asia/Shanghai'
 ```
 

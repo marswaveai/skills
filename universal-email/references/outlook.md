@@ -36,7 +36,9 @@ You run every step. Narrate in product words only: “正在连接你的 Outlook
 email = "user@outlook.com"
 display-name = "Outlook"
 default = true
-msgraph.auth.token.command = ["<absolute-path-to-cola-outlook-mail-auth>", "token"]
+# Use a TOML literal string so Windows backslashes are not parsed as escapes
+# (`\Users` in a basic string is `\U`). Forward slashes also work on Windows.
+msgraph.auth.token.command = ['<absolute-path-to-cola-outlook-mail-auth>', 'token']
 ```
 
 Replace the email with `accountLabel` from doctor. Then run `himalaya --account outlook --json account check` and `himalaya --account outlook --json msgraph profile get`.
