@@ -2,7 +2,7 @@
 name: universal-email
 description: Use the bundled Himalaya 2 CLI to connect IMAP/SMTP or Microsoft Graph mailboxes and list, search, read, compose, reply, forward, move, delete, flag, and download email. Use when the user asks to connect or operate Gmail, QQ Mail, iCloud Mail, Outlook, or another standard mailbox, or says "连接邮箱"、"绑定邮箱"、"看看我的邮件"、"查邮箱"、"发邮件"、"回复邮件".
 metadata:
-  version: 1.2.9
+  version: 1.2.11
   requires:
     bins: ["himalaya"]
 ---
@@ -36,6 +36,8 @@ The examples below write the command by its bare name for readability; always ru
 
 If that file is missing, report that the mailbox is not ready yet — never describe it as an account problem or a broken connector.
 
+For Outlook / Microsoft 365 Graph mail, also resolve `scripts/bin/<platform>/cola-outlook-mail-auth` the same way (Windows: `cola-outlook-mail-auth.exe`). You run that helper yourself. Never ask the user to run it, and never paste its path into chat. See `references/outlook.md`. Do not use the Himalaya setup wizard for Outlook.
+
 Treat the active configuration of the executable you invoke as the source of truth: do not inspect candidate config files to choose one, or add `--config` merely because a file exists. Use `--config` only when the user explicitly requests a separate profile.
 
 ## 使用场景
@@ -53,7 +55,7 @@ Treat the active configuration of the executable you invoke as the source of tru
    - Gmail: `references/gmail.md`
    - QQ Mail: `references/qq.md`
    - iCloud Mail: `references/icloud.md`
-   - Outlook/Microsoft 365: `references/outlook.md`
+   - Outlook/Microsoft 365: `references/outlook.md` (Graph OAuth via the bundled helper; never the Himalaya wizard)
    - Other IMAP/SMTP: `references/standard-imap-smtp.md`
 5. If configuration is missing, use `references/configuration.md` for the Himalaya 2 TOML format and active-configuration rules.
 6. Validate with `himalaya --account <name> --json account check` before any mailbox operation.

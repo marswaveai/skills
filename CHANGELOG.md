@@ -7,6 +7,8 @@
 **Changed:**
 - `podcast/SKILL.md` + `tts/SKILL.md` — support a task-level generation speed via the CLI's `--speed` flag. Continuous `0.5`–`2.0` range with at most two decimals; common values are `0.5 / 0.75 / 1 / 1.25 / 1.5 / 2`. The skills never ask about speed: with no explicit user request they omit the flag and generation stays at `1` (original speed).
 - `google-calendar-skill` `1.0.3` — calendar-specific proxy discovery: apply a device HTTP CONNECT proxy to the first `gws` login/API call; do not wait for timeout; mixed SOCKS `all_proxy` is cleared. See `google-calendar-skill/references/proxy.md`.
+- `outlook-calendar-skill` `1.0.5` — refresh bundled `cola-outlook-calendar` binaries.
+- `universal-email` `1.2.11` — Outlook / Microsoft 365 Graph mail connects through the bundled `cola-outlook-mail-auth` helper; never the Himalaya setup wizard. See `universal-email/references/outlook.md`.
 
 ## [1.4.0] - 2026-07-30
 
