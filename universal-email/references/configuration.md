@@ -23,9 +23,9 @@ The global `--config <path>` option explicitly selects another profile. Use it o
 
 ## Store the mailbox secret
 
-IMAP/SMTP secrets (Gmail app password, QQ authorization code, iCloud app-specific password, or another provider secret) are entered on a local Cola page. You open that page. The user never uses a terminal.
+IMAP/SMTP secrets (Gmail app password, QQ authorization code, iCloud app-specific password, or another provider secret) are entered through the bundled helper. The user never uses a terminal.
 
-Never run the bare `himalaya` setup wizard, and never allocate a PTY for Himalaya. That wizard needs a TTY this chat does not have and dumps implementation details to the user.
+Never run the bare `himalaya` setup wizard. That wizard needs a real terminal this chat does not have and dumps implementation details to the user.
 
 Resolve `scripts/bin/<platform>/cola-credential-helper` the same way as `himalaya` in `SKILL.md` (Windows: `cola-credential-helper.exe`). Use that absolute path. If the file is missing, the mailbox is not ready — do not fall back to a wizard, chat, or `password.raw`.
 
@@ -40,7 +40,7 @@ cola-credential-helper prompt \
   --secret-label-zh "<label>"
 ```
 
-Keep it running until it returns JSON with `ok` true. The only user action is to type the secret on the page that opens in the browser. Narrate in product words: “浏览器会打开一个本机页面，把授权码/应用专用密码填在那里，不要发在聊天里”.
+Keep it running until it returns JSON with `ok` true and `stored` true. The helper tries a system password dialog first (macOS `display dialog`; Windows a small password window). If that dialog cannot be shown, it opens a local HTML page. After a successful write it shows a system “已保存” dialog — not the OAuth “连上了” page. Narrate in product words: “本机会弹出输入框，把授权码/应用专用密码填进去，不要发在聊天里”. The secret is stored in the OS keychain as service `com.marswave.cola.app-secrets`, account `universal-email/<key>`, and later read only by `cola-credential-helper read`.
 
 2. Write the Himalaya 2 account into the active configuration using the templates below. Point both IMAP and SMTP `password.command` at the helper `read` and the same `--account`. Use a TOML literal string for a Windows path so `\Users` is not parsed as an escape (`\U`). Forward slashes also work on Windows. Never `password.raw`. Never put the secret in a command argument or in the TOML file.
 
@@ -53,7 +53,7 @@ Keep it running until it returns JSON with `ok` true. The only user action is to
 
 Provider guides supply the title and secret-label values. Do not show `--account`, the helper path, or keychain names to the user.
 
-If `prompt` does not return `ok`, do not write TOML. Tell the user the local page did not finish and that they can try again. If they paste a secret in chat anyway, do not store it: tell them to revoke it, generate a new one, and enter the new one on the page.
+If `prompt` does not return `ok`, do not write TOML. Tell the user the input did not finish and that they can try again. If they paste a secret in chat anyway, do not store it: tell them to revoke it, generate a new one, and enter the new one in the dialog.
 
 ## Minimal IMAP and SMTP account
 

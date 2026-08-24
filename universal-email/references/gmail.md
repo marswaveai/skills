@@ -29,7 +29,7 @@ For **personal Gmail** this almost always means 2-Step Verification is off (or i
 - Gmail 要先打开两步验证，才能生成应用专用密码。不是邮箱密码错了，也不是 Cola 连不上。
 - Open [Google 两步验证](https://myaccount.google.com/signinoptions/two-step-verification) and finish Google's setup.
 - Then open [应用专用密码](https://myaccount.google.com/apppasswords), generate a 16-character password, and come back. Spaces on screen are not part of it.
-- You will then open the local page so they can enter it.
+- You will then open the system dialog so they can enter it.
 
 Wait until they confirm 2-Step Verification is on and they have an app password, then continue connect.
 
@@ -46,4 +46,4 @@ If 2-Step Verification is already on and App passwords is still missing, the sam
 
 ## Validate and troubleshoot
 
-If authentication fails, confirm the address, confirm the app password was entered on the local page (display spaces are stripped), check that it was not revoked, and generate a new one if needed. A Workspace account that cannot create app passwords cannot be connected with this skill.
+If authentication fails, confirm the address, confirm the app password was entered in the helper dialog (display spaces are stripped), check that it was not revoked, and generate a new one if needed. A Workspace account that cannot create app passwords cannot be connected with this skill.
