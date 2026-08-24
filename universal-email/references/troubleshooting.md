@@ -11,4 +11,6 @@ Diagnose in this order:
 
 For proxy selection, provider routing, macOS/Windows discovery, and network-error mapping, read `proxy.md`. Do not improvise another proxy flow here.
 
-If reading works but sending fails, preserve the IMAP configuration and diagnose SMTP separately. Report only the stage and safe error category; never expose secrets, credential-helper output, private configuration contents, or full debug logs.
+If reading works but sending fails, preserve the IMAP configuration and diagnose SMTP separately. Before calling it a network or proxy failure, inspect the send command: `message compose|reply|forward` without `--from` still dials IMAP/SMTP, then fails with `No From: header`. A timeout or empty result after that is the missing sender, not a dead route. Add the connected mailbox address and retry that one send.
+
+Report only the stage and safe error category; never expose secrets, credential-helper output, private configuration contents, or full debug logs.

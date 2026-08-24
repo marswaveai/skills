@@ -2,7 +2,7 @@
 name: universal-email
 description: Use the bundled Himalaya 2 CLI to connect IMAP/SMTP or Microsoft Graph mailboxes and list, search, read, compose, reply, forward, move, delete, flag, and download email. Use when the user asks to connect or operate Gmail, QQ Mail, iCloud Mail, Outlook, or another standard mailbox, or says "连接邮箱"、"绑定邮箱"、"看看我的邮件"、"查邮箱"、"发邮件"、"回复邮件".
 metadata:
-  version: 1.2.19
+  version: 1.2.20
   requires:
     bins: ["himalaya"]
 ---
@@ -85,18 +85,26 @@ Show the final recipients, subject, and body to the user and obtain confirmation
 
 **Check the backend before writing.** `message compose|reply|forward --send` routes through SMTP or JMAP only, so an account on the Microsoft Graph backend cannot send with it. Read the account's backend from `account list` first; for a Graph account, send through `himalaya msgraph message send` with raw MIME and read `references/outlook.md` before composing.
 
+**`--from` is required on every compose, reply, and forward.** Do not omit it. Himalaya 2 does not copy `email` from the account config into `From:`; without the flag the message has no sender. `--send` still opens IMAP/SMTP, then fails with `No From: header` — on a slow connection that looks like a timeout, not a missing flag.
+
+- Use the connected mailbox address from this conversation (the address used to connect). `account list` returns only name and backends, not the email. Do not use the example placeholder. Do not invent another address.
+- This `--from` is the sender address. `message move --from` / `message copy --from` is a mailbox name. They are not the same flag.
+- If send times out, hangs, or returns no result: inspect the command you ran. If `--from` is missing, add the connected address and retry that one send. Do not treat it as a proxy or network failure yet.
+
 ```bash
 himalaya --account <name> message compose \
-  --from sender@example.com \
+  --from <connected-mailbox-address> \
   --to recipient@example.com \
   --subject "Subject" \
   --body "Body" \
   --send
 
 himalaya --account <name> message reply --mailbox inbox \
+  --from <connected-mailbox-address> \
   --body "Reply body" --send <message-id>
 
 himalaya --account <name> message forward --mailbox inbox \
+  --from <connected-mailbox-address> \
   --to recipient@example.com --body "Forward note" --send <message-id>
 ```
 

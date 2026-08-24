@@ -17,6 +17,7 @@
 - `universal-email` `1.2.17` — lock spoken lines for Gmail, QQ, iCloud, Outlook, and secret collection: what to do now, which link, what to click, what not to paste.
 - `universal-email` `1.2.18` — Gmail (and IMAP+SMTP on timeout) must probe receiving and sending as separate `--backend imap` / `--backend smtp` invocations, each on the process proxy and on a fully cleared direct wrap (`ALL_PROXY` and `all_proxy`). A combined `account check` timeout is not a password failure. See `universal-email/references/proxy.md`.
 - `universal-email` `1.2.19` — restore a fallback **chain**: preferred proxy first (HTTP CONNECT over SOCKS when both exist), then the other declared protocol, then direct; stop at the first success and reuse that wrap. Split IMAP/SMTP only when debug shows they failed at different stages. Do not stop after one `account check` timeout.
+- `universal-email` `1.2.20` — `message compose|reply|forward` must pass `--from` with the connected mailbox address. Himalaya 2 does not fill `From:` from config; omitting it still connects, then fails with `No From: header` (looks like a send timeout).
 
 ## [1.4.0] - 2026-07-30
 
