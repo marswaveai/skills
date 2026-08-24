@@ -2,7 +2,7 @@
 name: universal-email
 description: Use the bundled Himalaya 2 CLI to connect IMAP/SMTP or Microsoft Graph mailboxes and list, search, read, compose, reply, forward, move, delete, flag, and download email. Use when the user asks to connect or operate Gmail, QQ Mail, iCloud Mail, Outlook, or another standard mailbox, or says "连接邮箱"、"绑定邮箱"、"看看我的邮件"、"查邮箱"、"发邮件"、"回复邮件".
 metadata:
-  version: 1.2.14
+  version: 1.2.15
   requires:
     bins: ["himalaya"]
 ---

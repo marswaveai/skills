@@ -40,7 +40,7 @@ cola-credential-helper prompt \
   --secret-label-zh "<label>"
 ```
 
-Keep it running until it returns JSON with `ok` true and `stored` true. The helper tries a system password dialog first (macOS `display dialog`; Windows a small password window). If that dialog cannot be shown, it opens a local HTML page. After a successful write it shows a system “已保存” dialog — not the OAuth “连上了” page. Narrate in product words: “本机会弹出输入框，把授权码/应用专用密码填进去，不要发在聊天里”. The secret is stored in the OS keychain as service `com.marswave.cola.app-secrets`, account `universal-email/<key>`, and later read only by `cola-credential-helper read`.
+Keep it running until it returns JSON with `ok` true and `stored` true. The helper tries a system password dialog first (macOS `display dialog`; Windows a small password window), brings it to the front, and waits up to 180 seconds. HTML opens only when that dialog cannot be shown (missing host, no UI session, or timeout with no input). User cancel does not fall through to HTML. After a successful write it shows a system “已保存” dialog — not the OAuth “连上了” page. Narrate in product words: “本机会弹出输入框，把授权码/应用专用密码填进去，不要发在聊天里”. Storage stays the existing Cola keychain contract: service `com.marswave.cola.app-secrets`, account `universal-email/<key>`, read back only by `cola-credential-helper read`.
 
 2. Write the Himalaya 2 account into the active configuration using the templates below. Point both IMAP and SMTP `password.command` at the helper `read` and the same `--account`. Use a TOML literal string for a Windows path so `\Users` is not parsed as an escape (`\U`). Forward slashes also work on Windows. Never `password.raw`. Never put the secret in a command argument or in the TOML file.
 
