@@ -9,6 +9,7 @@
 - `google-calendar-skill` `1.0.3` — calendar-specific proxy discovery: apply a device HTTP CONNECT proxy to the first `gws` login/API call; do not wait for timeout; mixed SOCKS `all_proxy` is cleared. See `google-calendar-skill/references/proxy.md`.
 - `outlook-calendar-skill` `1.0.5` — refresh bundled `cola-outlook-calendar` binaries.
 - `universal-email` `1.2.11` — Outlook / Microsoft 365 Graph mail connects through the bundled `cola-outlook-mail-auth` helper; never the Himalaya setup wizard. See `universal-email/references/outlook.md`.
+- `universal-email` `1.2.12` — wrap Outlook helper `connect`/`doctor`/`token` with the device HTTP CONNECT proxy; when Microsoft shows “您的账号不支持您正在尝试的设置”, tell the user to turn on two-step verification rather than treating it as a Cola failure.
 
 ## [1.4.0] - 2026-07-30
 

@@ -2,7 +2,7 @@
 name: universal-email
 description: Use the bundled Himalaya 2 CLI to connect IMAP/SMTP or Microsoft Graph mailboxes and list, search, read, compose, reply, forward, move, delete, flag, and download email. Use when the user asks to connect or operate Gmail, QQ Mail, iCloud Mail, Outlook, or another standard mailbox, or says "连接邮箱"、"绑定邮箱"、"看看我的邮件"、"查邮箱"、"发邮件"、"回复邮件".
 metadata:
-  version: 1.2.11
+  version: 1.2.12
   requires:
     bins: ["himalaya"]
 ---
@@ -130,6 +130,8 @@ Remove-Item Env:https_proxy -ErrorAction SilentlyContinue
 ```
 
 Never assign `$env:` values directly in the working session: they persist, and every later command would silently run without the user's proxy. Confirm the route actually used from Himalaya's own `dial <host>:<port> ... (source: direct|all_proxy|https_proxy)` debug line rather than assuming it.
+
+Outlook Graph setup (`cola-outlook-mail-auth connect` / `doctor` / `token`) is HTTPS to Microsoft, not IMAP/SMTP. Wrap those helper invocations the same way when a proxy is required; leave `status` and `configure` unwrapped; keep loopback off the proxy so the OAuth callback can return. See `references/outlook.md` (Network). If the Microsoft page says the account does not support this setup, that is almost always missing two-step verification on a personal Microsoft account — follow `references/outlook.md`, do not treat it as a Cola failure.
 
 Read `references/proxy.md` before connecting or diagnosing when any of these conditions applies:
 

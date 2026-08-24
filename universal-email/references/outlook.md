@@ -27,8 +27,8 @@ You run every step. Narrate in product words only: “正在连接你的 Outlook
    - otherwise `$COLA_INTEGRATIONS_DIR/credentials/microsoft-graph-oauth.json` field `clientId`.
    Then run `cola-outlook-mail-auth configure --client-id <id>`.
    If neither source exists, say Outlook mail is not ready in this Cola build and stop. Do not ask the user for a client ID.
-3. Run `cola-outlook-mail-auth connect`. It opens the Microsoft sign-in page. Keep that command running until it returns JSON. The only user action is to finish login and consent in the browser.
-4. After connect succeeds, run `cola-outlook-mail-auth doctor` and read `accountLabel`.
+3. Run `cola-outlook-mail-auth connect`. It opens the Microsoft sign-in page. Keep that command running until it returns JSON. The only user action is to finish login and consent in the browser. If Microsoft Graph is only reachable through a device proxy, wrap **this** invocation (and `doctor` / later `token` refreshes) as in [Network](#network); do not wrap `status` or `configure`. Keep loopback (`localhost`, `127.0.0.1`) off the proxy so the helper can receive the OAuth callback.
+4. After connect succeeds, run `cola-outlook-mail-auth doctor` and read `accountLabel`. Apply the same per-invocation proxy wrap as `connect` when a proxy is required.
 5. Write the Himalaya 2 account into the active configuration (create the file if needed). Use the helper's absolute path in `token.command`. Do not use `token.raw`. Example:
 
 ```toml
@@ -46,6 +46,42 @@ Replace the email with `accountLabel` from doctor. Then run `himalaya --account 
 6. If Microsoft requires administrator approval, stop and explain that the organization's consent policy blocks personal approval. Do not tell the user to create a personal Microsoft application or provide a secret.
 
 If connect cannot wait in this environment, run `cola-outlook-mail-auth connect --emit-start true --no-open true`, open the returned `authorizationUrl` with the platform URL opener, then poll `status` until `connected` is true. Still never ask the user to run the helper.
+
+## Microsoft sign-in page: account does not support this setup
+
+If the browser page shows **「您的账号不支持您正在尝试的设置」** (or English **“Your account doesn't support the setup you're trying”**), that is Microsoft's login page, not a Cola or helper crash. Do not retry `connect` in a loop. Do not tell the user that Cola or Outlook mail is unsupported. Do not ask for a password or app password.
+
+For a personal Microsoft account (Outlook.com / Hotmail / Live), this almost always means **two-step verification is off**. Microsoft requires it for this sign-in. Tell the user in product words:
+
+- 微软这一步需要先打开两步验证，不是邮箱密码错了，也不是 Cola 连不上。
+- 请到 [Microsoft 账户安全页](https://account.microsoft.com/security) 打开「两步验证 / 双重验证」，按页面完成设置。
+- 打开后再回来说一声，我会重新帮你连 Outlook 邮箱。
+
+Wait until they confirm two-step verification is on, then run `connect` once more.
+
+For a work or school account, the same page can mean the organization's policy blocks this app. Explain that an admin has to allow it; do not walk them through creating an Azure application.
+
+## Network
+
+`connect`, `doctor`, and `token` talk to Microsoft over HTTPS (`login.microsoftonline.com`, `graph.microsoft.com`). `status` and `configure` are local. The helper takes its route only from each invocation's environment (`HTTPS_PROXY` / `HTTP_PROXY` / `ALL_PROXY`). Operating-system proxy settings are a discovery source, not a route.
+
+If an HTTP or HTTPS proxy is already on the device, apply it to the **first** `connect` (and to `doctor` / `token`) — do not wait for a timeout. Prefer HTTP CONNECT (`https_proxy=http://HOST:PORT`). Keep `NO_PROXY` / `no_proxy` including `localhost,127.0.0.1,::1` so the loopback OAuth callback is not proxied.
+
+Discovery, wrapping one invocation, and recovery live in `proxy.md` (Outlook through Microsoft Graph is HTTPS, not IMAP/SMTP). Replace `HOST:PORT` with the discovered endpoint; assign it once before expanding:
+
+```bash
+proxy='http://HOST:PORT/'
+env -u ALL_PROXY -u all_proxy \
+  HTTPS_PROXY="$proxy" \
+  HTTP_PROXY="$proxy" \
+  https_proxy="$proxy" \
+  http_proxy="$proxy" \
+  NO_PROXY='localhost,127.0.0.1,::1' \
+  no_proxy='localhost,127.0.0.1,::1' \
+  <cola-outlook-mail-auth> connect
+```
+
+Do not change the user's global proxy settings. Do not dump helper output.
 
 ## Validate and troubleshoot
 
