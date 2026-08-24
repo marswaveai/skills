@@ -6,6 +6,19 @@
 
 **Changed:**
 - `podcast/SKILL.md` + `tts/SKILL.md` — support a task-level generation speed via the CLI's `--speed` flag. Continuous `0.5`–`2.0` range with at most two decimals; common values are `0.5 / 0.75 / 1 / 1.25 / 1.5 / 2`. The skills never ask about speed: with no explicit user request they omit the flag and generation stays at `1` (original speed).
+- `google-calendar-skill` `1.0.3` — calendar-specific proxy discovery: apply a device HTTP CONNECT proxy to the first `gws` login/API call; do not wait for timeout; mixed SOCKS `all_proxy` is cleared. See `google-calendar-skill/references/proxy.md`.
+- `google-calendar-skill` `1.0.4` — wrap `gws auth status` with the same per-invocation proxy as login; decline `gws auth setup`'s default unscoped login, then run the calendar-only `--scopes` command.
+- `outlook-calendar-skill` `1.0.5` — refresh bundled `cola-outlook-calendar` binaries.
+- `universal-email` `1.2.11` — Outlook / Microsoft 365 Graph mail connects through the bundled `cola-outlook-mail-auth` helper; never the Himalaya setup wizard. See `universal-email/references/outlook.md`.
+- `universal-email` `1.2.12` — wrap Outlook helper `connect`/`doctor`/`token` with the device HTTP CONNECT proxy.
+- `universal-email` `1.2.13` — IMAP/SMTP secrets (Gmail, QQ, iCloud, other) are entered on a local Cola page via `cola-credential-helper prompt`; never the Himalaya wizard or a terminal. Gmail app passwords require Google 2-Step Verification ([official](https://support.google.com/accounts/answer/185833)); “您的账号不支持您正在尝试的设置” is Google's app-passwords page, including Workspace accounts that cannot issue app passwords. Personal Gmail and Workspace Gmail use the same IMAP method.
+- `universal-email` `1.2.14` — `cola-credential-helper prompt` prefers a system password dialog (macOS `display dialog`, Windows Forms); HTML is fallback only. After a successful keychain write it shows a “已保存” dialog, not the OAuth “连上了” page. Secrets are stored at service `com.marswave.cola.app-secrets` / account `universal-email/<key>`.
+- `universal-email` `1.2.15` — system dialog is activated to the front and times out after 180s; cancel does not open HTML; empty input re-prompts; HTML fallback bypasses the device proxy for `127.0.0.1`. Keychain location is unchanged.
+- `universal-email` `1.2.16` — user-facing secret collection copy: do not paste in chat; say the system window is about to appear, then they fill it and click 保存.
+- `universal-email` `1.2.17` — lock spoken lines for Gmail, QQ, iCloud, Outlook, and secret collection: what to do now, which link, what to click, what not to paste.
+- `universal-email` `1.2.18` — Gmail (and IMAP+SMTP on timeout) must probe receiving and sending as separate `--backend imap` / `--backend smtp` invocations, each on the process proxy and on a fully cleared direct wrap (`ALL_PROXY` and `all_proxy`). A combined `account check` timeout is not a password failure. See `universal-email/references/proxy.md`.
+- `universal-email` `1.2.19` — restore a fallback **chain**: preferred proxy first (HTTP CONNECT over SOCKS when both exist), then the other declared protocol, then direct; stop at the first success and reuse that wrap. Split IMAP/SMTP only when debug shows they failed at different stages. Do not stop after one `account check` timeout.
+- `universal-email` `1.2.20` — `message compose|reply|forward` must pass `--from` with the connected mailbox address. Himalaya 2 does not fill `From:` from config; omitting it still connects, then fails with `No From: header` (looks like a send timeout).
 
 ## [1.4.0] - 2026-07-30
 

@@ -2,7 +2,7 @@
 name: google-calendar
 description: Use the bundled Google Workspace CLI (gws) to read, create, update, and delete Google Calendar events, list calendars, and show agendas. Use when the user asks to connect or operate Google Calendar, or to manage events on their Google Calendar, or says "谷歌日历"、"Google 日历"、"看看我 Google 日历上的安排".
 metadata:
-  version: 1.0.1
+  version: 1.0.4
   requires:
     bins: ["gws"]
 ---
@@ -24,11 +24,11 @@ The examples below write the command by its bare name for readability; always ru
 
 If that file is missing, report that Google Calendar is not ready yet — never describe it as an account problem or a broken connector.
 
-## Talk like Cola
+## Talk to the user
 
 These rules govern what you SAY to the user. They never change which commands you RUN.
 
-- **Product words are fine.** 配置、授权、连接、账号、日程、App 专用密码 — the user should always know which step they are in.
+- **Product words are fine.** 配置、授权、连接、账号、日程 — the user should always know which step they are in.
 - **Implementation details never reach the user.** Tool names, CLI flags, config files, protocols, PATH, raw commands, raw error output. Narrate by goal ("正在看你的日历"), translate every failure into one clear next step, and confirm results in user terms.
 
 ## 使用场景
@@ -41,12 +41,51 @@ These rules govern what you SAY to the user. They never change which commands yo
 
 This installation is **calendar-only**. Authorization covers Google Calendar and nothing else: other Google services (`gmail`, `drive`, `sheets`, `docs`, `tasks`, …) will fail with permission errors. Do not attempt them, and do not suggest them as available.
 
+## Configuration directory
+
+`gws` stores OAuth client files and tokens in one config directory:
+
+- If `GOOGLE_WORKSPACE_CLI_CONFIG_DIR` is set and non-empty, **every** `gws` command in this skill must use that directory. Keep it in the environment. Do not unset it, overwrite it, or pass a different `--config` path.
+- If it is unset or empty, `gws` uses its own default directory (`~/.config/gws` on Unix; `%USERPROFILE%\.config\gws` on Windows).
+
+Check `printenv GOOGLE_WORKSPACE_CLI_CONFIG_DIR` (Unix) or `$env:GOOGLE_WORKSPACE_CLI_CONFIG_DIR` (PowerShell) once per session and treat that value as the profile for login, status, and calendar commands.
+
 ## Authorization
 
-OAuth is managed by Cola with calendar-only scopes (`calendar.events` plus read-only calendar list). Credentials are already configured for the `gws` command you invoke.
+This skill is **calendar-only**. Login must request exactly these scopes (comma-separated, no spaces):
 
-- **Never run `gws auth login`** or any other interactive auth flow, and never set `GOOGLE_APPLICATION_CREDENTIALS`. Authorization is done by the user in Cola's app center.
-- If a command fails with an authorization or permission error, tell the user to open the Google Calendar app in Cola's Skill settings and complete or renew authorization there. Do not retry in a loop.
+`openid,https://www.googleapis.com/auth/userinfo.email,https://www.googleapis.com/auth/userinfo.profile,https://www.googleapis.com/auth/calendar.events,https://www.googleapis.com/auth/calendar.calendarlist.readonly`
+
+Never set `GOOGLE_APPLICATION_CREDENTIALS`. Never run a default `gws auth login` without `--scopes` — the default set includes Drive, Gmail, and other services this skill must not request.
+
+1. Run `gws auth status` with the same per-invocation proxy wrap as login when a proxy is present (`references/proxy.md`). If credentials already exist and calendar commands succeed, skip login.
+2. If the user asks to connect Google Calendar, or status/calendar calls fail with authorization errors, run:
+
+```bash
+gws auth login --scopes 'openid,https://www.googleapis.com/auth/userinfo.email,https://www.googleapis.com/auth/userinfo.profile,https://www.googleapis.com/auth/calendar.events,https://www.googleapis.com/auth/calendar.calendarlist.readonly'
+```
+
+`gws` prints a Google URL. Give that URL to the user, wait until they finish in the browser, then run `gws auth status` and a read-only calendar probe before doing writes. Wrap those the same way as login when a proxy is present.
+
+3. If login says no OAuth client is configured, run `gws auth setup` **without** `--login`, or set `GOOGLE_WORKSPACE_CLI_CLIENT_ID` and `GOOGLE_WORKSPACE_CLI_CLIENT_SECRET` for that invocation — these are `gws` native client settings, not extra product config. Do not invent a client id. Setup may ask `Run gws auth login now? [Y/n]`; answer `n`. Never accept that default login: it requests Drive, Gmail, and other services this skill must not grant. After setup, run the scoped `gws auth login --scopes` command in step 2.
+
+4. Do not start a second login while one is waiting for the browser.
+
+## Network and troubleshooting
+
+`gws` takes its route **only** from the environment of each invocation. Operating-system proxy settings are a discovery source, not a route: a proxy configured in macOS or Windows settings but absent from this process is not used, so reading it and then running `gws` unchanged tests the direct route while appearing to test the proxy.
+
+This build reads `https_proxy` / `HTTPS_PROXY`, `http_proxy` / `HTTP_PROXY`, and `all_proxy` / `ALL_PROXY`. Token exchange and Calendar API calls are HTTPS (`oauth2.googleapis.com`, `www.googleapis.com`). Prefer HTTP CONNECT (`https_proxy=http://HOST:PORT`). Mixing SOCKS `all_proxy` with an HTTP proxy often fails token exchange (`Hyper error: client error (Connect)`); when the device has both, use the HTTP proxy on that invocation and clear `all_proxy` / `ALL_PROXY`. If only `http_proxy` is set, copy it onto `https_proxy` for the invocation.
+
+`gws auth status` can refresh a token through `oauth2.googleapis.com` and call user-info; it is not local-only. Wrap it with the same per-invocation proxy as login. A successful status still does not prove the Calendar API route. On many networks the Google HTTPS hosts are unreachable directly even when this chat still works. If an HTTP or HTTPS proxy is already on the device, apply it to the **first** `gws auth status`, `gws auth login`, and calendar command — do not wait for a timeout.
+
+Read `references/proxy.md` before the first `gws auth status`, login, or calendar API call when any of these applies:
+
+- proxy variables or an operating-system HTTP/HTTPS/SOCKS proxy are present
+- the current network may block Google HTTPS
+- the failure mentions proxy, timeout, connect, TLS, unreachable, or `Hyper error`
+
+That guide is the routing procedure: discover, wrap **that one** `gws` invocation, recover. Do not change the user's global proxy settings. Do not treat a hang after `Using keyring backend: keyring` as an empty calendar or expired authorization. Leave `GOOGLE_WORKSPACE_CLI_CONFIG_DIR` unchanged. Do not dump raw `gws` output.
 
 ### Scope boundaries
 
