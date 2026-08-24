@@ -31,24 +31,23 @@ Ask once only when the domain does not make it obvious. Do not invent a Google m
 
 4. When they have generated the password: use the 弹窗前 / 成功 / 取消 / 超时 lines in `configuration.md`, then run `prompt` in the same turn.
 
-5. After **both** IMAP and SMTP succeed on the same route: 「Gmail 已经连好了。以后直接说『看看今天的邮件』就行。」
-6. After IMAP and SMTP succeed on **different** routes: 「收信已经连上。发信要走另一条网络路径，我已经分开连。以后直接说『看看今天的邮件』就行。」
-7. IMAP succeeded, SMTP failed on both routes: 「收信已经连上，发信这条路现在过不去。先看邮件可以。密码不用重新生成。」
-8. SMTP succeeded, IMAP failed on both routes: 「发信通道是通的，收信现在过不去。密码不用重新生成。」
-9. Both failed after the split probes in `proxy.md`: 「现在到邮箱服务的路都不通，不是密码错。邮箱配置还在，网络恢复后直接继续。」
-10. If authentication fails after they filled the window (server responded, then rejected the secret): 「这个应用专用密码好像不对。去 https://myaccount.google.com/apppasswords 再生成一串，生成后跟我说，我会再弹出窗口。」
+5. After `account check` succeeds on a wrap: 「Gmail 已经连好了。以后直接说『看看今天的邮件』就行。」
+6. After the fallback chain, IMAP works and SMTP does not: 「收信已经连上，发信这条路现在过不去。先看邮件可以。密码不用重新生成。」
+7. After the fallback chain, SMTP works and IMAP does not: 「发信通道是通的，收信现在过不去。密码不用重新生成。」
+8. After the whole chain, neither works: 「现在到邮箱服务的路都不通，不是密码错。邮箱配置还在，网络恢复后直接继续。」
+9. If authentication fails after they filled the window (server responded, then rejected the secret): 「这个应用专用密码好像不对。去 https://myaccount.google.com/apppasswords 再生成一串，生成后跟我说，我会再弹出窗口。」
 
-A combined `account check` timeout with empty output is not authentication failure. Do not use line 10. Follow `references/proxy.md` Split IMAP and SMTP.
+A timeout with empty output is not authentication failure. Do not use line 9. Take the next wrap in `references/proxy.md`. Do not stop after one attempt.
 
 ## How to connect
 
 1. Confirm the full address in chat with the lines above.
 2. Walk through 2-Step Verification and app password. Official: <https://support.google.com/accounts/answer/185833>.
 3. Collect the app password with the bundled helper as described in `configuration.md`. Use `--account universal-email/gmail`, title `Connect Gmail` / `连接 Gmail`, secret label `App password` / `应用专用密码`. Never run the Himalaya wizard. Never open a terminal for the user.
-4. Write the Gmail IMAP/SMTP account from `configuration.md`. Then validate with the split IMAP / SMTP probes in `references/proxy.md` — not a single default `account check`. Speak the matching locked line above.
+4. Write the Gmail IMAP/SMTP account from `configuration.md`. Then run `himalaya --account gmail --log-level debug --json account check` on the first wrap from `references/proxy.md`. If it fails at the network stage, continue the chain until one wrap succeeds, then reuse that wrap. Speak the matching locked line above.
 
 ## Validate and troubleshoot
 
-If the server **rejects the secret after responding**, confirm the address, confirm they entered the new app password in the window (display spaces are stripped), and generate a new one if needed. Timeouts, TLS hangs, and empty wrapper kills are not that case — keep the stored secret and follow `proxy.md`. A Workspace account that cannot create app passwords cannot be connected with this skill.
+If the server **rejects the secret after responding**, confirm the address, confirm they entered the new app password in the window (display spaces are stripped), and generate a new one if needed. Timeouts, TLS hangs, and empty wrapper kills are not that case — keep the stored secret and take the next wrap. A Workspace account that cannot create app passwords cannot be connected with this skill.
 
-Read commands this session must use the IMAP wrap that succeeded. Send commands must use the SMTP wrap that succeeded.
+Reuse the wrap that succeeded for later commands in this session. If a later send fails while reads still work, retry that send on the next wrap only.

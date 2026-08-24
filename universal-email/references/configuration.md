@@ -190,11 +190,10 @@ Configuration-only parse check using the active configuration:
 himalaya --json account list
 ```
 
-Connection and authentication check. Default `account check` hits every backend in one environment. For Gmail, or whenever a proxy is present or a check timed out, do not stop there — split IMAP and SMTP as in `proxy.md`:
+Connection and authentication check, on the first wrap from `proxy.md`:
 
 ```bash
-himalaya --account <name> --backend imap --json account check
-himalaya --account <name> --backend smtp --json account check
+himalaya --account <name> --log-level debug --json account check
 ```
 
-The list command proves only that the TOML matches Himalaya 2. Each `--backend` check exercises that backend on the environment of **that** invocation.
+The list command proves only that the TOML matches Himalaya 2. The check exercises configured backends. If it times out, follow Route fallback in `proxy.md` — next wrap, do not stop. Split `--backend imap` / `--backend smtp` only when debug shows they failed at different stages.

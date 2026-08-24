@@ -2,7 +2,7 @@
 name: universal-email
 description: Use the bundled Himalaya 2 CLI to connect IMAP/SMTP or Microsoft Graph mailboxes and list, search, read, compose, reply, forward, move, delete, flag, and download email. Use when the user asks to connect or operate Gmail, QQ Mail, iCloud Mail, Outlook, or another standard mailbox, or says "连接邮箱"、"绑定邮箱"、"看看我的邮件"、"查邮箱"、"发邮件"、"回复邮件".
 metadata:
-  version: 1.2.18
+  version: 1.2.19
   requires:
     bins: ["himalaya"]
 ---
@@ -60,7 +60,7 @@ Treat the active configuration of the executable you invoke as the source of tru
    - Outlook/Microsoft 365: `references/outlook.md` (Graph OAuth via the bundled helper; never the Himalaya wizard)
    - Other IMAP/SMTP: `references/standard-imap-smtp.md`
 5. If configuration is missing, use `references/configuration.md` for secret collection (system dialog, HTML fallback) and the Himalaya 2 TOML format.
-6. Validate before any mailbox operation. For Gmail, and for any IMAP+SMTP account when proxy variables are present or a check timed out, follow `references/proxy.md` **Split IMAP and SMTP** (`--backend imap` and `--backend smtp` as separate invocations, proxy then direct). Do not use a single default `account check` as the only verdict — it shares one environment across receiving and sending and will hang with empty output when those routes differ. Outlook Graph: `account check` plus `msgraph profile get` as in `references/outlook.md`.
+6. Validate with `himalaya --account <name> --log-level debug --json account check` on the **first wrap** from `references/proxy.md` (Route fallback). If that times out or fails at the network stage, take the next wrap — other declared protocol, then direct. Stop at the first success and reuse that wrap for the rest of the session. Do not stop after one attempt. Split IMAP/SMTP (`--backend`) only when debug shows they failed at different stages. Outlook Graph: `account check` plus `msgraph profile get` as in `references/outlook.md`.
 
 Do not ask for a normal account password when the provider requires an app password, authorization code, or OAuth. Never echo a secret, put it in command arguments, or store it as `password.raw`. Never run the Himalaya wizard or any other terminal UI.
 
@@ -153,11 +153,10 @@ That guide defines the routing defaults for Gmail, QQ Mail, iCloud Mail, Outlook
 
 Use its error mapping as recovery guidance. When an observed error matches a known case, move the diagnosis in the stated direction using the current device's available controls. Do not merely restate the protocol, port, or timeout to the user and stop, and do not assume that every device exposes proxy controls in the same way.
 
-Use the actual CLI path — **one backend per invocation** when diagnosing Gmail or a timeout:
+Use the actual CLI path on the current wrap:
 
 ```bash
-himalaya --account <name> --backend imap --log-level debug --json account check
-himalaya --account <name> --backend smtp --log-level debug --json account check
+himalaya --account <name> --log-level debug --json account check
 ```
 
 Verify the selected route from Himalaya's own debug line before interpreting the result. Do not use `nc`, `telnet`, or a direct socket probe as proof of Himalaya connectivity because those checks bypass its proxy selection. Read `references/troubleshooting.md` for non-network failures and the staged diagnostic flow.
