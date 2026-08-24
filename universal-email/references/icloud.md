@@ -1,6 +1,6 @@
 # iCloud Mail
 
-iCloud Mail through Himalaya uses IMAP/SMTP and an Apple app-specific password.
+iCloud Mail uses IMAP/SMTP and an Apple app-specific password.
 
 ## What the user needs
 
@@ -9,13 +9,16 @@ iCloud Mail through Himalaya uses IMAP/SMTP and an Apple app-specific password.
 
 Do not ask for the Apple Account password.
 
-## How to obtain it
+## How to connect
 
 1. Confirm the complete iCloud Mail address used to receive mail.
 2. Ask the user to enable two-factor authentication for the Apple Account.
 3. Open <https://account.apple.com/account/manage>.
-4. Under **Sign-In and Security**, generate an app-specific password with a recognizable label such as `Himalaya`.
-5. Run the bare `himalaya` setup wizard in a PTY, or configure the account as described in `configuration.md`. Supply the complete address and generated password through the chosen secure credential mechanism.
+4. Under **Sign-In and Security**, generate an app-specific password with a recognizable label such as `Cola`.
+5. Store the app-specific password with the bundled helper as described in `configuration.md`. Use `--account universal-email/icloud`, title `Connect iCloud Mail` / `连接 iCloud 邮箱`, secret label `App-specific password` / `应用专用密码`. Never run the Himalaya wizard. Never open a terminal for the user.
+6. Write the iCloud IMAP/SMTP account from `configuration.md`. Then run `himalaya --account icloud --json account check`.
+
+This mail flow is separate from iCloud Calendar. Do not send the user to the calendar helper.
 
 ## Validate and troubleshoot
 

@@ -1,6 +1,6 @@
 # QQ Mail
 
-QQ Mail through Himalaya uses IMAP/SMTP and a client authorization code.
+QQ Mail uses IMAP/SMTP and a client authorization code.
 
 ## What the user needs
 
@@ -9,24 +9,21 @@ QQ Mail through Himalaya uses IMAP/SMTP and a client authorization code.
 
 Do not ask for the QQ account password. The username is the full email address.
 
-## How to obtain it
+## How to connect
 
 1. Ask for the full `@qq.com` or `@foxmail.com` address.
 2. Ask the user to sign in to QQ Mail on the web.
 3. Go to **Settings → Account and Security → Security Settings**.
 4. Enable the **POP3/IMAP/SMTP service** and complete QQ's identity verification.
 5. Generate the 16-character client authorization code.
-6. Run the bare `himalaya` setup wizard in a PTY, or configure the account as described in `configuration.md`. Supply the full address and authorization code through the chosen secure credential mechanism. Use the authorization code, not the QQ login password.
+6. Store the authorization code with the bundled helper as described in `configuration.md`. Use `--account universal-email/qq`, title `Connect QQ Mail` / `连接 QQ 邮箱`, secret label `Authorization code` / `授权码`. Use the authorization code, not the QQ login password. Never run the Himalaya wizard. Never open a terminal for the user.
+7. Write the QQ IMAP/SMTP account from `configuration.md` (`imap.id.auto = true` is required). Then run `himalaya --account qq --json account check`.
 
 Do not stop at “enable IMAP/SMTP and generate an authorization code.” Always give the next concrete action. In user-facing conversation, describe the goal only as “连接 QQ 邮箱”; never expose internal implementation identifiers. Connecting saves the account configuration and credential on the user's device and does not change mail stored by QQ.
 
 ## Required IMAP ID exchange
 
 QQ enforces the RFC 2971 `ID` command before a mailbox can be selected, so set `imap.id.auto = true` for this account. Without it authentication succeeds and then `account check` and every mailbox operation fail — a failure that looks like a wrong authorization code but is not.
-
-```toml
-imap.id.auto = true
-```
 
 ## Validate and troubleshoot
 

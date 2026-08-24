@@ -2,7 +2,7 @@
 name: universal-email
 description: Use the bundled Himalaya 2 CLI to connect IMAP/SMTP or Microsoft Graph mailboxes and list, search, read, compose, reply, forward, move, delete, flag, and download email. Use when the user asks to connect or operate Gmail, QQ Mail, iCloud Mail, Outlook, or another standard mailbox, or says "连接邮箱"、"绑定邮箱"、"看看我的邮件"、"查邮箱"、"发邮件"、"回复邮件".
 metadata:
-  version: 1.2.12
+  version: 1.2.13
   requires:
     bins: ["himalaya"]
 ---
@@ -16,8 +16,8 @@ These rules govern everything you SAY. They never change which commands you RUN 
 - **Product words are fine.** 配置、授权、连接、账号、授权码/App 专用密码 — the user should always know which step they are in.
 - **Implementation details never reach the user.** `himalaya`, CLI, config files, TOML, IMAP/SMTP, PATH, keychain service names — say “你的邮箱 / 邮件账户 / your mailbox” instead. If the user explicitly asks how it works, then you may explain.
 - **Narrate by goal, not by tooling.** “正在连接你的邮箱” “正在看你的收件箱”, never “running himalaya account list”.
-- **Ask for the minimum, once.** Ask for the email address. A well-known domain identifies the provider; a company or custom domain does not — it is often hosted on Google Workspace, Microsoft 365 or iCloud, and treating it as a generic mailbox would ask for server settings the user does not have and skip the provider's own sign-in. Check the domain's MX records, or simply ask which service hosts it, before choosing a guide. Then guide the user to generate the provider's app credential (QQ: 设置→账户→开启 IMAP/SMTP 生成授权码; iCloud/Gmail: App 专用密码, links allowed). Do not ask again unless verification actually failed.
-- **Credentials never enter the conversation.** An app password or authorization code must reach the secure local prompt, never a chat message and never a shell argument — a credential pasted into chat stays in the transcript. Ask the user to re-run the setup and enter the new code there; if they paste one anyway, use it once, then tell them to revoke and regenerate it.
+- **Ask for the minimum, once.** Ask for the email address. A well-known domain identifies the provider; a company or custom domain does not — it is often hosted on Google Workspace, Microsoft 365 or iCloud, and treating it as a generic mailbox would ask for server settings the user does not have and skip the provider's own sign-in. Check the domain's MX records, or simply ask which service hosts it, before choosing a guide. Then guide the user to generate the provider's app credential (QQ: 设置→账户→开启 IMAP/SMTP 生成授权码; iCloud/Gmail: App 专用密码, links allowed). Do not ask again unless verification actually failed. Workspace vs personal Gmail is the same IMAP method; only whether Google will issue an app password changes — see `references/gmail.md`.
+- **Credentials never enter the conversation.** An app password or authorization code is entered only on the local page the bundled helper opens in the browser, never in chat and never as a shell argument. A credential pasted into chat stays in the transcript: do not store it; tell them to revoke it, generate a new one, and enter the new one on that page. Never open a terminal, a PTY, or the Himalaya setup wizard for the user.
 - **Translate errors into next steps.** Never paste raw command output or stack traces. Turn failures into one clear user action (“这个授权码好像不对，去 QQ 邮箱设置里重新生成一个，我这就帮你重新连”).
 - **Confirm in user terms.** Finish with what they can now do (“邮箱连好了，以后直接说『看看今天的邮件』就行”), not with what was configured where.
 
@@ -36,7 +36,9 @@ The examples below write the command by its bare name for readability; always ru
 
 If that file is missing, report that the mailbox is not ready yet — never describe it as an account problem or a broken connector.
 
-For Outlook / Microsoft 365 Graph mail, also resolve `scripts/bin/<platform>/cola-outlook-mail-auth` the same way (Windows: `cola-outlook-mail-auth.exe`). You run that helper yourself. Never ask the user to run it, and never paste its path into chat. See `references/outlook.md`. Do not use the Himalaya setup wizard for Outlook.
+For IMAP/SMTP secrets (Gmail, QQ Mail, iCloud Mail, other IMAP), also resolve `scripts/bin/<platform>/cola-credential-helper` the same way (Windows: `cola-credential-helper.exe`). You run `prompt` to open the local page and later `read` from Himalaya `password.command`. Never ask the user to run it, and never paste its path into chat. See `references/configuration.md`.
+
+For Outlook / Microsoft 365 Graph mail, also resolve `scripts/bin/<platform>/cola-outlook-mail-auth` the same way (Windows: `cola-outlook-mail-auth.exe`). You run that helper yourself. Never ask the user to run it, and never paste its path into chat. See `references/outlook.md`. Do not use the Himalaya setup wizard for any provider.
 
 Treat the active configuration of the executable you invoke as the source of truth: do not inspect candidate config files to choose one, or add `--config` merely because a file exists. Use `--config` only when the user explicitly requests a separate profile.
 
@@ -57,10 +59,10 @@ Treat the active configuration of the executable you invoke as the source of tru
    - iCloud Mail: `references/icloud.md`
    - Outlook/Microsoft 365: `references/outlook.md` (Graph OAuth via the bundled helper; never the Himalaya wizard)
    - Other IMAP/SMTP: `references/standard-imap-smtp.md`
-5. If configuration is missing, use `references/configuration.md` for the Himalaya 2 TOML format and active-configuration rules.
+5. If configuration is missing, use `references/configuration.md` for secret collection (local helper page) and the Himalaya 2 TOML format.
 6. Validate with `himalaya --account <name> --json account check` before any mailbox operation.
 
-Do not ask for a normal account password when the provider requires an app password, authorization code, or OAuth. Never echo a secret, put it in command arguments, or store it as `password.raw`.
+Do not ask for a normal account password when the provider requires an app password, authorization code, or OAuth. Never echo a secret, put it in command arguments, or store it as `password.raw`. Never run the Himalaya wizard or any other terminal UI.
 
 ## Read operations
 
@@ -131,7 +133,7 @@ Remove-Item Env:https_proxy -ErrorAction SilentlyContinue
 
 Never assign `$env:` values directly in the working session: they persist, and every later command would silently run without the user's proxy. Confirm the route actually used from Himalaya's own `dial <host>:<port> ... (source: direct|all_proxy|https_proxy)` debug line rather than assuming it.
 
-Outlook Graph setup (`cola-outlook-mail-auth connect` / `doctor` / `token`) is HTTPS to Microsoft, not IMAP/SMTP. Wrap those helper invocations the same way when a proxy is required; leave `status` and `configure` unwrapped; keep loopback off the proxy so the OAuth callback can return. See `references/outlook.md` (Network). If the Microsoft page says the account does not support this setup, that is almost always missing two-step verification on a personal Microsoft account — follow `references/outlook.md`, do not treat it as a Cola failure.
+Outlook Graph setup (`cola-outlook-mail-auth connect` / `doctor` / `token`) is HTTPS to Microsoft, not IMAP/SMTP. Wrap those helper invocations the same way when a proxy is required; leave `status` and `configure` unwrapped; keep loopback off the proxy so the OAuth callback can return. See `references/outlook.md` (Network).
 
 Read `references/proxy.md` before connecting or diagnosing when any of these conditions applies:
 

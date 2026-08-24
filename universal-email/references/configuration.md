@@ -21,6 +21,40 @@ On Windows the equivalent location is `%APPDATA%\himalaya\config.toml`. Write co
 
 The global `--config <path>` option explicitly selects another profile. Use it only when the user requests a separate profile; do not use it for ordinary account discovery, validation, or mailbox operations.
 
+## Store the mailbox secret
+
+IMAP/SMTP secrets (Gmail app password, QQ authorization code, iCloud app-specific password, or another provider secret) are entered on a local Cola page. You open that page. The user never uses a terminal.
+
+Never run the bare `himalaya` setup wizard, and never allocate a PTY for Himalaya. That wizard needs a TTY this chat does not have and dumps implementation details to the user.
+
+Resolve `scripts/bin/<platform>/cola-credential-helper` the same way as `himalaya` in `SKILL.md` (Windows: `cola-credential-helper.exe`). Use that absolute path. If the file is missing, the mailbox is not ready — do not fall back to a wizard, chat, or `password.raw`.
+
+1. After the user has generated the provider secret, run:
+
+```bash
+cola-credential-helper prompt \
+  --account universal-email/<key> \
+  --title-en "<title>" \
+  --title-zh "<title>" \
+  --secret-label-en "<label>" \
+  --secret-label-zh "<label>"
+```
+
+Keep it running until it returns JSON with `ok` true. The only user action is to type the secret on the page that opens in the browser. Narrate in product words: “浏览器会打开一个本机页面，把授权码/应用专用密码填在那里，不要发在聊天里”.
+
+2. Write the Himalaya 2 account into the active configuration using the templates below. Point both IMAP and SMTP `password.command` at the helper `read` and the same `--account`. Use a TOML literal string for a Windows path so `\Users` is not parsed as an escape (`\U`). Forward slashes also work on Windows. Never `password.raw`. Never put the secret in a command argument or in the TOML file.
+
+| Provider | `--account` | Himalaya account name |
+| --- | --- | --- |
+| Gmail (personal or Workspace) | `universal-email/gmail` | `gmail` |
+| QQ Mail | `universal-email/qq` | `qq` |
+| iCloud Mail | `universal-email/icloud` | `icloud` |
+| Other IMAP/SMTP | `universal-email/<name>` | `<name>` — `name` may contain only ASCII letters, digits, `-`, and `_` |
+
+Provider guides supply the title and secret-label values. Do not show `--account`, the helper path, or keychain names to the user.
+
+If `prompt` does not return `ok`, do not write TOML. Tell the user the local page did not finish and that they can try again. If they paste a secret in chat anyway, do not store it: tell them to revoke it, generate a new one, and enter the new one on the page.
+
 ## Minimal IMAP and SMTP account
 
 ```toml
@@ -36,11 +70,11 @@ mailbox.alias.trash = "Trash"
 
 imap.server = "imaps://imap.example.com:993"
 imap.sasl.plain.username = "user@example.com"
-imap.sasl.plain.password.command = ["credential-helper", "get", "personal"]
+imap.sasl.plain.password.command = ['<absolute-path-to-cola-credential-helper>', 'read', '--account', 'universal-email/personal']
 
 smtp.server = "smtps://smtp.example.com:465"
 smtp.sasl.plain.username = "user@example.com"
-smtp.sasl.plain.password.command = ["credential-helper", "get", "personal"]
+smtp.sasl.plain.password.command = ['<absolute-path-to-cola-credential-helper>', 'read', '--account', 'universal-email/personal']
 ```
 
 For STARTTLS, use the cleartext scheme and opt in explicitly:
@@ -52,7 +86,7 @@ smtp.starttls = true
 
 Use `imap://...` plus `imap.starttls = true` for IMAP STARTTLS. Do not combine an implicit-TLS scheme such as `imaps://` or `smtps://` with `starttls = true`.
 
-`credential-helper` is a placeholder for a secure command that prints the secret to stdout. Store secrets in the operating-system credential store. Do not use `password.raw` in production and do not put the secret directly in command-line arguments.
+`password.command` must be the bundled helper `read`. Himalaya prints that command's stdout as the secret; `read` writes only the secret.
 
 ## Gmail IMAP/SMTP
 
@@ -70,14 +104,36 @@ mailbox.alias.archive = "[Gmail]/All Mail"
 
 imap.server = "imaps://imap.googlemail.com:993"
 imap.sasl.plain.username = "you@gmail.com"
-imap.sasl.plain.password.command = ["credential-helper", "get", "gmail"]
+imap.sasl.plain.password.command = ['<absolute-path-to-cola-credential-helper>', 'read', '--account', 'universal-email/gmail']
 
 smtp.server = "smtps://smtp.gmail.com:465"
 smtp.sasl.plain.username = "you@gmail.com"
-smtp.sasl.plain.password.command = ["credential-helper", "get", "gmail"]
+smtp.sasl.plain.password.command = ['<absolute-path-to-cola-credential-helper>', 'read', '--account', 'universal-email/gmail']
 ```
 
-Use a Google app password, not the normal account password. Remove visual whitespace from the 16-character app password before secure storage.
+Use a Google app password, not the normal account password. The helper strips display spaces from the 16-character app password.
+
+## QQ Mail IMAP/SMTP
+
+```toml
+[accounts.qq]
+email = "you@qq.com"
+display-name = "Your Name"
+default = true
+
+mailbox.alias.inbox = "INBOX"
+
+imap.server = "imaps://imap.qq.com:993"
+imap.sasl.plain.username = "you@qq.com"
+imap.sasl.plain.password.command = ['<absolute-path-to-cola-credential-helper>', 'read', '--account', 'universal-email/qq']
+imap.id.auto = true
+
+smtp.server = "smtps://smtp.qq.com:465"
+smtp.sasl.plain.username = "you@qq.com"
+smtp.sasl.plain.password.command = ['<absolute-path-to-cola-credential-helper>', 'read', '--account', 'universal-email/qq']
+```
+
+QQ requires `imap.id.auto = true`. Use the client authorization code, not the QQ login password.
 
 ## iCloud IMAP/SMTP
 
@@ -90,12 +146,12 @@ mailbox.alias.inbox = "INBOX"
 
 imap.server = "imaps://imap.mail.me.com:993"
 imap.sasl.plain.username = "you@icloud.com"
-imap.sasl.plain.password.command = ["credential-helper", "get", "icloud"]
+imap.sasl.plain.password.command = ['<absolute-path-to-cola-credential-helper>', 'read', '--account', 'universal-email/icloud']
 
 smtp.server = "smtp://smtp.mail.me.com:587"
 smtp.starttls = true
 smtp.sasl.plain.username = "you@icloud.com"
-smtp.sasl.plain.password.command = ["credential-helper", "get", "icloud"]
+smtp.sasl.plain.password.command = ['<absolute-path-to-cola-credential-helper>', 'read', '--account', 'universal-email/icloud']
 ```
 
 Discover the actual mailbox names with `mailbox list` before adding Sent, Drafts, or Trash aliases.
