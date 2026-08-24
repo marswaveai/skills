@@ -2,7 +2,7 @@
 name: universal-email
 description: Use the bundled Himalaya 2 CLI to connect IMAP/SMTP or Microsoft Graph mailboxes and list, search, read, compose, reply, forward, move, delete, flag, and download email. Use when the user asks to connect or operate Gmail, QQ Mail, iCloud Mail, Outlook, or another standard mailbox, or says "连接邮箱"、"绑定邮箱"、"看看我的邮件"、"查邮箱"、"发邮件"、"回复邮件".
 metadata:
-  version: 1.2.17
+  version: 1.2.18
   requires:
     bins: ["himalaya"]
 ---
@@ -60,7 +60,7 @@ Treat the active configuration of the executable you invoke as the source of tru
    - Outlook/Microsoft 365: `references/outlook.md` (Graph OAuth via the bundled helper; never the Himalaya wizard)
    - Other IMAP/SMTP: `references/standard-imap-smtp.md`
 5. If configuration is missing, use `references/configuration.md` for secret collection (system dialog, HTML fallback) and the Himalaya 2 TOML format.
-6. Validate with `himalaya --account <name> --json account check` before any mailbox operation.
+6. Validate before any mailbox operation. For Gmail, and for any IMAP+SMTP account when proxy variables are present or a check timed out, follow `references/proxy.md` **Split IMAP and SMTP** (`--backend imap` and `--backend smtp` as separate invocations, proxy then direct). Do not use a single default `account check` as the only verdict — it shares one environment across receiving and sending and will hang with empty output when those routes differ. Outlook Graph: `account check` plus `msgraph profile get` as in `references/outlook.md`.
 
 Do not ask for a normal account password when the provider requires an app password, authorization code, or OAuth. Never echo a secret, put it in command arguments, or store it as `password.raw`. Never run the Himalaya wizard or any other terminal UI.
 
@@ -120,13 +120,19 @@ himalaya --account <name> message delete --mailbox inbox <message-id>
 
 Himalaya 2 supports SOCKS5 and HTTP CONNECT, and takes its route **only** from the environment of each invocation. Operating-system proxy settings are a discovery source, not a route: a proxy configured in macOS or Windows settings but absent from the process environment is not used, so reading it and then running the command unchanged tests the direct route while appearing to test the proxy. To exercise a discovered setting, pass it explicitly in that invocation's environment, and preserve the protocol exactly as reported — never infer one from a port number.
 
-Himalaya has no proxy configuration field or CLI flag: the route comes only from the environment of each invocation, and this build reads exactly two variables — `all_proxy` first, then `https_proxy`. **`http_proxy` is not consulted at all**, so a proxy supplied only through it is silently ignored and the command runs direct; carry such a value over into `https_proxy` for the invocation. This environment is the one lever for per-command route isolation. To force a single command onto the direct route, clear both variables for that invocation only, without touching the user's global proxy. On macOS use `env -u all_proxy -u https_proxy <himalaya> --account <name> ...`; in PowerShell, `env` does not exist, so scope the change to the process instead:
+Himalaya has no proxy configuration field or CLI flag: the route comes only from the environment of each invocation, and this build reads exactly two variables — `all_proxy` first, then `https_proxy`. **`http_proxy` is not consulted at all**, so a proxy supplied only through it is silently ignored and the command runs direct; carry such a value over into `https_proxy` for the invocation. This environment is the one lever for per-command route isolation. To force a single command onto the direct route, clear the proxy variables for that invocation only, without touching the user's global proxy. Unset **both** letter cases: Cola writes `ALL_PROXY` / `HTTPS_PROXY`; a shell may write `all_proxy` / `https_proxy`. If `ALL_PROXY` remains, Himalaya is still on the proxy. On macOS:
+
+```bash
+env -u all_proxy -u ALL_PROXY -u https_proxy -u HTTPS_PROXY -u http_proxy -u HTTP_PROXY \
+  himalaya --account <name> ...
+```
+
+In PowerShell, `env` does not exist, so scope the change to the process instead:
 
 ```powershell
 # A child process, so the user's proxy stays intact in this session.
 powershell -NoProfile -Command @'
-Remove-Item Env:all_proxy -ErrorAction SilentlyContinue
-Remove-Item Env:https_proxy -ErrorAction SilentlyContinue
+Remove-Item Env:all_proxy,Env:ALL_PROXY,Env:https_proxy,Env:HTTPS_PROXY,Env:http_proxy,Env:HTTP_PROXY -ErrorAction SilentlyContinue
 & '<himalaya>' --account <name> ...
 '@
 ```
@@ -147,10 +153,11 @@ That guide defines the routing defaults for Gmail, QQ Mail, iCloud Mail, Outlook
 
 Use its error mapping as recovery guidance. When an observed error matches a known case, move the diagnosis in the stated direction using the current device's available controls. Do not merely restate the protocol, port, or timeout to the user and stop, and do not assume that every device exposes proxy controls in the same way.
 
-Use the actual CLI path:
+Use the actual CLI path — **one backend per invocation** when diagnosing Gmail or a timeout:
 
 ```bash
-himalaya --account <name> --log-level debug account check
+himalaya --account <name> --backend imap --log-level debug --json account check
+himalaya --account <name> --backend smtp --log-level debug --json account check
 ```
 
 Verify the selected route from Himalaya's own debug line before interpreting the result. Do not use `nc`, `telnet`, or a direct socket probe as proof of Himalaya connectivity because those checks bypass its proxy selection. Read `references/troubleshooting.md` for non-network failures and the staged diagnostic flow.

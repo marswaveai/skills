@@ -15,6 +15,7 @@
 - `universal-email` `1.2.15` — system dialog is activated to the front and times out after 180s; cancel does not open HTML; empty input re-prompts; HTML fallback bypasses the device proxy for `127.0.0.1`. Keychain location is unchanged.
 - `universal-email` `1.2.16` — user-facing secret collection copy: do not paste in chat; say the system window is about to appear, then they fill it and click 保存.
 - `universal-email` `1.2.17` — lock spoken lines for Gmail, QQ, iCloud, Outlook, and secret collection: what to do now, which link, what to click, what not to paste.
+- `universal-email` `1.2.18` — Gmail (and IMAP+SMTP on timeout) must probe receiving and sending as separate `--backend imap` / `--backend smtp` invocations, each on the process proxy and on a fully cleared direct wrap (`ALL_PROXY` and `all_proxy`). A combined `account check` timeout is not a password failure. See `universal-email/references/proxy.md`.
 
 ## [1.4.0] - 2026-07-30
 
