@@ -17,7 +17,7 @@ Use this guide for Google Calendar network routing. Keep authorization scopes, c
 2. Adapt the diagnosis to the current device. Do not assume that macOS, Windows, and every host shell expose proxy settings in the same place, or that the host injected proxy variables into this process.
 3. Keep routing changes local to **that one** `gws` invocation. Do not alter the user's global proxy settings. Do not assign persistent `$env:` values in a PowerShell session.
 4. Leave `GOOGLE_WORKSPACE_CLI_CONFIG_DIR` unchanged on every wrapped invocation.
-5. `gws auth status` succeeding only proves local credentials. It is not evidence that Calendar API or token exchange can reach Google.
+5. `gws auth status` can refresh a token and call Google user-info; wrap it like login. A successful status still does not prove the Calendar API route.
 6. A hang that prints only `Using keyring backend: keyring` is an unfinished HTTPS call, not an empty agenda and not expired authorization. Do not repeat the same unwrapped command.
 7. Do not use `nc`, `telnet`, or a direct socket probe as proof of `gws` connectivity: those checks bypass its proxy selection.
 8. Do not dump raw `gws` output, proxy credentials, or config-directory contents.
@@ -26,7 +26,7 @@ Use this guide for Google Calendar network routing. Keep authorization scopes, c
 
 Google Calendar traffic is HTTPS to `oauth2.googleapis.com` (token refresh / login) and `www.googleapis.com` (Calendar API). Treat this as web HTTPS, not mail.
 
-If the device already has an HTTP or HTTPS proxy, use it on the first `gws auth login` and the first calendar command (`+agenda`, `calendarList`, `events`, …). Do not wait for a timeout to discover that the direct route is blocked.
+If the device already has an HTTP or HTTPS proxy, use it on the first `gws auth status`, the first `gws auth login`, and the first calendar command (`+agenda`, `calendarList`, `events`, …). Do not wait for a timeout to discover that the direct route is blocked.
 
 Prefer HTTP CONNECT (`https_proxy=http://HOST:PORT`) over SOCKS (`all_proxy=socks5://...`). When HTTP/HTTPS and SOCKS are both configured, use HTTP CONNECT and clear `all_proxy` / `ALL_PROXY` for that invocation — mixed SOCKS + HTTP often fails token exchange with `Hyper error: client error (Connect)`.
 
@@ -74,7 +74,7 @@ $env:no_proxy = $env:NO_PROXY
 '@
 ```
 
-Use the same wrap for `gws auth login` and every calendar API command. `gws auth status` may stay unwrapped.
+Use the same wrap for `gws auth status`, `gws auth login`, and every calendar API command.
 
 To force a single command onto the direct route (only when diagnosing a proxy that is interfering), clear the proxy variables for that invocation only — the same `env -u` / child-process pattern — without touching the user's global proxy.
 
@@ -89,7 +89,7 @@ To force a single command onto the direct route (only when diagnosing a proxy th
 | Direct connection times out; no proxy is configured on the device | The current network cannot reach Google HTTPS. | Say the calendar service could not be reached and what the user can enable locally. Do not invent events. |
 | TLS certificate validation fails | The route may be intercepting TLS, the system clock may be wrong, or the trust store may be invalid. | Use a trusted route and validate the device environment. Never disable certificate verification. |
 | Authorization or permission error after the server responded | The network route worked; credentials or scopes are the problem. | Follow Authorization in `SKILL.md`. Do not keep changing proxies unless the error also shows a network-stage failure. |
-| `auth status` is valid but calendar commands hang | Local credentials are fine; the API route is not. | Apply the HTTP CONNECT wrap to the calendar command. Status success is not a route check. |
+| `auth status` is valid but calendar commands hang | Status reached Google for token/user-info; the Calendar API route is not. | Apply the HTTP CONNECT wrap to the calendar command. Status success is not a Calendar API check. |
 
 ## User-facing response
 
