@@ -14,6 +14,7 @@
 - `universal-email` `1.2.14` — `cola-credential-helper prompt` prefers a system password dialog (macOS `display dialog`, Windows Forms); HTML is fallback only. After a successful keychain write it shows a “已保存” dialog, not the OAuth “连上了” page. Secrets are stored at service `com.marswave.cola.app-secrets` / account `universal-email/<key>`.
 - `universal-email` `1.2.15` — system dialog is activated to the front and times out after 180s; cancel does not open HTML; empty input re-prompts; HTML fallback bypasses the device proxy for `127.0.0.1`. Keychain location is unchanged.
 - `universal-email` `1.2.16` — user-facing secret collection copy: do not paste in chat; say the system window is about to appear, then they fill it and click 保存.
+- `universal-email` `1.2.17` — lock spoken lines for Gmail, QQ, iCloud, Outlook, and secret collection: what to do now, which link, what to click, what not to paste.
 
 ## [1.4.0] - 2026-07-30
 

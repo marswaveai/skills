@@ -42,15 +42,17 @@ cola-credential-helper prompt \
 
 Keep it running until it returns JSON with `ok` true and `stored` true. The helper tries a system password dialog first (macOS `display dialog`; Windows a small password window), brings it to the front, and waits up to 180 seconds. HTML opens only when that dialog cannot be shown (missing host, no UI session, or timeout with no input). User cancel does not fall through to HTML. After a successful write it shows a system “已保存” dialog — not the OAuth “连上了” page. Storage stays the existing Cola keychain contract: service `com.marswave.cola.app-secrets`, account `universal-email/<key>`, read back only by `cola-credential-helper read`.
 
-**What you SAY, in this order.** Chat only ever collects the email address. Do not invent other wording.
+**对用户说（照念，不要改写）。** 聊天只收邮箱地址。生成密钥的具体链接和菜单在各 provider 指南里。收密钥时用下面三句，说完第三句的同一轮立刻跑 `prompt`，不要再等一句聊天。
 
-1. Asking for the address: 「把要连接的邮箱地址发我。应用专用密码/授权码不要发到聊天里。」
-2. Guiding them to generate the secret (provider links as in the provider guide): 「按这个页面生成。生成后跟我说一声，先别把密码发过来。」
-3. The moment you run `prompt` — say this, then start the command in the same turn, do not wait for another chat message: 「屏幕上马上会弹出一个系统窗口。把刚生成的应用专用密码（或授权码）填进去，点保存。不要粘贴到聊天里。」
-4. After `prompt` returns `ok`: 「已经收下了，我继续连。」
-5. If the system window does not appear and HTML opens: 「窗口没弹出来的话，浏览器会打开一个本机页面，在那里填并点保存。」
+- 问地址：「把要连接的邮箱地址发我。应用专用密码或授权码不要发到聊天里。」
+- 弹窗前（同一轮启动 `prompt`）：「屏幕上马上会弹出一个系统窗口。把刚生成的应用专用密码或授权码填进去，点保存。不要粘贴到聊天里。」
+- `prompt` 成功：「已经收下了，我继续连。」
+- 系统窗口没出现、改走本机页面：「窗口没弹出来。浏览器会打开一个本机页面，在那里填，点保存。」
+- 用户点了取消：「窗口取消了。要继续连的话跟我说一声，我会再弹一次。」
+- 窗口超时：「窗口等太久关掉了。跟我说一声，我会再弹一次。」
+- 用户把密钥发到聊天：「不要发在聊天里。先去作废这一串，重新生成一串。生成后跟我说，我会弹出窗口让你填。」
 
-Never say only “我会在本机安全输入框中接收它”. Always pair “不要发到聊天” with when the window appears and what they click.
+Never say only “我会在本机安全输入框中接收它”.
 
 2. Write the Himalaya 2 account into the active configuration using the templates below. Point both IMAP and SMTP `password.command` at the helper `read` and the same `--account`. Use a TOML literal string for a Windows path so `\Users` is not parsed as an escape (`\U`). Forward slashes also work on Windows. Never `password.raw`. Never put the secret in a command argument or in the TOML file.
 

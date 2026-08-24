@@ -17,9 +17,16 @@ Resolve `scripts/bin/<platform>/cola-outlook-mail-auth` the same way as `himalay
 
 The examples write the helper by its bare name; always run the resolved absolute path.
 
+## 对用户说（照念）
+
+1. 「接下来浏览器会打开微软登录页。在那个页面登录并同意邮件权限。微软密码不要发到聊天里。登录完成后回到这里就行。」
+2. After connect succeeds: 「Outlook 已经连好了。以后直接说『看看今天的邮件』就行。」
+3. If the organization requires admin consent: 「这个公司账号需要管理员同意，你这边点不了。让管理员允许这个应用之后再跟我说。」
+4. If Outlook mail is not ready in this Cola build: 「这台 Cola 还不能连 Outlook 邮箱，不是你的账号问题。」
+
 ## How to connect
 
-You run every step. Narrate in product words only: “正在连接你的 Outlook 邮箱，浏览器会打开微软登录页”.
+You run every step. Use the lines above. Do not ask them to run a command.
 
 1. Run `cola-outlook-mail-auth status`.
 2. If it is not configured, read the Microsoft public client ID (never show it to the user):
