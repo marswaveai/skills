@@ -2,7 +2,7 @@
 name: universal-email
 description: Use the bundled Himalaya 2 CLI to connect IMAP/SMTP or Microsoft Graph mailboxes and list, search, read, compose, reply, forward, move, delete, flag, and download email. Use when the user asks to connect or operate Gmail, QQ Mail, iCloud Mail, Outlook, or another standard mailbox, or says "连接邮箱"、"绑定邮箱"、"看看我的邮件"、"查邮箱"、"发邮件"、"回复邮件".
 metadata:
-  version: 1.2.15
+  version: 1.2.16
   requires:
     bins: ["himalaya"]
 ---
@@ -17,7 +17,7 @@ These rules govern everything you SAY. They never change which commands you RUN 
 - **Implementation details never reach the user.** `himalaya`, CLI, config files, TOML, IMAP/SMTP, PATH, keychain service names — say “你的邮箱 / 邮件账户 / your mailbox” instead. If the user explicitly asks how it works, then you may explain.
 - **Narrate by goal, not by tooling.** “正在连接你的邮箱” “正在看你的收件箱”, never “running himalaya account list”.
 - **Ask for the minimum, once.** Ask for the email address. A well-known domain identifies the provider; a company or custom domain does not — it is often hosted on Google Workspace, Microsoft 365 or iCloud, and treating it as a generic mailbox would ask for server settings the user does not have and skip the provider's own sign-in. Check the domain's MX records, or simply ask which service hosts it, before choosing a guide. Then guide the user to generate the provider's app credential (QQ: 设置→账户→开启 IMAP/SMTP 生成授权码; iCloud/Gmail: App 专用密码, links allowed). Do not ask again unless verification actually failed. Workspace vs personal Gmail is the same IMAP method; only whether Google will issue an app password changes — see `references/gmail.md`.
-- **Credentials never enter the conversation.** An app password or authorization code is entered only in the helper: system dialog first, HTML page only if that dialog is unavailable. Never in chat and never as a shell argument. A credential pasted into chat stays in the transcript: do not store it; tell them to revoke it, generate a new one, and enter the new one in the dialog. Never open a terminal or the Himalaya setup wizard for the user.
+- **Credentials never enter the conversation.** Never ask them to paste an app password or authorization code in chat. Chat only takes the email address. When it is time to collect the secret, follow the exact user-facing lines in `references/configuration.md`: first say the system window is about to appear, then immediately run `prompt`. They fill the window and click 保存. Do not say vague lines like “我会在安全输入框中接收它” without saying when the window appears and what to click. Never open a terminal or the Himalaya setup wizard.
 - **Translate errors into next steps.** Never paste raw command output or stack traces. Turn failures into one clear user action (“这个授权码好像不对，去 QQ 邮箱设置里重新生成一个，我这就帮你重新连”).
 - **Confirm in user terms.** Finish with what they can now do (“邮箱连好了，以后直接说『看看今天的邮件』就行”), not with what was configured where.
 

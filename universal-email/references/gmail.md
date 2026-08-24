@@ -29,9 +29,7 @@ For **personal Gmail** this almost always means 2-Step Verification is off (or i
 - Gmail 要先打开两步验证，才能生成应用专用密码。不是邮箱密码错了，也不是 Cola 连不上。
 - Open [Google 两步验证](https://myaccount.google.com/signinoptions/two-step-verification) and finish Google's setup.
 - Then open [应用专用密码](https://myaccount.google.com/apppasswords), generate a 16-character password, and come back. Spaces on screen are not part of it.
-- You will then open the system dialog so they can enter it.
-
-Wait until they confirm 2-Step Verification is on and they have an app password, then continue connect.
+Wait until they confirm 2-Step Verification is on and they have generated an app password. Do not ask them to paste it. Then collect it with the helper as in the next section.
 
 For **Workspace / work / school**, Google also hides app passwords when the organization disabled them, the account is on Advanced Protection, or 2-Step Verification is security-key-only. Stop. Explain that this mailbox skill cannot connect until the organization allows app passwords. Do not walk them through creating a Google Cloud OAuth client.
 
@@ -39,9 +37,9 @@ If 2-Step Verification is already on and App passwords is still missing, the sam
 
 ## How to connect
 
-1. Confirm the full address.
-2. Walk through 2-Step Verification and app password as above. Use a recognizable label such as `Cola`.
-3. Store the app password with the bundled helper as described in `configuration.md`. Use `--account universal-email/gmail`, title `Connect Gmail` / `连接 Gmail`, secret label `App password` / `应用专用密码`. Never run the Himalaya wizard. Never open a terminal for the user.
+1. Confirm the full address in chat. Tell them not to send the app password in chat.
+2. Walk through 2-Step Verification and app password as above. Use a recognizable label such as `Cola`. Wait until they have generated it.
+3. Say the system window is about to appear, then immediately store the app password with the bundled helper as described in `configuration.md`. Use `--account universal-email/gmail`, title `Connect Gmail` / `连接 Gmail`, secret label `App password` / `应用专用密码`. They type it in that window and click 保存. Never run the Himalaya wizard. Never open a terminal for the user.
 4. Write the Gmail IMAP/SMTP account from `configuration.md`. Then run `himalaya --account gmail --json account check`.
 
 ## Validate and troubleshoot

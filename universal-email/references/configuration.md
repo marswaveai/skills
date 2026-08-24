@@ -40,7 +40,17 @@ cola-credential-helper prompt \
   --secret-label-zh "<label>"
 ```
 
-Keep it running until it returns JSON with `ok` true and `stored` true. The helper tries a system password dialog first (macOS `display dialog`; Windows a small password window), brings it to the front, and waits up to 180 seconds. HTML opens only when that dialog cannot be shown (missing host, no UI session, or timeout with no input). User cancel does not fall through to HTML. After a successful write it shows a system “已保存” dialog — not the OAuth “连上了” page. Narrate in product words: “本机会弹出输入框，把授权码/应用专用密码填进去，不要发在聊天里”. Storage stays the existing Cola keychain contract: service `com.marswave.cola.app-secrets`, account `universal-email/<key>`, read back only by `cola-credential-helper read`.
+Keep it running until it returns JSON with `ok` true and `stored` true. The helper tries a system password dialog first (macOS `display dialog`; Windows a small password window), brings it to the front, and waits up to 180 seconds. HTML opens only when that dialog cannot be shown (missing host, no UI session, or timeout with no input). User cancel does not fall through to HTML. After a successful write it shows a system “已保存” dialog — not the OAuth “连上了” page. Storage stays the existing Cola keychain contract: service `com.marswave.cola.app-secrets`, account `universal-email/<key>`, read back only by `cola-credential-helper read`.
+
+**What you SAY, in this order.** Chat only ever collects the email address. Do not invent other wording.
+
+1. Asking for the address: 「把要连接的邮箱地址发我。应用专用密码/授权码不要发到聊天里。」
+2. Guiding them to generate the secret (provider links as in the provider guide): 「按这个页面生成。生成后跟我说一声，先别把密码发过来。」
+3. The moment you run `prompt` — say this, then start the command in the same turn, do not wait for another chat message: 「屏幕上马上会弹出一个系统窗口。把刚生成的应用专用密码（或授权码）填进去，点保存。不要粘贴到聊天里。」
+4. After `prompt` returns `ok`: 「已经收下了，我继续连。」
+5. If the system window does not appear and HTML opens: 「窗口没弹出来的话，浏览器会打开一个本机页面，在那里填并点保存。」
+
+Never say only “我会在本机安全输入框中接收它”. Always pair “不要发到聊天” with when the window appears and what they click.
 
 2. Write the Himalaya 2 account into the active configuration using the templates below. Point both IMAP and SMTP `password.command` at the helper `read` and the same `--account`. Use a TOML literal string for a Windows path so `\Users` is not parsed as an escape (`\U`). Forward slashes also work on Windows. Never `password.raw`. Never put the secret in a command argument or in the TOML file.
 

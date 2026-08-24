@@ -21,7 +21,7 @@ Do not guess endpoints from the email domain. Do not assume the normal webmail p
 3. Collect the IMAP and SMTP settings exactly as documented.
 4. Determine whether the provider requires the normal password, an app password, or an authorization code.
 5. Choose a Himalaya account `<name>` that contains only ASCII letters, digits, `-`, and `_`.
-6. Store the secret with the bundled helper as described in `configuration.md`. Use `--account universal-email/<name>` and secret labels that match the provider's term. Never run the Himalaya wizard. Never open a terminal for the user.
+6. Say the system window is about to appear, then immediately store the secret with the bundled helper as described in `configuration.md`. Use `--account universal-email/<name>` and secret labels that match the provider's term. They type it in that window and click 保存. Never run the Himalaya wizard. Never open a terminal for the user.
 7. Write the IMAP/SMTP account from `configuration.md`. Then run `himalaya --account <name> --json account check`.
 
 ## Validate and troubleshoot

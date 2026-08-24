@@ -15,7 +15,7 @@ Do not ask for the Apple Account password.
 2. Ask the user to enable two-factor authentication for the Apple Account.
 3. Open <https://account.apple.com/account/manage>.
 4. Under **Sign-In and Security**, generate an app-specific password with a recognizable label such as `Cola`.
-5. Store the app-specific password with the bundled helper as described in `configuration.md`. Use `--account universal-email/icloud`, title `Connect iCloud Mail` / `连接 iCloud 邮箱`, secret label `App-specific password` / `应用专用密码`. Never run the Himalaya wizard. Never open a terminal for the user.
+5. Say the system window is about to appear, then immediately store the app-specific password with the bundled helper as described in `configuration.md`. Use `--account universal-email/icloud`, title `Connect iCloud Mail` / `连接 iCloud 邮箱`, secret label `App-specific password` / `应用专用密码`. They type it in that window and click 保存. Never run the Himalaya wizard. Never open a terminal for the user.
 6. Write the iCloud IMAP/SMTP account from `configuration.md`. Then run `himalaya --account icloud --json account check`.
 
 This mail flow is separate from iCloud Calendar. Do not send the user to the calendar helper.
