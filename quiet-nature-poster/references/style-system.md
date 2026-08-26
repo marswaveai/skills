@@ -222,6 +222,11 @@
 | 竖排右行 | 竖排右对齐自上而下，英文横排小字缀于下方 | 东方、节气、山水 |
 | 中英咬合 | 英文小字嵌在中文行间字旁，或低透明度叠印在中文/影像上 | 双语海报 |
 | 留白嵌字 | 标题整体置于负空间，与影像零叠压 | 极简、高留白画面 |
+| 文字沿结构线生长 | 文案顺着画面结构线（花茎、枝条、地平线）排布，小字大距、信息分级（诗→英文→日期） | 节气、单一主体特写 |
+| 主体当立轴 | 主体物（树干、塔、光柱）作贯穿视觉轴，文字悬挂嵌靠两侧 | 单主体极简、禅意提问 |
+| 散点呼吸 | slogan 拆成中英小短语，按对角线散钉全图各处，与中央主标形成疏密场 | 禅意、生活方式、茶饮 |
+| 上下锚点 | 顶部拼音/日期字距拉开，底部英文衬线收尾，中央留白嵌字，像三明治封边 | 节气、品牌情绪 |
+| 日历信息组 | 大字星期 + ((年份)) + 长横线牵引日期；字色随背景区域自动反转（天上白字地上深字） | 日系、旅行、日记感 |
 
 #### B. 三种字体气质
 
@@ -243,6 +248,12 @@
 2. **半透明叠印**：英文以 30%–60% 不透明度叠在中文或影像上，呈半溶状态。
 3. **边缘轻咬**：字的边缘被雾气、虚化纹理轻微溶解。
 4. **零叠压嵌字**：文字完全在留白区，与影像互不接触。
+5. **勾线呼应**：用标题同色的细手绘线沿山势、物体轮廓勾线，让字迹与图像有笔迹级的血缘关系。
+6. **字势即景势**：手写长拖笔的运动方向与画面中的浪、风、雾同构，字的动势就是景的动势。
+7. **实物活字**：一小块实物照片（雏菊、叶片）嵌入句中替代标点，沿途散落花瓣暗示路径。
+8. **实物载体**：文字落在有褶皱和侧光投影的布面、纸张上，零装饰获得温度。
+9. **声音渐隐**：拟声词（哗、哗、哗）字号递减斜排，把声音可视化。
+10. **符号断点**：假名或符号（の、·、〔〕）插入标题，制造阅读顿挫。
 
 #### E. 位置与比例
 
@@ -259,6 +270,14 @@ thin elegant Songti serif, light weight, sharp serifs
 handwritten thin-pen script with extended strokes and flying white
 small English serif words nested between Chinese lines
 letters half-dissolved into the mist; no color block behind text, no outline, no glow
+copy growing along the stem line, small type with wide tracking, tiered info levels
+slogan fragments scattered as diagonal whispers around the central title
+hand-drawn contour lines in the title color tracing the mountain ridge
+long handwritten stroke becoming the wind across the frame
+a small real-flower photo embedded in the sentence as punctuation
+text printed on wrinkled fabric with soft side light
+calendar-style info group: big weekday, (( year )), long rule line to the date
+onomatopoeia fading in size along a diagonal
 ```
 
 #### G. 选择逻辑
@@ -302,6 +321,14 @@ letters half-dissolved into the mist; no color block behind text, no outline, no
 | 档案灰阶 | `#F2F0EA #D1D1D1 #5E5E5E #1A1A1A` | 实验海报、图鉴、研究记录 | 冷静、理性、疏离 |
 | 茶器暖岩 | `#E5E0D8 #B8A99C #5E4B45 #D5B78C` | 茶、器物、时间、仪式 | 沉静、东方、成熟 |
 | 青柠微光 | `#F2F1E8 #C9D69C #6F8D42 #26312B` | 当代自然、结构海报 | 清醒、轻实验、克制的活力 |
+| 空谷电蓝 | `#4A5560 #6B8894 #E9EDF0 #45B7E8` | 雪山、湖面、孤寂 | 冷冽纪录片感，一线电蓝提神 |
+| 暗调森系 | `#1F2B1E #4C5B40 #F1EEE0 #E5C34A` | 夜林、思念、风 | 幽静湿润，自然文学感 |
+| 蜜桃海岸 | `#F5D8C6 #C9D8C2 #6E7030 #7C7E2E` | 海岸清晨、温柔告别 | 粉绿过渡，晨雾治愈 |
+| 芒种雾绿 | `#7A8B5E #B8C47D #3A452F #F2F2EC` | 节气、田野、草木 | 朦胧湿润，麦黄提亮 |
+| 雾霾蓝记忆 | `#6E8CA8 #33506E #EFEDE8 #C8B79E` | 草原、回忆、消逝 | 怀旧粗粝，记忆质感 |
+| 晨间林雾 | `#E9EDC6 #C8D89E #BFD9CE #3E5A3B` | 禅意、光斑、茶饮 | 高明度造境，墨绿字沉在水色里 |
+| 獨鸣灰粉 | `#E9E3E1 #3E7B78 #D0527B #8A8580` | 物哀、雾中动物、诗 | 灰蒙空寂，一点玫红顿挫 |
+| 天光水波 | `#7FB0E6 #D6E9F7 #F6F9FC #D93A2B` | 水下天光、热血情绪 | 清冷底×滚烫字，互补对撞 |
 
 ### 5.3 从用户提供的图片配色自动适配
 
@@ -313,6 +340,7 @@ letters half-dissolved into the mist; no color block behind text, no outline, no
 4. 从画面中最小面积的亮色取**强调色**，控制在 3%–8%。
 5. 若原图颜色太鲜艳，先转为灰调、雾化、降低对比，再保持色相关系。
 6. 不改变这套风格的明度层级：背景要能呼吸，标题要能读，强调色只能轻轻出现。
+7. **模糊废片改造**：把随手拍的自然素材重度模糊成纯氛围色场（失去细节只留色彩情绪），文字颜色直接从图中取色——图文同源的低成本高级感。
 
 ### 5.4 新增元素与色板的调用方式
 
@@ -369,6 +397,11 @@ letters half-dissolved into the mist; no color block behind text, no outline, no
 | 水纹/风纹 | 让静态画面有流动 | 极简曲线、拉伸模糊 | 底部或斜向穿过 | 流逝、呼吸、轻盈 |
 | 纸张纤维 | 把数字图变得可触摸 | 细颗粒、哑光、低透明度 | 全画面底层 | 手作、旧物、温度 |
 | 印章/小符号 | 增加东方设计落点 | 只用一个小小的色块或印记 | 角落或标题旁 | 文化感、完成感 |
+| 悬滴细线 | 制造失重与时间冻结 | 1px 细线吊起透明水滴，背景方向性动态模糊 | 中上部或对角线 | 清晨、一瞬、轻盈 |
+| 颗粒立轴 | 把主体当贯穿笔画用 | 树干/塔/光柱喷砂颗粒化，文字悬挂两侧 | 中轴 | 禅意、提问、沉思 |
+| 水波焦散 | 让静态画面自带呼吸 | 水下天光、焦散光斑柔焦流动 | 全画面底层 | 情绪、流动、清凉 |
+| 白布载体 | 给文字真实温度 | 褶皱布面/宣纸质感 + 侧光柔和投影 | 中部或下半区 | 手札、私人化、克制 |
+| 兽群剪影 | 记忆中的动态消逝 | 长曝光动态模糊剪影 + 重颗粒褪色 | 下缘横带 | 回忆、草原、告别 |
 
 ### 元素组合限制
 
