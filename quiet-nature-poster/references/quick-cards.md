@@ -89,6 +89,38 @@
 
 口诀：先找呼吸区，再放主意象；先定情绪重心，再放标题；宁可空三分，不要满到没有回声。
 
+## 标题设计速查
+
+总原则：无色块衬底、无描边、无发光、无投影；可读性靠画面明暗、同色系和留白。
+
+| 排版骨架 | 做法 | 适用 |
+|---|---|---|
+| 阶梯错落（最常用） | 行首行尾不对齐，沿对角线逐行下沉，基线微倾 | 诗句式标题、情绪主题 |
+| 大小对比 | 一行小字 + 一个核心大字（高 1/4–1/3）或首字放大 | 单字点题 |
+| 长笔画贯穿 | 长横长撇拉长出画；书法大字末笔垂落贯穿画面 | 书法、风、动势 |
+| 竖排右行 | 竖排右对齐，英文横排小字缀底 | 东方、节气、山水 |
+| 中英咬合 | 英文小字嵌行间或低透明度叠印 | 双语海报 |
+| 留白嵌字 | 标题整体放负空间，零叠压 | 极简高留白 |
+
+字体气质三选一：细宋（横细竖粗、Light、衬角锐利）｜手写行楷/瘦金（连笔、飞白、笔画拉长）｜毛笔书法大字（只用于单字或超大主字）。西文：Didot 类高对比衬线、衬线斜体、花体首字母。
+
+字色策略三选一（代替底色）：白字压暗部（明度对比）｜主色深一档同色系（深苔绿/玫红/金/墨绿）｜深灰墨字放浅色负空间。
+
+融合手法：直接叠加靠暗部｜英文 30%–60% 透明度叠印半溶｜字边缘被雾气轻咬｜零叠压嵌字。标题避开几何正中，占宽 50%–80%；单字约画面宽 1/10，核心大字可到 1/4 以上。
+
+提示词短语：
+
+```text
+staggered two-line title, baselines slightly tilted along the diagonal
+one oversized calligraphy character, its long final stroke running through the frame
+thin elegant Songti serif, light weight, sharp serifs
+handwritten thin-pen script with extended strokes and flying white
+small English serif words nested between Chinese lines
+letters half-dissolved into the mist; no color block behind text, no outline, no glow
+```
+
+选择逻辑：书法/手写→情绪浓的个人化主题；细宋→节气、自然观察、安静知性；大小对比/长笔画→单字点题。每张只选 1 骨架 + 1 字体 + 1 字色策略。
+
 ## 常用元素速查
 
 蕉叶/大叶片、细枝、模糊花影、草地、海平线/水面、飞鸟（2–5 只小剪影）、光晕、雾/薄纱、
