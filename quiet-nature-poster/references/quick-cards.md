@@ -37,6 +37,14 @@
 | 档案灰阶 | `#F2F0EA #D1D1D1 #5E5E5E #1A1A1A` | 实验海报、图鉴、研究记录 | 冷静、理性、疏离 |
 | 茶器暖岩 | `#E5E0D8 #B8A99C #5E4B45 #D5B78C` | 茶、器物、时间、仪式 | 沉静、东方、成熟 |
 | 青柠微光 | `#F2F1E8 #C9D69C #6F8D42 #26312B` | 当代自然、结构海报 | 清醒、轻实验、克制的活力 |
+| 空谷电蓝 | `#4A5560 #6B8894 #E9EDF0 #45B7E8` | 雪山、湖面、孤寂 | 冷冽纪录片感，一线电蓝提神 |
+| 暗调森系 | `#1F2B1E #4C5B40 #F1EEE0 #E5C34A` | 夜林、思念、风 | 幽静湿润，自然文学感 |
+| 蜜桃海岸 | `#F5D8C6 #C9D8C2 #6E7030 #7C7E2E` | 海岸清晨、温柔告别 | 粉绿过渡，晨雾治愈 |
+| 芒种雾绿 | `#7A8B5E #B8C47D #3A452F #F2F2EC` | 节气、田野、草木 | 朦胧湿润，麦黄提亮 |
+| 雾霾蓝记忆 | `#6E8CA8 #33506E #EFEDE8 #C8B79E` | 草原、回忆、消逝 | 怀旧粗粝，记忆质感 |
+| 晨间林雾 | `#E9EDC6 #C8D89E #BFD9CE #3E5A3B` | 禅意、光斑、茶饮 | 高明度造境，墨绿字沉在水色里 |
+| 獨鸣灰粉 | `#E9E3E1 #3E7B78 #D0527B #8A8580` | 物哀、雾中动物、诗 | 灰蒙空寂，一点玫红顿挫 |
+| 天光水波 | `#7FB0E6 #D6E9F7 #F6F9FC #D93A2B` | 水下天光、热血情绪 | 清冷底×滚烫字，互补对撞 |
 
 配色比例：主色 60%–75%，辅助色 20%–30%，强调色 3%–8%。从参考图取色时：最大面积为主色
 （降饱和 10%–25%），阴影深处为文字深色，高光纸面为留白色（不用纯白），最小面积亮色为强调色。
@@ -101,12 +109,17 @@
 | 竖排右行 | 竖排右对齐，英文横排小字缀底 | 东方、节气、山水 |
 | 中英咬合 | 英文小字嵌行间或低透明度叠印 | 双语海报 |
 | 留白嵌字 | 标题整体放负空间，零叠压 | 极简高留白 |
+| 沿结构线生长 | 文案顺花茎/枝条/地平线排布，小字大距分级 | 节气、主体特写 |
+| 主体当立轴 | 树干/光柱作贯穿轴，文字悬挂两侧 | 单主体极简、禅意 |
+| 散点呼吸 | slogan 拆成中英小短语对角线散钉 | 禅意、生活方式 |
+| 上下锚点 | 顶部拼音拉开+底部英文收尾，中央嵌字 | 节气三明治 |
+| 日历信息组 | 大字星期+((年))+长横线牵引日期，字色随区反转 | 日系、旅行、日记 |
 
 字体气质三选一：细宋（横细竖粗、Light、衬角锐利）｜手写行楷/瘦金（连笔、飞白、笔画拉长）｜毛笔书法大字（只用于单字或超大主字）。西文：Didot 类高对比衬线、衬线斜体、花体首字母。
 
 字色策略三选一（代替底色）：白字压暗部（明度对比）｜主色深一档同色系（深苔绿/玫红/金/墨绿）｜深灰墨字放浅色负空间。
 
-融合手法：直接叠加靠暗部｜英文 30%–60% 透明度叠印半溶｜字边缘被雾气轻咬｜零叠压嵌字。标题避开几何正中，占宽 50%–80%；单字约画面宽 1/10，核心大字可到 1/4 以上。
+融合手法：直接叠加靠暗部｜英文 30%–60% 透明度叠印半溶｜字边缘被雾气轻咬｜零叠压嵌字｜同色勾线沿山势呼应字迹｜手写长拖笔方向=画面动势（字势即景势）｜实物小图嵌句中当活字｜文字落在褶皱布面侧光里｜拟声词字号渐隐斜排｜假名/符号插入标题作顿挫。标题避开几何正中，占宽 50%–80%；单字约画面宽 1/10，核心大字可到 1/4 以上。
 
 提示词短语：
 
@@ -117,6 +130,14 @@ thin elegant Songti serif, light weight, sharp serifs
 handwritten thin-pen script with extended strokes and flying white
 small English serif words nested between Chinese lines
 letters half-dissolved into the mist; no color block behind text, no outline, no glow
+copy growing along the stem line, small type with wide tracking, tiered info levels
+slogan fragments scattered as diagonal whispers around the central title
+hand-drawn contour lines in the title color tracing the mountain ridge
+long handwritten stroke becoming the wind across the frame
+a small real-flower photo embedded in the sentence as punctuation
+text printed on wrinkled fabric with soft side light
+calendar-style info group: big weekday, (( year )), long rule line to the date
+onomatopoeia fading in size along a diagonal
 ```
 
 选择逻辑：书法/手写→情绪浓的个人化主题；细宋→节气、自然观察、安静知性；大小对比/长笔画→单字点题。每张只选 1 骨架 + 1 字体 + 1 字色策略。
