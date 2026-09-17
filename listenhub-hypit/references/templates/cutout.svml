@@ -1,0 +1,7 @@
+<?svml using="@hypit/markup@1"?>
+<svml>
+  <import as="asset" from="@hypit/media@1"/>
+  <import as="remove" from="@hypit/background-removal@1"/>
+  <asset:Image id="portrait" src="./assets/portrait.png"/>
+  <remove:Background id="cutout" source={portrait}/>
+</svml>

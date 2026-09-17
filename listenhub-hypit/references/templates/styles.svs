@@ -1,0 +1,15 @@
+<?svml using="@hypit/svs@1"?>
+<sheet version="1">
+media.full { stack-order: 10; fit: cover; }
+media.portrait { stack-order: 30; fit: contain; }
+film.main { background: #141821; }
+caption.main {
+  stack-order: 70;
+  x: 0.5; y: 0.88; width: 0.85; height: 0.22;
+  anchor-x: center; anchor-y: bottom;
+  align: center; block-align: end; inline-size: fixed;
+  wrap: word; size: 48; line-height: 1.2;
+  background: #00000066; padding: "12"; radius: 12;
+  fill: #FFFFFF; active-fill: #FFE066; karaoke: current;
+}
+</sheet>

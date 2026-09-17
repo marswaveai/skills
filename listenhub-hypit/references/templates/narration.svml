@@ -1,0 +1,37 @@
+<?svml using="@hypit/markup@1"?>
+<svml>
+  <import from="@hypit/script@1"/>
+  <import as="asset" from="@hypit/media@1"/>
+  <import as="time" from="@hypit/timeline-author@1"/>
+  <import as="pipeline" from="@hypit/media-pipeline@1"/>
+  <import as="whisperx" from="@hypit/whisperx@1"/>
+  <import as="space" from="@hypit/spatial@1"/>
+  <import as="media" from="@hypit/media-track@1"/>
+  <import as="sound" from="@hypit/sound@1"/>
+  <import as="audio" from="@hypit/audio-track@1"/>
+  <import as="caption" from="@hypit/caption-fine@1"/>
+  <import as="film" from="@hypit/film@1"/>
+  <import as="render" from="@hypit/render-hyperframes@1"/>
+  <import as="style" source="./styles.svs"/>
+  <script id="story"><opening>把想法写下来。|| 让画面跟着声音走。</opening></script>
+  <asset:Image id="poster" src="./assets/poster.png"/>
+  <asset:Audio id="voice" src="./assets/voice.wav"/>
+  <asset:Audio id="music" src="./assets/music.wav"/>
+  <asset:Font id="font" src="./assets/caption-font.ttf" weight="700" style="normal"/>
+  <time:Clock id="clock" frame-rate="30"/>
+  <pipeline:Normalize id="voice-media" source={voice} video="none" audio="default" span-authority="audio" clock={clock}/>
+  <pipeline:Normalize id="music-media" source={music} video="none" audio="default" span-authority="audio" clock={clock}/>
+  <whisperx:SemanticTake id="opening" narrative={story} segment={story.segment.opening} media={voice-media.media} language="zh"/>
+  <time:Timeline id="program" clock={clock}><time:Take source={opening.take}/></time:Timeline>
+  <space:Canvas id="canvas" width="720" height="1280"/>
+  <space:Frame id="full" within={canvas} left="0%" top="0%" right="100%" bottom="100%"/>
+  <space:Extent id="poster-size" width="720" height="1280"/>
+  <media:Track id="picture" timeline={program.timeline} canvas={canvas}><media:Item image={poster} extent={poster-size} frame={full} during="program" appearance={style.media.full}/></media:Track>
+  <sound:Style id="voice-style"/>
+  <sound:Track id="speech" timeline={program.timeline}><sound:Use style={voice-style}/></sound:Track>
+  <audio:Track id="score" timeline={program.timeline}><audio:Item source={music-media.media} during="program" playback="once" gain="0.12" fade-out="6f"/></audio:Track>
+  <caption:Style id="caption-style" recipe={style.caption.main} font={font}/>
+  <caption:Track id="captions" document={story.caption} timeline={program.timeline}><caption:Use style={caption-style}/></caption:Track>
+  <film:Film id="main" canvas={canvas} timeline={program.timeline} appearance={style.film.main}><film:Track source={picture.visual}/><film:Track source={speech.audio}/><film:Track source={score.audio}/><film:Track source={captions.track}/></film:Film>
+  <render:Video id="final" composition={main.composition} timeline={program.timeline}/>
+</svml>
