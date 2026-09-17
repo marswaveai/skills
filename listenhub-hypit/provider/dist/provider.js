@@ -231,7 +231,8 @@ export function createListenHubProvider(options) {
                     const source = object(context.need.constraints).source;
                     const bytes = await resource(context, source);
                     const decoded = decodeImage(bytes);
-                    const result = await call(imagePath, secret(context), {
+                    const apiKey = secret(context);
+                    const created = await call(`${imagePath}/async`, apiKey, {
                         ...imageParameters,
                         imageConfig: {
                             ...imageParameters.imageConfig,
@@ -246,14 +247,42 @@ export function createListenHubProvider(options) {
                             },
                         ],
                     });
-                    const candidates = result.candidates;
-                    const encoded = candidates
-                        ?.flatMap((candidate) => candidate.content?.parts ?? [])
-                        .find((part) => part.inlineData?.data)?.inlineData?.data;
-                    if (!encoded)
-                        throw new Error('Seedream returned no inline image; inspect the paid request before retrying');
-                    const png = keyImage(Buffer.from(encoded, 'base64'));
-                    return { value: await context.resources.put(png, 'image/png') };
+                    const id = text(created.taskId, 'image task id');
+                    await context.reportDiagnostic?.({
+                        level: 'info',
+                        message: `ListenHub background image task ${id}`,
+                    });
+                    const deadline = Date.now() + timeoutMs;
+                    /* eslint-disable no-await-in-loop -- Poll the accepted image task without resubmitting. */
+                    while (Date.now() <= deadline) {
+                        const task = await call(`${imagePath}/tasks/${encodeURIComponent(id)}`, apiKey);
+                        if (task.status === 'fail')
+                            throw new Error(`ListenHub image ${id} failed; inspect the existing task before retrying`);
+                        if (task.status === 'success') {
+                            const images = task.images;
+                            const imageUrl = new URL(text(images?.[0]?.url, `image URL for ${id}`));
+                            if (imageUrl.protocol !== 'https:' ||
+                                imageUrl.username ||
+                                imageUrl.password)
+                                throw new Error(`Invalid image result URL for ${id}`);
+                            const response = await fetcher(imageUrl, {
+                                signal: AbortSignal.timeout(timeoutMs),
+                                redirect: 'error',
+                            });
+                            if (!response.ok)
+                                throw new Error(`Image download for ${id} returned HTTP ${response.status}`);
+                            const png = keyImage(new Uint8Array(await response.arrayBuffer()));
+                            return { value: await context.resources.put(png, 'image/png') };
+                        }
+                        if (!['pending', 'generating'].includes(String(task.status)))
+                            throw new Error(`Unknown image status for ${id}`);
+                        await context.reportProgress?.({
+                            phase: `ListenHub image ${id}: ${String(task.status)}`,
+                        });
+                        await delay(pollIntervalMs);
+                    }
+                    /* eslint-enable no-await-in-loop */
+                    throw new Error(`ListenHub image ${id} wait timed out; inspect this task before resubmitting`);
                 },
             },
         ],

@@ -20,10 +20,10 @@ Script 的 `||` 是字幕断句；Segment 是可独立重生成的一段表演/�
 ```bash
 listenhub openapi video create --model doubao-seedance-2-pro --resolution 720p \
   --ratio 9:16 --duration 5 --prompt '保持角色外观，跟随参考动作' \
-  --reference-image ./assets/character.png --reference-video ./assets/reference.mp4 --json
+  --reference-image ./assets/character.png --reference-video ./assets/reference.mp4 --input-video-duration 5 --json
 ```
 
-音频参考加 `--reference-audio`；H3 换模型并显式指定 `--resolution 768p`。先读 `listenhub openapi video create --help` 确认安装版本参数；CLI 支持本地上传时传本地路径，URL 模式只用自有上传地址。同步图片生成应使用至少300秒请求超时（Provider 默认600秒），SDK 设置 `maxRetries:0`。客户端超时可能仍在后台完成并扣费，先查既有任务/实扣，不能自动重新生成。所有结果下载到项目 `assets/`，记录来源任务 ID、prompt、模型和积分。长输入先裁剪，不发送超限素材：
+音频参考加 `--reference-audio`；H3 换模型并显式指定 `--resolution 768p`。先读 `listenhub openapi video create --help` 确认安装版本参数；CLI 支持本地上传时传本地路径，URL 模式只用自有上传地址。参考视频先 probe 实际时长，`--input-video-duration` 与引用片段一致（上例5秒）。图片较慢时优先走现有 ListenHub `POST /v1/images/generation/async` 并轮询 `GET /v1/images/generation/tasks/:taskId`，成功后下载 `images[].url`；参数与同步生成一致，Provider 抠图默认采用此路径。CLI 同步图接口可能遇到网关超时，单纯延长客户端超时不能保证拿到结果；SDK 禁止自动重试。超时先查既有任务/实扣，不能自动重新生成。若旧版 CLI 把上传返回的 `fileUrl` 强改为 `storage.googleapis.com`，参考素材会失效：走同一 ListenHub OpenAPI 的 `POST /v1/files` 获取签名上传地址，PUT 文件后保留原样 `fileUrl` 再传给视频命令，并按实际 probe 结果传 metadata。禁止自行改文件域名或漏掉存储桶路径。所有结果下载到项目 `assets/`，记录来源任务 ID、prompt、模型和积分。长输入先裁剪，不发送超限素材：
 
 ```bash
 npx hypit media cut reference.mp4 --start 0 --end 5 --to assets/reference.mp4

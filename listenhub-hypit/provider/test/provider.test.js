@@ -108,17 +108,44 @@ test('failed tasks stop without creating another charge', async () => {
   assert.throws(() => createListenHubProvider({baseUrl: 'http://remote.test', apiKey: {store: 'env', key: 'TEST'}}));
 });
 
-test('background endpoint requests Seedream with reference image and stores alpha PNG', async () => {
+test('background endpoint polls one accepted image task and downloads without API bearer', async () => {
   const picture = new PNG({width: 1, height: 1}); picture.data.set([0,255,0,255]);
   const png = PNG.sync.write(picture);
-  const {endpoints, context} = await harness(async (_url, options) => {
-    const body = JSON.parse(options.body);
-    assert.equal(body.model, 'seedream-5-0-pro'); assert.equal(body.referenceImages[0].inlineData.mimeType, 'image/png');
-    return new Response(JSON.stringify({candidates: [{content: {parts: [{inlineData: {data: png.toString('base64'), mimeType: 'image/png'}}]}}]}));
+  let creates = 0;
+  const {endpoints, context} = await harness(async (url, options) => {
+    if (String(url).endsWith('/async')) {
+      creates++;
+      const body = JSON.parse(options.body);
+      assert.equal(body.model, 'seedream-5-0-pro');
+      assert.equal(body.referenceImages[0].inlineData.mimeType, 'image/png');
+      return reply({taskId: 'image-1', status: 'pending'});
+    }
+    if (String(url).includes('/tasks/')) return reply({taskId: 'image-1', status: 'success', images: [{url: 'https://cdn.test/image.png'}]});
+    assert.equal(String(url), 'https://cdn.test/image.png');
+    assert.equal(options.headers, undefined);
+    return new Response(png, {headers: {'content-type': 'image/png'}});
   }, png);
   context.need.constraints = {source: {...blob(png), mediaType: 'image/png'}};
+  const diagnostics = [];
+  context.reportDiagnostic = async value => diagnostics.push(value);
   let output;
   context.resources.put = async (bytes, mediaType) => {output = PNG.sync.read(bytes); return {kind: 'blob', resource: 'res_output', size: bytes.length, mediaType};};
   const result = await endpoints.get(removal.name)(context);
   assert.equal(result.value.mediaType, 'image/png'); assert.equal(output.data[3], 0);
+  assert.equal(creates, 1); assert.match(diagnostics[0].message, /image-1/);
+});
+
+test('failed or missing image results stop without submitting another image', async () => {
+  const picture = new PNG({width: 1, height: 1}); picture.data.set([0,255,0,255]);
+  const png = PNG.sync.write(picture);
+  for (const task of [{status: 'fail'}, {status: 'success', images: []}]) {
+    let creates = 0;
+    const {endpoints, context} = await harness(async (url) => {
+      if (String(url).endsWith('/async')) {creates++; return reply({taskId: 'image-stop', status: 'pending'});}
+      return reply(task);
+    }, png);
+    context.need.constraints = {source: {...blob(png), mediaType: 'image/png'}};
+    await assert.rejects(endpoints.get(removal.name)(context), /image-stop/);
+    assert.equal(creates, 1);
+  }
 });
