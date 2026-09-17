@@ -25,7 +25,7 @@
 | 视频/图片配乐、生成分轨、区域改写、音乐描述 | 每次 15 |
 | 歌词识别 | 每次 3 |
 | 分轨 | `audio-separation-1` 10；`audio-separation-2` 100 |
-| 持久说话人克隆 `/voice-clone` | 套餐确认额度内 0，额度耗尽后每次保存 300；先查 speaker 列表/remainingConfirmations，第二条变体直接复用 `speakerInnerId` |
+| 持久说话人克隆 `/voice-clone` | 套餐确认额度内 0，额度耗尽后每次保存 300；先查 speaker 列表/remainingConfirmations/maxSpeakers；数量达到上限就不能保存，不能仅凭 `isLimitReached` 或剩余确认额度判断。第二条变体直接复用 `speakerInnerId` |
 | 音乐人声克隆 | 600（与说话人克隆不同；仅确实需要时列入） |
 
 来源：[TTS 计数与换算](https://github.com/marswaveai/marswave-lib/tree/main/packages/common-lib/src/mtoken)、[音乐费率](https://github.com/marswaveai/listenhub-api-server/blob/main/src/lib/credits-config.ts)、[说话人确认费率](https://github.com/marswaveai/listenhub-api-server/blob/main/src/common/constants.ts)、[视频积分换算](https://github.com/marswaveai/listenhub-api-server/blob/main/src/lib/video-generation-credits.ts)。费率会变，检查日期与结果，不保证历史固定价长期有效。
