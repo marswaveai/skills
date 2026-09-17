@@ -57,11 +57,11 @@ npx hypit build narration.svrun --runtime ./hypit.runtime.json --follow
 
 ```bash
 ffmpeg -i screen-recording.mp4 -i green-take.mp4 \
-  -filter_complex '[1:v]chromakey=0x00FF00:0.18:0.10,despill=type=green,scale=320:-1[person];[0:v][person]overlay=W-w-24:H-h-24:shortest=1[out]' \
+  -filter_complex '[1:v]chromakey=0x00FF00:0.08:0.03,despill=type=green:mix=0.35:green=-0.5,scale=320:-1[person];[0:v][person]overlay=W-w-24:H-h-24:shortest=1[out]' \
   -map '[out]' -map '1:a?' -c:v libx264 -crf 18 -pix_fmt yuv420p -c:a aac assets/presenter-composite.mp4
 ```
 
-上述数值只是起点。看全段动作、头发和手指边缘，调阈值避免主体穿孔；屏幕与人物需同一计划时长。把合成结果重新 Normalize 加入 hypit。绿色溢色或快速运动边缘不足时明确展示缺陷，记录是否需要另评视频 matting，不静默引入外部付费服务。
+上述数值只是起点。先采样真实背景色；提示词写纯绿不代表输出一定是纯绿，背景有明暗时也不能只提高容差。看全段动作、头发和手指边缘，检查白衣是否穿孔；屏幕与人物需同一计划时长。把合成结果重新 Normalize 加入 hypit。2026-09-17 的实测中，实际背景约 `#258A5A`，容差0.08保留白衣，0.10已出现穿孔；最终仍有少量灰绿发丝边与散发损失。绿色溢色或快速运动边缘不足时明确展示缺陷，记录是否需要另评视频 matting，不静默引入外部付费服务。
 
 ## 只改一句台词
 
