@@ -8,6 +8,7 @@ description: |
   "混音", "remix", "续写", "extend", "纯音乐", "instrumental", "配乐",
   "soundtrack", "分轨", "stem", "识别歌词", "克隆人声", "vocal clone",
   "cover song", "pixverse", "口型", "lipsync", "对口型",
+  "hypit", "参考片复刻", "宠物 meme",
   "parse URL", "解析链接", "提取内容".
 metadata:
   openclaw:
@@ -25,6 +26,7 @@ This is a router skill. When users trigger a general ListenHub action, this skil
 
 | User intent | Keywords | Route to |
 |-------------|----------|----------|
+| ListenHub + hypit video | "hypit", "用 ListenHub 做 hypit 视频", "参考片复刻", "宠物 meme" | `/listenhub-hypit` |
 | ListenHub Voice end-to-end audio | "端到端音频", "语音生成", "图片转音频", "图片生成音频", "多音色对白", "参考音频克隆", "克隆音色", "音效", "生成音效" | `/listenhub-voice` |
 | Podcast | "podcast", "播客", "debate", "dialogue" | `/podcast` |
 | Explainer video | "explainer", "解说视频", "tutorial video" | `/explainer` |
