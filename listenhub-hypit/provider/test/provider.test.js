@@ -52,6 +52,8 @@ test('green keying makes background transparent, retains foreground and suppress
   const keyed = keyGreenRgba(new Uint8Array([0,255,0,255, 190,120,100,255, 70,130,60,255]));
   assert.equal(keyed[3], 0); assert.equal(keyed[7], 255);
   assert.ok(keyed[11] > 0 && keyed[11] < 255); assert.ok(keyed[9] < 130);
+  const edges = keyGreenRgba(new Uint8Array([70,90,60,255, 20,30,18,255, 30,110,130,255, 130,120,35,255, 190,175,150,255]));
+  assert.deepEqual([...edges], [70,65,60,255, 20,19,18,255, 30,110,130,255, 130,83,35,255, 190,175,150,255]);
   const image = new PNG({width: 2, height: 1}); image.data.set([0,255,0,255,190,120,100,255]);
   const decoded = PNG.sync.read(keyImage(PNG.sync.write(image)));
   assert.equal(decoded.data[3], 0); assert.equal(decoded.data[7], 255);

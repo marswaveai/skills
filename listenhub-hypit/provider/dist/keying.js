@@ -18,8 +18,9 @@ export function keyGreenRgba(data) {
         const dominance = green - Math.max(red, blue);
         const removal = green > 70 ? Math.min(1, Math.max(0, (dominance - 25) / 75)) : 0;
         output[i + 3] = Math.round(output[i + 3] * (1 - removal));
-        if (removal > 0)
-            output[i + 1] = Math.round(green - dominance * removal);
+        if (dominance > 0 || (green > blue * 1.6 && green > red * 0.75)) {
+            output[i + 1] = Math.min(green, Math.round((red + blue) / 2));
+        }
     }
     return output;
 }
