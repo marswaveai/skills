@@ -32,4 +32,4 @@ npx hypit doctor --runtime ./hypit.runtime.json --json
 
 `runtime up` 会自动安装配置所需的本地依赖；这些本地安装不扣 ListenHub 积分。下载慢可先 `--endpoint media.local`、`--endpoint hyperframes.local` 分别准备；要执行图像合成再准备 `image-opencv.local`。用命令输出的安装日志排查，勿将 `MANAGED_PROGRAM_DOWN` 当素材生成故障而重新付费。遇到安装/网络阻塞先解决，确认本地可渲染再提交生成。
 
-拷贝 `templates/` 里需要的 `.svml`、`.svrun`、`styles.svs` 到项目，创建 `assets/`。它们是实际素材位置模板：meme 需要 `pet.mp4`、`music.wav`；旁白需要 `poster.png`、`voice.wav`、`music.wav`、`caption-font.ttf`。素材格式扩展名必须与实际内容一致。旁白图像的 `space:Extent` 要用 probe 得到的真实尺寸，字体文件要覆盖台词字符、与声明字重一致；使用自带/开源字体及其许可，可换为 `.otf/.woff2` 并更新 src。不要把 `.ttc` 改名成 `.ttf`。
+拷贝 `templates/` 里需要的 `.svml`、`.svrun`、`styles.svs` 到项目，创建 `assets/`。这些是起点示例，题材和角色不限：action 需要 `footage.mp4`，保留视频原声、不需要另交歌曲；dialogue 需要 `footage.mp4`、`caption-font.ttf`，Script 填视频实际台词，支持说话的宠物等角色；旁白示例需要 `poster.png`、`voice.wav`、`music.wav`、`caption-font.ttf`。若不需要旁白示例的音乐，删除 music 资产与 Normalize、score Track 及 Film 中对应引用。素材格式扩展名必须与实际内容一致。旁白图像的 `space:Extent` 要用 probe 得到的真实尺寸，字体文件要覆盖台词字符、与声明字重一致；使用自带/开源字体及其许可，可换为 `.otf/.woff2` 并更新 src。不要把 `.ttc` 改名成 `.ttf`。
