@@ -6,9 +6,11 @@ The commands below route through SMTP or JMAP. An account on the Microsoft Graph
 
 ## New message
 
+`--from` is required. Use the connected mailbox address from this conversation. Himalaya 2 does not fill `From:` from the account `email` field; omitting the flag still connects, then fails with `No From: header` (often looking like a send timeout). Do not omit it. This is the sender address, not `message move --from` (a mailbox name).
+
 ```bash
 himalaya --account <name> message compose \
-  --from sender@example.com \
+  --from <connected-mailbox-address> \
   --to recipient@example.com \
   --cc copy@example.com \
   --subject "Subject" \
@@ -21,11 +23,15 @@ Repeat `--to`, `--cc`, `--bcc`, or `--attach` for multiple values. Use `--body-f
 
 ## Reply and forward
 
+Same `--from` rule: required, connected mailbox address, do not omit.
+
 ```bash
 himalaya --account <name> message reply --mailbox inbox \
+  --from <connected-mailbox-address> \
   --body-file /absolute/path/reply.txt --send <message-id>
 
 himalaya --account <name> message forward --mailbox inbox \
+  --from <connected-mailbox-address> \
   --to recipient@example.com --body "Forward note" --send <message-id>
 ```
 
@@ -37,7 +43,7 @@ For a prebuilt MIME message, pipe it to `message send`:
 
 ```bash
 himalaya --account <name> message send <<'EOF'
-From: sender@example.com
+From: <connected-mailbox-address>
 To: recipient@example.com
 Subject: Subject
 
