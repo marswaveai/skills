@@ -2,7 +2,7 @@
 name: outlook-calendar
 description: View, create, update, and delete Outlook or Microsoft 365 calendar events with the cola-outlook-calendar CLI. Use for Outlook Calendar schedules, availability, and event changes, or when the user says "outlook 日历"、"看看我 outlook 上的安排"、"帮我在 outlook 上约个会".
 metadata:
-  version: 1.0.4
+  version: 1.0.5
   requires:
     bins: ["cola-outlook-calendar"]
 ---

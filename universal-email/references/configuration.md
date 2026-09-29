@@ -21,6 +21,52 @@ On Windows the equivalent location is `%APPDATA%\himalaya\config.toml`. Write co
 
 The global `--config <path>` option explicitly selects another profile. Use it only when the user requests a separate profile; do not use it for ordinary account discovery, validation, or mailbox operations.
 
+## Store the mailbox secret
+
+IMAP/SMTP secrets (Gmail app password, QQ authorization code, iCloud app-specific password, or another provider secret) are entered through the bundled helper. The user never uses a terminal.
+
+Never run the bare `himalaya` setup wizard. That wizard needs a real terminal this chat does not have and dumps implementation details to the user.
+
+Resolve `scripts/bin/<platform>/cola-credential-helper` the same way as `himalaya` in `SKILL.md` (Windows: `cola-credential-helper.exe`). Use that absolute path. If the file is missing, the mailbox is not ready — do not fall back to a wizard, chat, or `password.raw`.
+
+1. After the user has generated the provider secret, run:
+
+```bash
+cola-credential-helper prompt \
+  --account universal-email/<key> \
+  --title-en "<title>" \
+  --title-zh "<title>" \
+  --secret-label-en "<label>" \
+  --secret-label-zh "<label>"
+```
+
+Keep it running until it returns JSON with `ok` true and `stored` true. The helper tries a system password dialog first (macOS `display dialog`; Windows a small password window), brings it to the front, and waits up to 180 seconds. HTML opens only when that dialog cannot be shown (missing host, no UI session, or timeout with no input). User cancel does not fall through to HTML. After a successful write it shows a system “已保存” dialog — not the OAuth “连上了” page. Storage stays the existing Cola keychain contract: service `com.marswave.cola.app-secrets`, account `universal-email/<key>`, read back only by `cola-credential-helper read`.
+
+**对用户说（照念，不要改写）。** 聊天只收邮箱地址。生成密钥的具体链接和菜单在各 provider 指南里。收密钥时用下面三句，说完第三句的同一轮立刻跑 `prompt`，不要再等一句聊天。
+
+- 问地址：「把要连接的邮箱地址发我。应用专用密码或授权码不要发到聊天里。」
+- 弹窗前（同一轮启动 `prompt`）：「屏幕上马上会弹出一个系统窗口。把刚生成的应用专用密码或授权码填进去，点保存。不要粘贴到聊天里。」
+- `prompt` 成功：「已经收下了，我继续连。」
+- 系统窗口没出现、改走本机页面：「窗口没弹出来。浏览器会打开一个本机页面，在那里填，点保存。」
+- 用户点了取消：「窗口取消了。要继续连的话跟我说一声，我会再弹一次。」
+- 窗口超时：「窗口等太久关掉了。跟我说一声，我会再弹一次。」
+- 用户把密钥发到聊天：「不要发在聊天里。先去作废这一串，重新生成一串。生成后跟我说，我会弹出窗口让你填。」
+
+Never say only “我会在本机安全输入框中接收它”.
+
+2. Write the Himalaya 2 account into the active configuration using the templates below. Point both IMAP and SMTP `password.command` at the helper `read` and the same `--account`. Use a TOML literal string for a Windows path so `\Users` is not parsed as an escape (`\U`). Forward slashes also work on Windows. Never `password.raw`. Never put the secret in a command argument or in the TOML file.
+
+| Provider | `--account` | Himalaya account name |
+| --- | --- | --- |
+| Gmail (personal or Workspace) | `universal-email/gmail` | `gmail` |
+| QQ Mail | `universal-email/qq` | `qq` |
+| iCloud Mail | `universal-email/icloud` | `icloud` |
+| Other IMAP/SMTP | `universal-email/<name>` | `<name>` — `name` may contain only ASCII letters, digits, `-`, and `_` |
+
+Provider guides supply the title and secret-label values. Do not show `--account`, the helper path, or keychain names to the user.
+
+If `prompt` does not return `ok`, do not write TOML. Tell the user the input did not finish and that they can try again. If they paste a secret in chat anyway, do not store it: tell them to revoke it, generate a new one, and enter the new one in the dialog.
+
 ## Minimal IMAP and SMTP account
 
 ```toml
@@ -36,11 +82,11 @@ mailbox.alias.trash = "Trash"
 
 imap.server = "imaps://imap.example.com:993"
 imap.sasl.plain.username = "user@example.com"
-imap.sasl.plain.password.command = ["credential-helper", "get", "personal"]
+imap.sasl.plain.password.command = ['<absolute-path-to-cola-credential-helper>', 'read', '--account', 'universal-email/personal']
 
 smtp.server = "smtps://smtp.example.com:465"
 smtp.sasl.plain.username = "user@example.com"
-smtp.sasl.plain.password.command = ["credential-helper", "get", "personal"]
+smtp.sasl.plain.password.command = ['<absolute-path-to-cola-credential-helper>', 'read', '--account', 'universal-email/personal']
 ```
 
 For STARTTLS, use the cleartext scheme and opt in explicitly:
@@ -52,7 +98,7 @@ smtp.starttls = true
 
 Use `imap://...` plus `imap.starttls = true` for IMAP STARTTLS. Do not combine an implicit-TLS scheme such as `imaps://` or `smtps://` with `starttls = true`.
 
-`credential-helper` is a placeholder for a secure command that prints the secret to stdout. Store secrets in the operating-system credential store. Do not use `password.raw` in production and do not put the secret directly in command-line arguments.
+`password.command` must be the bundled helper `read`. Himalaya prints that command's stdout as the secret; `read` writes only the secret.
 
 ## Gmail IMAP/SMTP
 
@@ -70,14 +116,36 @@ mailbox.alias.archive = "[Gmail]/All Mail"
 
 imap.server = "imaps://imap.googlemail.com:993"
 imap.sasl.plain.username = "you@gmail.com"
-imap.sasl.plain.password.command = ["credential-helper", "get", "gmail"]
+imap.sasl.plain.password.command = ['<absolute-path-to-cola-credential-helper>', 'read', '--account', 'universal-email/gmail']
 
 smtp.server = "smtps://smtp.gmail.com:465"
 smtp.sasl.plain.username = "you@gmail.com"
-smtp.sasl.plain.password.command = ["credential-helper", "get", "gmail"]
+smtp.sasl.plain.password.command = ['<absolute-path-to-cola-credential-helper>', 'read', '--account', 'universal-email/gmail']
 ```
 
-Use a Google app password, not the normal account password. Remove visual whitespace from the 16-character app password before secure storage.
+Use a Google app password, not the normal account password. The helper strips display spaces from the 16-character app password.
+
+## QQ Mail IMAP/SMTP
+
+```toml
+[accounts.qq]
+email = "you@qq.com"
+display-name = "Your Name"
+default = true
+
+mailbox.alias.inbox = "INBOX"
+
+imap.server = "imaps://imap.qq.com:993"
+imap.sasl.plain.username = "you@qq.com"
+imap.sasl.plain.password.command = ['<absolute-path-to-cola-credential-helper>', 'read', '--account', 'universal-email/qq']
+imap.id.auto = true
+
+smtp.server = "smtps://smtp.qq.com:465"
+smtp.sasl.plain.username = "you@qq.com"
+smtp.sasl.plain.password.command = ['<absolute-path-to-cola-credential-helper>', 'read', '--account', 'universal-email/qq']
+```
+
+QQ requires `imap.id.auto = true`. Use the client authorization code, not the QQ login password.
 
 ## iCloud IMAP/SMTP
 
@@ -90,12 +158,12 @@ mailbox.alias.inbox = "INBOX"
 
 imap.server = "imaps://imap.mail.me.com:993"
 imap.sasl.plain.username = "you@icloud.com"
-imap.sasl.plain.password.command = ["credential-helper", "get", "icloud"]
+imap.sasl.plain.password.command = ['<absolute-path-to-cola-credential-helper>', 'read', '--account', 'universal-email/icloud']
 
 smtp.server = "smtp://smtp.mail.me.com:587"
 smtp.starttls = true
 smtp.sasl.plain.username = "you@icloud.com"
-smtp.sasl.plain.password.command = ["credential-helper", "get", "icloud"]
+smtp.sasl.plain.password.command = ['<absolute-path-to-cola-credential-helper>', 'read', '--account', 'universal-email/icloud']
 ```
 
 Discover the actual mailbox names with `mailbox list` before adding Sent, Drafts, or Trash aliases.
@@ -122,10 +190,10 @@ Configuration-only parse check using the active configuration:
 himalaya --json account list
 ```
 
-Connection and authentication check:
+Connection and authentication check, on the first wrap from `proxy.md`:
 
 ```bash
-himalaya --account <name> --json account check
+himalaya --account <name> --log-level debug --json account check
 ```
 
-The first command proves only that the TOML matches Himalaya 2. The second exercises configured backends and can contact external services.
+The list command proves only that the TOML matches Himalaya 2. The check exercises configured backends. If it times out, follow Route fallback in `proxy.md` — next wrap, do not stop. Split `--backend imap` / `--backend smtp` only when debug shows they failed at different stages.
