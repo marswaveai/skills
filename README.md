@@ -70,6 +70,7 @@ listenhub auth login
 | Skill | Trigger | What it does |
 |-------|---------|-------------|
 | `/cola-avatar-pack` | "生成形象", "avatar", "表情包", "梗图" | Generate pixel-art avatar, profile card, emoji GIFs & meme stickers |
+| `/quiet-nature-poster` | "海报", "静谧自然", "氛围海报", "poster" | Poetic low-saturation nature poster prompt system — theme in, palette, composition, copy & AI prompts out |
 
 **Setup:** Requires Python 3.10+ and Pillow. See [cola-avatar-pack/SKILL.md](cola-avatar-pack/SKILL.md).
 
@@ -95,7 +96,8 @@ listenhub auth login
 ├── listenhub/           # Router skill
 │
 │   # COLA
-└── cola-avatar-pack/    # Avatar pack generation
+├── cola-avatar-pack/    # Avatar pack generation
+└── quiet-nature-poster/ # Quiet nature poster prompt system
 ```
 
 ## Supported Clients

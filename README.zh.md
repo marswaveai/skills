@@ -69,7 +69,8 @@ listenhub auth login
 
 | 技能 | 触发词 | 功能 |
 |------|--------|------|
-| `/cola-avatar-pack` | "生成形象"、"avatar"、"表情包"、"梗图" | 生成像素风专属形象、资料卡、表情 GIF 和梗图贴纸 |
+| `/cola-avatar-pack` | "生成形象”、“avatar”、“表情包”、“梗图” | 生成像素风专属形象、资料卡、表情 GIF 和梗图贴纸 |
+| `/quiet-nature-poster` | "海报”、“静谧自然”、“氛围海报”、“poster” | 静谧自然海报提示词系统——输入主题，输出低饱和、留白、胶片质感的配色、构图、文案与 AI 提示词 |
 
 **配置：** 需要 Python 3.10+ 和 Pillow。详见 [cola-avatar-pack/SKILL.md](cola-avatar-pack/SKILL.md)。
 
@@ -95,7 +96,8 @@ listenhub auth login
 ├── listenhub/           # 路由 skill
 │
 │   # COLA
-└── cola-avatar-pack/    # 形象包生成
+├── cola-avatar-pack/    # 形象包生成
+└── quiet-nature-poster/ # 静谧自然海报提示词系统
 ```
 
 ## 支持的客户端
