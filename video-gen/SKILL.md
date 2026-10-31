@@ -8,7 +8,7 @@ metadata:
     primaryBin: "listenhub"
 description: |
   Generate AI videos from text prompts or reference materials.
-  Supports HappyHorse, SeeDance, and PixVerse models.
+  Supports HappyHorse, Seedance 2.0/2.5 (multi-reference and Draft), and PixVerse models.
   Triggers on: "生成视频", "做视频", "video generation", "text to video",
   "create video", "视频生成", "视频编辑", "video edit", "pixverse",
   "口型", "lipsync", "对口型".
@@ -32,10 +32,11 @@ description: |
 
 ## Purpose
 
-Generate AI videos using the ListenHub CLI. Supports three model families:
+Generate AI videos using the ListenHub CLI. Supports three model families (Seedance has separate 2.0 and 2.5 capabilities):
 
 - **HappyHorse** (default) — text-to-video, image-to-video, reference-image-to-video, video-edit
-- **SeeDance** — text-to-video, frame mode (first + last frame), reference mode (images, videos, audio)
+- **Seedance 2.0 Pro/Fast** — text-to-video, frame mode (first + last frame), reference mode (images, videos, audio)
+- **Seedance 2.5** (`doubao-seedance-2-5`) — adds multi-reference/ audio-only generation, edit/extend and 480p Draft → 1080p final. Read `references/seedance-2-5.md` when selected; retain the requested model.
 - **PixVerse** — nine atomic capabilities via the Agent API (text_to_video, image_to_video, transition, multi_transition, fusion, restyle, mimic, **lip_sync**, agent). The only family that supports lip sync. OpenAPI-only, URL/ID based, and uses its own `pixverse` CLI namespace.
 
 ## Hard Constraints
@@ -57,7 +58,7 @@ until the user has explicitly confirmed.
 
 ## Model Comparison
 
-| Feature | HappyHorse (default) | SeeDance | PixVerse |
+| Feature | HappyHorse (default) | Seedance 2.0 | PixVerse |
 |---------|---------------------|----------|----------|
 | Text-to-video | ✅ | ✅ | ✅ (`text_to_video`) |
 | Image-to-video (first-frame) | ✅ | ✅ (+ last-frame) | ✅ (`image_to_video`) |
@@ -73,11 +74,13 @@ until the user has explicitly confirmed.
 | Resolution / quality | 720p, 1080p | 480p, 720p, 1080p | 360p, 540p, 720p, 1080p |
 | Duration range | 3–15s | 4–15s | 1–60s (agent: 20/30/60) |
 | Aspect ratios | 16:9, 9:16, 1:1, 4:3, 3:4, 4:5, 5:4 | 16:9, 9:16, 1:1, 4:3, 3:4, 21:9 | 9:16, 16:9, 1:1, 4:3, 3:4 |
-| Prompt length | ≤2500 中文 / ≤5000 非中文 | ≤500 | ≤2048 |
+| Prompt length | ≤2500 中文 / ≤5000 非中文 | ≤1500 characters | ≤2048 |
 | Rate limit | 5 RPM | 5 RPM | 5 RPM |
 | CLI namespace | `… video create` | `… video create` | `… video pixverse generate` (OpenAPI only) |
 
-**Lip sync is PixVerse-only** — HappyHorse and SeeDance do not support it. Mimic, restyle, fusion, transition, and the marketing agent are also PixVerse-exclusive.
+**Seedance 2.5 has separate limits:** 30 images, 10 videos (total ≤30s), 10 audios (total ≤30s; audio-only allowed), 5000 prompt characters, 4–30s output or automatic duration. First/last-frame, edit and extend require `--ratio adaptive`; edit requires `--duration -1`. Draft and final are separate charged tasks. See `references/seedance-2-5.md` for commands and per-file rules.
+
+**Lip sync is PixVerse-only** — HappyHorse and SeeDance do not support it. The named `mimic`, `restyle`, `fusion`, `transition` and `agent` API capabilities use PixVerse. Generic editing/extension requests can use Seedance 2.5; keep an explicitly selected Seedance model.
 
 ## Step -1: CLI Auth Check + Video Command Gate
 
@@ -186,6 +189,8 @@ CONFIG=$(cat "$CONFIG_PATH")
 
 ### Step 1: Collect Prompt
 
+If the user wants to finalize an existing Seedance 2.5 draft, collect its ListenHub task ID and use the final-generation path in `references/seedance-2-5.md`; do not ask for or resend a prompt.
+
 Ask the user for a video description. If they haven't provided one:
 
 > 描述你想要生成的视频内容。
@@ -204,7 +209,7 @@ Options:
   - "有视频，想做口型同步" — Lip-sync mode (PixVerse only) → Step 3d
 ```
 
-If the user mentions PixVerse-exclusive capabilities (口型/lip sync, 模仿/mimic, restyle/风格化、融合/fusion、过渡/transition、广告/promo agent), route to PixVerse and pick the matching `--capability` — see Step 4 (PixVerse) and `references/pixverse-api.md`.
+Keep explicit Seedance 2.5 requests on Seedance 2.5, including edit, extend and multi-reference. For audio-only or Draft requests choose 2.5. If the user explicitly asks for PixVerse capabilities (口型/lip sync, mimic, restyle, fusion, transition, promo agent), route to PixVerse and pick the matching `--capability` — see Step 4 (PixVerse) and `references/pixverse-api.md`.
 
 ### Step 3a: Image-to-Video (First-Frame)
 
@@ -225,11 +230,11 @@ Options:
 
 After collecting, proceed to Step 4.
 
-**Note:** HappyHorse i2v mode has no `ratio` parameter — ratio is determined by the input image. SeeDance still accepts `--ratio`.
+**Note:** HappyHorse i2v mode has no `ratio` parameter — ratio is determined by the input image. Seedance 2.0 accepts a fixed `--ratio`; Seedance 2.5 frame mode requires `--ratio adaptive`.
 
 ### Step 3b: Reference-Image Mode
 
-Collect reference images (1–9 images required).
+Collect reference images (HappyHorse/Seedance 2.0: 1–9; Seedance 2.5: up to 30). For Seedance 2.5 references may also be video-only or audio-only; do not force an image.
 
 Ask for image paths/URLs:
 - Supported formats: jpg, jpeg, png, webp
@@ -239,16 +244,17 @@ Ask for image paths/URLs:
 
 **HappyHorse prompt syntax:** When multiple reference images are provided, the user can use `[Image 1]`, `[Image 2]` etc. in the prompt to refer to specific images. Inform the user of this capability.
 
-**SeeDance additional references** (only if model is SeeDance):
-- reference-video (optional, max 3): mp4, mov, max 50MB
-- reference-audio (optional, max 3): mp3, wav, max 20MB (must pair with image or video)
+**Seedance additional references:**
+- 2.0: at most 3 videos and 3 audios; each 2–15s, each type total ≤15s; audio must pair with image or video.
+- 2.5: at most 10 videos and 10 audios; each 2–30s (edit video 4–30s), each type total ≤30s; audio-only allowed. Video MP4/MOV ≤200 MB; audio MP3/WAV ≤15 MB.
+- For 2.5 include one `--reference-audio-meta DURATION[:SIZE]` per audio; never count audio duration as input-video duration.
 - reference-video metadata is required: provide `--reference-video-meta WIDTHxHEIGHT[:DURATION[:FPS[:SIZE]]]` for each video.
 
 After collecting, proceed to Step 4.
 
-### Step 3c: Video-Edit Mode (HappyHorse Only)
+### Step 3c: Video-Edit Mode
 
-If model is SeeDance, inform the user: "视频编辑仅 HappyHorse 模型支持，已自动切换。" and set model to `happyhorse`.
+If Seedance 2.5 is selected, follow its edit/extend section in `references/seedance-2-5.md`: retain that model and use adaptive (edit also -1). Do not send HappyHorse `--audio-setting`. For Seedance 2.0 explain its reference-mode limitations and ask before changing models. The following controls apply only to HappyHorse.
 
 1. **video** (required): Ask for the video path or URL.
    - Supported formats: mp4, mov (H.264 recommended)
@@ -317,7 +323,7 @@ Options:
   - "我要调整参数" — Ask each parameter below
 ```
 
-**For video-edit mode:** Skip Step 4 entirely — no adjustable generation params (only resolution).
+**For HappyHorse video-edit mode:** Skip Step 4 entirely — only resolution is adjustable. Seedance 2.5 keeps its own rules and Draft option.
 
 **If adjusting**, ask each parameter one at a time:
 
@@ -328,6 +334,7 @@ Options:
   - "happyhorse（推荐）" — Higher quality, video-edit support
   - "doubao-seedance-2-pro" — SeeDance pro, supports last-frame & audio ref
   - "doubao-seedance-2-fast" — SeeDance fast
+  - "doubao-seedance-2-5" — Multi-video/audio, audio-only, edit/extend, Draft
   - "pixverse" — PixVerse: 口型同步/模仿/风格化/融合/过渡/广告 agent (OpenAPI only)
 ```
 
@@ -362,7 +369,7 @@ Options:
   - "5 秒（推荐）" — Standard
   - "8 秒" — Medium
   - "10 秒" — Long
-  - "Other" — Custom (HappyHorse: 3–15, SeeDance: 4–15)
+  - "Other" — Custom (HappyHorse: 3–15; Seedance 2.0: 4–15; 2.5: 4–30 or -1, edit must use -1)
 ```
 
 **Seed** (optional): Only ask if the user mentions wanting to reproduce a result. Otherwise skip.
@@ -381,7 +388,7 @@ ESTIMATE=$($CMD_PREFIX estimate \
 EXIT_CODE=$?
 ```
 
-For **video-edit mode** — add `--has-video-input` and `--input-video-duration`:
+For **HappyHorse video-edit mode** — add `--has-video-input` and `--input-video-duration`:
 - If user provided a URL: ask duration
 - Local files: detect with ffprobe as best-effort:
   ```bash
@@ -639,7 +646,7 @@ For `agent` add `--agent-type ad_master` (or `promo_mix`).
 - `--no-generate-audio` — only if user disabled audio (SeeDance only)
 - `--seed 12345` — only if user specified a seed
 - `--audio-setting origin` — video-edit mode, keep original audio
-- `--input-video-duration N` — required with `--reference-video` (2-15s)
+- `--input-video-duration N` — original reference video duration total. For 2.5 the CLI sums every `--reference-video-meta` duration; an explicit total must match. 2.0 total ≤15s; 2.5 total ≤30s. Audio duration is excluded.
 
 **Error check:**
 ```bash
@@ -761,6 +768,7 @@ Reuse `shared/cli-patterns.md` standard error codes:
 - CLI execution patterns: `shared/cli-patterns.md`
 - Config pattern: `shared/config-pattern.md`
 - Output mode: `shared/output-mode.md`
+- Seedance 2.5 and Draft: `references/seedance-2-5.md`
 - HappyHorse API: `references/happyhorse-api.md`
 - PixVerse API: `references/pixverse-api.md`
 
