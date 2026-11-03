@@ -74,7 +74,7 @@ until the user has explicitly confirmed.
 | Resolution / quality | 720p, 1080p | 480p, 720p, 1080p | 360p, 540p, 720p, 1080p |
 | Duration range | 3–15s | 4–15s | 1–60s (agent: 20/30/60) |
 | Aspect ratios | 16:9, 9:16, 1:1, 4:3, 3:4, 4:5, 5:4 | 16:9, 9:16, 1:1, 4:3, 3:4, 21:9 | 9:16, 16:9, 1:1, 4:3, 3:4 |
-| Prompt length | ≤2500 中文 / ≤5000 非中文 | ≤1500 characters | ≤2048 |
+| Prompt length | ≤2500 中文 / ≤5000 非中文 | ≤3000 characters | ≤2048 |
 | Rate limit | 5 RPM | 5 RPM | 5 RPM |
 | CLI namespace | `… video create` | `… video create` | `… video pixverse generate` (OpenAPI only) |
 

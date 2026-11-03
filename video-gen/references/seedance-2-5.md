@@ -6,7 +6,7 @@ Use `--model doubao-seedance-2-5` with `listenhub video` or `listenhub openapi v
 
 | Rule | Seedance 2.0 Pro/Fast | Seedance 2.5 |
 |---|---|---|
-| Prompt | 1500 characters | 5000 characters, including asset reference text |
+| Prompt | 3000 characters | 5000 characters, including asset reference text |
 | Reference images | 9 | 30 |
 | Reference videos | 3; each 2–15s; total ≤15s | 10; each 2–30s (edit: 4–30s); total ≤30s |
 | Reference audios | 3; each 2–15s; total ≤15s; needs image/video | 10; each 2–30s; total ≤30s; audio-only allowed |
