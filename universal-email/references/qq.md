@@ -1,6 +1,6 @@
 # QQ Mail
 
-QQ Mail through Himalaya uses IMAP/SMTP and a client authorization code.
+QQ Mail uses IMAP/SMTP and a client authorization code.
 
 ## What the user needs
 
@@ -9,27 +9,29 @@ QQ Mail through Himalaya uses IMAP/SMTP and a client authorization code.
 
 Do not ask for the QQ account password. The username is the full email address.
 
-## How to obtain it
+## 对用户说（照念）
+
+1. 「把要连接的 QQ 邮箱地址发我，完整的 @qq.com 或 @foxmail.com。授权码不要发到聊天里。」
+2. 「打开 QQ 邮箱网页并登录。点 设置 → 账户与安全 → 安全设置。打开 POP3/IMAP/SMTP，按页面完成验证，再生成 16 位授权码。生成后跟我说一声，不要把授权码发过来。」
+3. When they have generated it: use the 弹窗前 / 成功 / 取消 / 超时 lines in `configuration.md`, then run `prompt` in the same turn. In that window they enter the 授权码, not the QQ login password.
+4. After `account check` succeeds: 「QQ 邮箱已经连好了。以后直接说『看看今天的邮件』就行。」
+5. If authentication fails: 「这个授权码好像不对。去 QQ 邮箱设置里重新生成一个，生成后跟我说，我会再弹出窗口。」
+
+Do not stop after “去生成授权码” without saying the next action. Connecting saves the account on this device and does not change mail stored by QQ.
+
+## How to connect
 
 1. Ask for the full `@qq.com` or `@foxmail.com` address.
-2. Ask the user to sign in to QQ Mail on the web.
-3. Go to **Settings → Account and Security → Security Settings**.
-4. Enable the **POP3/IMAP/SMTP service** and complete QQ's identity verification.
-5. Generate the 16-character client authorization code.
-6. Run the bare `himalaya` setup wizard in a PTY, or configure the account as described in `configuration.md`. Supply the full address and authorization code through the chosen secure credential mechanism. Use the authorization code, not the QQ login password.
-
-Do not stop at “enable IMAP/SMTP and generate an authorization code.” Always give the next concrete action. In user-facing conversation, describe the goal only as “连接 QQ 邮箱”; never expose internal implementation identifiers. Connecting saves the account configuration and credential on the user's device and does not change mail stored by QQ.
+2. Guide IMAP/SMTP + authorization code with the lines above.
+3. Collect the authorization code with the bundled helper as described in `configuration.md`. Use `--account universal-email/qq`, title `Connect QQ Mail` / `连接 QQ 邮箱`, secret label `Authorization code` / `授权码`. Never run the Himalaya wizard. Never open a terminal for the user.
+4. Write the QQ IMAP/SMTP account from `configuration.md` (`imap.id.auto = true` is required). Then run `himalaya --account qq --json account check`.
 
 ## Required IMAP ID exchange
 
 QQ enforces the RFC 2971 `ID` command before a mailbox can be selected, so set `imap.id.auto = true` for this account. Without it authentication succeeds and then `account check` and every mailbox operation fail — a failure that looks like a wrong authorization code but is not.
 
-```toml
-imap.id.auto = true
-```
-
 ## Validate and troubleshoot
 
 The standard endpoints are `imap.qq.com:993` with TLS and `smtp.qq.com:465` with TLS.
 
-If authentication fails, confirm the full address, confirm IMAP/SMTP remains enabled, and generate a new authorization code. If the server rejects IMAP before authentication completes, report a QQ protocol compatibility error rather than asking the user to expose more credentials.
+If the server rejects IMAP before authentication completes, report a QQ protocol compatibility error rather than asking the user to expose more credentials.

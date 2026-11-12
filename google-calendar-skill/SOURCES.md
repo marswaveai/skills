@@ -6,10 +6,10 @@
   - `win32-x64`: `google-workspace-cli-x86_64-pc-windows-msvc.zip`, archive sha256 `407705d695dc83d48b1c5f50d71b5aa64095bf6f17d5b439b2e9a373bbe67ec2`
 - Skill reference: `googleworkspace/cli` tag `v0.22.5`, `skills/gws-calendar`, `skills/gws-calendar-agenda`, `skills/gws-calendar-insert`, and `skills/gws-shared`.
 
-`SKILL.md` is a calendar-only rewrite of the upstream skills for the Cola app-center distribution:
+`SKILL.md` is a calendar-only rewrite of the upstream skills:
 
 - Only the calendar command surface is kept; every other Google service and all upstream non-calendar skills, examples, and repository-interaction guidance are removed.
-- Authorization guidance is replaced: OAuth is managed by Cola with calendar-only scopes (`https://www.googleapis.com/auth/calendar.events`, `https://www.googleapis.com/auth/calendar.calendarlist.readonly` plus OpenID identity), so `gws auth login` and service-account credentials must not be used.
+- Login uses `gws auth login` with calendar-only scopes (`https://www.googleapis.com/auth/calendar.events`, `https://www.googleapis.com/auth/calendar.calendarlist.readonly` plus OpenID identity). Config directory follows `GOOGLE_WORKSPACE_CLI_CONFIG_DIR` when set.
 - Resources outside the granted scopes (`acl`, calendar create/delete, `settings`, `watch`/`channels`) are documented as unavailable instead of listed as commands.
 
 Binary hashes are recorded in `SHA256SUMS`; the final ZIP hash is recorded in the sibling `.zip.sha256` file.
