@@ -20,7 +20,7 @@ description: |
 - User wants to animate a still image (first-frame)
 - User has reference images to guide video generation
 - User wants to edit an existing video (change style, background, etc.)
-- User wants to lip-sync a video to audio or TTS (PixVerse only) — "对口型", "口型同步"
+- User wants to re-sync an existing video to audio or TTS (PixVerse `lip_sync`) — "对口型", "口型同步"
 - User wants a marketing ad / promo mix video (PixVerse agent)
 - User says "生成视频", "做视频", "video generation", "text to video", "视频编辑", "pixverse", "口型"
 
@@ -37,7 +37,7 @@ Generate AI videos using the ListenHub CLI. Supports three model families (Seeda
 - **HappyHorse** (default) — text-to-video, image-to-video, reference-image-to-video, video-edit
 - **Seedance 2.0 Pro/Fast** — text-to-video, frame mode (first + last frame), reference mode (images, videos, audio)
 - **Seedance 2.5** (`doubao-seedance-2-5`) — adds multi-reference/ audio-only generation, edit/extend and 480p Draft → 1080p final. Read `references/seedance-2-5.md` when selected; retain the requested model.
-- **PixVerse** — nine atomic capabilities via the Agent API (text_to_video, image_to_video, transition, multi_transition, fusion, restyle, mimic, **lip_sync**, agent). The only family that supports lip sync. OpenAPI-only, URL/ID based, and uses its own `pixverse` CLI namespace.
+- **PixVerse** — nine atomic capabilities via the Agent API (text_to_video, image_to_video, transition, multi_transition, fusion, restyle, mimic, **lip_sync**, agent). The family with a dedicated `lip_sync` operation for an existing video. OpenAPI-only, URL/ID based, and uses its own `pixverse` CLI namespace.
 
 ## Hard Constraints
 
@@ -67,7 +67,7 @@ until the user has explicitly confirmed.
 | Video edit | ✅ | ❌ | ❌ |
 | Restyle | ❌ | ❌ | ✅ (`restyle`) |
 | Mimic (motion transfer) | ❌ | ❌ | ✅ (`mimic`, locked 720p) |
-| **Lip sync** | ❌ | ❌ | ✅ (`lip_sync`, audio or TTS) |
+| **Re-sync an existing video** | ❌ | ❌ (no dedicated `lip_sync` operation) | ✅ (`lip_sync`, audio or TTS) |
 | Marketing agent (ad/promo) | ❌ | ❌ | ✅ (`agent`: ad_master / promo_mix) |
 | Reference video | ❌ (use video-edit instead) | ✅ | ✅ (mimic / lip_sync source) |
 | Reference audio | ❌ | ✅ | ✅ (lip_sync) |
@@ -80,7 +80,51 @@ until the user has explicitly confirmed.
 
 **Seedance 2.5 has separate limits:** 30 images, 10 videos (total ≤30s), 10 audios (total ≤30s; audio-only allowed), 5000 prompt characters, 4–30s output or automatic duration. First/last-frame, edit and extend require `--ratio adaptive`; edit requires `--duration -1`. Draft and final are separate charged tasks. See `references/seedance-2-5.md` for commands and per-file rules.
 
-**Lip sync is PixVerse-only** — HappyHorse and SeeDance do not support it. The named `mimic`, `restyle`, `fusion`, `transition` and `agent` API capabilities use PixVerse. Generic editing/extension requests can use Seedance 2.5; keep an explicitly selected Seedance model.
+**The dedicated `lip_sync` operation is PixVerse-only.** This is different from generating a new Seedance video with native dialogue audio; a request for natural mouth movements does not by itself require PixVerse. The named `mimic`, `restyle`, `fusion`, `transition` and `agent` API capabilities use PixVerse. Generic editing/extension requests can use Seedance 2.5; keep an explicitly selected Seedance model.
+
+## Dialogue and voice-reference workflow
+
+Choose the workflow from what the user wants to make, before routing by words such as “口型同步”:
+
+- **New dialogue / talking-head video:** prefer a model's native audio and retain the generated audio track. Put the spoken lines in the prompt; ordinary dialogue does not require a separate TTS step.
+- **Specified voice:** if the chosen model supports reference audio, reuse the supplied voice sample or follow `/tts` to generate reference speech through ListenHub. Submit it with the model's required materials. For multiple shots, reuse each character's selected voice. Reference audio guides generation; it does not guarantee exact voice reproduction, word timing, or perfect lip sync. Review the result before claiming those requirements are met.
+- **Re-sync an existing video:** use the dedicated PixVerse `lip_sync` path when compatible with the source. Do not send every new-video request mentioning natural lip sync to PixVerse, or silently replace an explicitly selected model.
+- **Silent video, voice-over narration, or explicit post-production dubbing:** follow the user's choice. Native audio is a preference, not a requirement; explain model/copyright limitations before choosing another approach.
+
+Before estimating and submitting a voice-reference video:
+
+1. Identify the exact model. Seedance **2.0 Pro/Fast** requires audio references to accompany at least one **reference image or reference video**. Do not mix reference inputs with `--first-frame` / `--last-frame`. With only audio, collect suitable visual references or explain the limitation; do not submit repeatedly or silently drop the voice sample.
+2. Seedance **2.5** allows audio-only references. Do not impose the 2.0 visual-reference requirement on it. Follow `references/seedance-2-5.md` for real media metadata and model limits.
+3. Estimate and submit with the same model, output settings, and reference metadata. A successful estimate is not proof that all generation inputs are valid. Apply the existing confirmation rules to paid TTS and video generation.
+4. Keep the native video audio unless the user requested another workflow. If generation rejects the inputs, report the specific cause and correct it before retrying; a video made without the requested voice reference is not a completed voice-reference task.
+
+### Example: reference voice + character image, Seedance 2.5
+
+Follow `/tts` for voice selection and authorization. With internal CLI auth, a direct speech request is:
+
+```bash
+listenhub tts create --text "早上好，欢迎来到海边。" \
+  --mode direct --speaker "已确认的可用音色名称" --lang zh --json
+```
+
+Use the returned audio result as the reference; if the command returns a pending task, wait for its successful result using the TTS skill. For OpenAPI auth use the corresponding `listenhub openapi tts` path. The following example assumes the resulting audio has been saved as `voice.wav` and the user supplied `person.png`. Set `AUDIO_DURATION` and `AUDIO_BYTES` from that actual audio file (for example with ffprobe and its file size); do not copy sample metadata or count audio duration as input-video duration.
+
+```bash
+listenhub video estimate --model doubao-seedance-2-5 \
+  --omni-reference-task-type reference --resolution 720p --ratio 16:9 --duration 5 \
+  --reference-image-meta "$IMAGE_WIDTH"x"$IMAGE_HEIGHT":"$IMAGE_BYTES" \
+  --reference-audio-meta "$AUDIO_DURATION:$AUDIO_BYTES" --json
+
+# After cost confirmation; all metadata above must describe these same files.
+listenhub video create --model doubao-seedance-2-5 \
+  --omni-reference-task-type reference --resolution 720p --ratio 16:9 --duration 5 \
+  --reference-image ./person.png \
+  --reference-audio ./voice.wav --reference-audio-meta "$AUDIO_DURATION:$AUDIO_BYTES" \
+  --prompt '图片1中的人物自然面对镜头，以音频1为音色参考，说出“早上好，欢迎来到海边。”，声音、口型和动作自然配合。' \
+  --no-wait --json
+```
+
+Read `IMAGE_WIDTH`, `IMAGE_HEIGHT`, and `IMAGE_BYTES` from the actual image. Local image metadata is inferred by the create command; remote image URLs need explicit metadata. Use `listenhub openapi video` for both estimate/create when OpenAPI auth is active. For 2.5 audio-only generation, omit the reference image and its estimate metadata. See `references/seedance-2-5.md` for other reference modes.
 
 ## Step -1: CLI Auth Check + Video Command Gate
 
@@ -209,7 +253,7 @@ Options:
   - "有视频，想做口型同步" — Lip-sync mode (PixVerse only) → Step 3d
 ```
 
-Keep explicit Seedance 2.5 requests on Seedance 2.5, including edit, extend and multi-reference. For audio-only or Draft requests choose 2.5. If the user explicitly asks for PixVerse capabilities (口型/lip sync, mimic, restyle, fusion, transition, promo agent), route to PixVerse and pick the matching `--capability` — see Step 4 (PixVerse) and `references/pixverse-api.md`.
+Keep explicit Seedance 2.5 requests on Seedance 2.5, including edit, extend and multi-reference. For audio-only or Draft requests choose 2.5. If the user explicitly requests PixVerse or an existing-video `lip_sync`, mimic, restyle, fusion, transition, or promo-agent operation, route to PixVerse and pick the matching `--capability` — see Step 4 (PixVerse) and `references/pixverse-api.md`.
 
 ### Step 3a: Image-to-Video (First-Frame)
 
@@ -278,7 +322,7 @@ After collecting, proceed to Step 4.
 
 ### Step 3d: Lip-Sync Mode (PixVerse Only)
 
-Lip sync is **only available on PixVerse** (`--capability lip_sync`). If the user is on HappyHorse/SeeDance, inform them: "口型同步仅 PixVerse 模型支持，已自动切换。" and use the PixVerse command template in Step 4.
+This step re-syncs an **existing video** through PixVerse (`--capability lip_sync`). For a new dialogue video, use the dialogue workflow above. If the user selected another model for an existing-video re-sync, explain the dedicated capability and confirm the change instead of silently switching models.
 
 1. **source video** (required): the video whose lips will be driven. Collect EITHER:
    - `--source-video-id <id>` — a PixVerse video id, OR
@@ -778,7 +822,7 @@ Reuse `shared/cli-patterns.md` standard error codes:
 |-----------|-------------|
 | `listenhub` router → `video-gen` | Routed when user mentions video generation via `/listenhub` |
 | `listenhub-cli` router → `video-gen` | Same routing via `/listenhub-cli` |
-| `video-gen` → (none) | Independent terminal skill, no downstream dependencies |
+| `video-gen` → `tts` | Generate reference speech when a specified voice needs it; reuse existing audio otherwise |
 
 ## Examples
 
